@@ -11,7 +11,7 @@ const influxDB = new InfluxDB({ url, token })
 // Crea una consulta
 const queryApi = influxDB.getQueryApi(org)
 
-const consultaprueba = async (query) => {
+const ConsultaInflux = async (query) => {
 	// Escribe tu consulta en Flux
 	const fluxQuery = `from(bucket: "${bucket}")
 	${query}`
@@ -35,5 +35,5 @@ const consultaprueba = async (query) => {
 	})
 }
 module.exports = {
-	consultaprueba,
+	ConsultaInflux,
 }
