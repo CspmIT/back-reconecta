@@ -1,0 +1,39 @@
+{
+	"name": "back-reconecta",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "nodemon index.js",
+		"dev": "eslint --config eslint.config.js && node --env-file .env --watch index.js",
+		"lint": "eslint ."
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@influxdata/influxdb-client": "^1.35.0",
+		"@influxdata/influxdb-client-apis": "^1.35.0",
+		"axios": "^1.6.8",
+		"bcrypt": "^5.1.1",
+		"cookie-parser": "^1.4.6",
+		"cors": "^2.8.5",
+		"dotenv": "^16.4.5",
+		"express": "^4.19.2",
+		"jsonwebtoken": "^9.0.2",
+		"mysql2": "^3.9.7",
+		"passport": "^0.7.0",
+		"passport-jwt": "^4.0.1",
+		"sequelize": "^6.37.3"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.2.0",
+		"eslint": "^8.57.0",
+		"eslint-config-standard": "^17.1.0",
+		"eslint-plugin-import": "^2.29.1",
+		"eslint-plugin-n": "^16.6.2",
+		"eslint-plugin-promise": "^6.1.1",
+		"globals": "^15.1.0",
+		"sequelize-cli": "^6.6.2"
+	}
+}
