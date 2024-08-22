@@ -19,11 +19,11 @@ const ConsultaInflux = async (query) => {
 	// Ejecuta la consulta
 	return new Promise((resolve, reject) => {
 		const results = []
-
 		queryApi.queryRows(fluxQuery, {
 			next(row, tableMeta) {
-				const rowObject = tableMeta.toObject(row)
-				results.push(rowObject)
+				// Convertir la fila a un objeto
+				const record = tableMeta.toObject(row)
+				results.push(record)
 			},
 			error(error) {
 				reject(error)

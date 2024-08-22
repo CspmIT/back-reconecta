@@ -16,6 +16,15 @@
 		"dialect": "mysql",
 		"timezone": "America/Argentina/Buenos_Aires"
 	},
+	"reconecta": {
+		"database": "reconecta",
+		"username": "root",
+		"password": ">gN*DrCPX76Om6^b]QF=]",
+		"host": "localhost",
+		"port": 3307,
+		"dialect": "mysql",
+		"timezone": "America/Argentina/Buenos_Aires"
+	},
 	"procoop": {
 		"database": "PR_MT_NUEVA_DEMO",
 		"username": "Oficina",

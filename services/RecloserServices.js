@@ -1,5 +1,51 @@
-const { db } = require('../models')
+const { db, dbDesarrollo } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
+
+/**
+ * Guarda una lista de nuevos reconectadores en la base de datos.
+ *
+ * @param {Array<Object>} listRecloser - Un arreglo de objetos que representan los reconectadores a guardar.
+ * @returns {Promise<Array<Object>>} Un mensaje de éxito, un arreglo con los reconectadores guardados, o el número total de reconectadores guardados.
+ * @throws {Error} Lanza un error si ocurre algún problema al guardar los reconectadores.
+ * @author  [Jose Romani] <jose.romani@hotmail.com>
+ *
+ */
+const upMigrationRecloser = async (listRecloser) => {
+	return db.sequelize.transaction(async (t) => {
+		try {
+			const savedReclosers = []
+			for (const recloser of listRecloser) {
+				console.log(recloser)
+				const [Recloser, created] = await db.Recloser.findOrCreate({ where: { id: recloser.id }, defaults: { ...recloser }, transaction: t })
+				if (!created) {
+					await Recloser.update(recloser, { transaction: t })
+				}
+				// const savedRecloser = await db.Recloser.findOrCreate(recloser)
+				savedReclosers.push(Recloser)
+			}
+			return savedReclosers
+		} catch (error) {
+			throw error
+		}
+	})
+}
+
+/**
+ * Obtiene todos los reconectadores de la base de datos de Desarrollo.
+ *
+ * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan todos los reconectadores encontrados, o lanza un error si no se encuentra ninguno.
+ * @author  [Jose Romani] <jose.romani@hotmail.com>
+ *
+ */
+const getAllRecloserDesarrollo = async () => {
+	try {
+		const RecloserDesarrollo = await dbDesarrollo.RecloserDesarrollo.findAll({ where: { status: 1 } })
+		if (!RecloserDesarrollo) throw new Error('No existe ningun reconectador')
+		return RecloserDesarrollo
+	} catch (error) {
+		throw error
+	}
+}
 
 /**
  * Obtiene todos los reconectadores de la base de datos.
@@ -10,7 +56,7 @@ const { ConsultaInflux } = require('./InfluxServices')
  */
 const getAllRecloser = async () => {
 	try {
-		const RecloserDesarrollo = await db.RecloserDesarrollo.findAll({ where: { status: 1 } })
+		const RecloserDesarrollo = await db.Recloser.findAll({ where: { status: 1 } })
 		if (!RecloserDesarrollo) throw new Error('No existe ningun reconectador')
 		return RecloserDesarrollo
 	} catch (error) {
@@ -28,9 +74,21 @@ const getAllRecloser = async () => {
  */
 const getRecloserId = async (id) => {
 	try {
-		const RecloserDesarrollo = await db.RecloserDesarrollo.findOne({ where: { id: id } })
-		if (!RecloserDesarrollo) throw new Error('No existe ningun reconectador')
-		return RecloserDesarrollo
+		const Recloser = await db.Recloser.findOne({
+			where: { id: id },
+			include: [
+				{
+					association: 'version',
+					include: [
+						{
+							association: 'brand',
+						},
+					],
+				},
+			],
+		})
+		if (!Recloser) throw new Error('No existe ningun reconectador')
+		return Recloser
 	} catch (error) {
 		throw error
 	}
@@ -97,4 +155,103 @@ const dataRecloseInflux = async (data) => {
 	}
 }
 
-module.exports = { getAllRecloser, getRecloserId, brandRecloser, dataRecloseInflux }
+/**
+ * Consulta los datos instantaneos de un reconectador si no encuentra busca hasta 1 dia hacia atras, en InfluxDB.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object|null>} Un objeto que representa los datos encontrados en InfluxDB, o `null` si no se encuentran datos. Lanza un error si ocurre un problema en la consulta.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author  [Jose Romani] <jose.romani@hotmail.com>
+ *
+ */
+const getMetrologiaIntantanea = async (data) => {
+	try {
+		const query = `|> range(start: -30s, stop: now())
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
+        |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "bat_0" or r["_field"] == "bat_1" or r["_field"] == "bat_2" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2" or r["_field"] == "I_n" or r["_field"] == "V_f_ABC_0" or r["_field"] == "V_f_ABC_1" or r["_field"] == "V_f_ABC_2" or r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2" or r["_field"] == "F_ABC" or r["_field"] == "V_L_SRT_0" or r["_field"] == "V_L_SRT_1" or r["_field"] == "V_L_SRT_2" or r["_field"] == "V_f_SRT_0" or r["_field"] == "V_f_SRT_1" or r["_field"] == "V_f_SRT_2" or r["_field"] == "W_0" or r["_field"] == "W_1" or r["_field"] == "W_2" or r["_field"] == "FP_f_0" or r["_field"] == "FP_f_1" or r["_field"] == "FP_f_2")
+        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+		|> last()`
+
+		let dataInflux = await ConsultaInflux(query)
+
+		if (!dataInflux) {
+			const fallbackQuery = `|> range(start: -1d, stop: now())
+			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
+			|> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2" or r["_field"] == "I_n" or r["_field"] == "V_f_ABC_0" or r["_field"] == "V_f_ABC_1" or r["_field"] == "V_f_ABC_2" or r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2" or r["_field"] == "F_ABC" or r["_field"] == "V_L_SRT_0" or r["_field"] == "V_L_SRT_1" or r["_field"] == "V_L_SRT_2" or r["_field"] == "V_f_SRT_0" or r["_field"] == "V_f_SRT_1" or r["_field"] == "V_f_SRT_2" or r["_field"] == "W_0" or r["_field"] == "W_1" or r["_field"] == "W_2" or r["_field"] == "FP_f_0" or r["_field"] == "FP_f_1" or r["_field"] == "FP_f_2")
+			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
+			|> last()`
+
+			dataInflux = await ConsultaInflux(fallbackQuery)
+		}
+		if (!dataInflux) throw new Error('Sin datos en Influx')
+		let dataReturn = {}
+		for (const element of dataInflux) {
+			if (!dataReturn[element._field]) {
+				dataReturn[element._field] = []
+			}
+			dataReturn[element._field].push({
+				field: element._field,
+				value: element._value,
+				time: element._time,
+			})
+		}
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta los eventos desde el 01/11/2022 hasta la fecha, filtrando los ultimos 200 registros, de un reconectador en InfluxDB.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Array<Array<Object>>>} Un array de arrays que representan los datos organizados encontrados en InfluxDB, o `null` si no se encuentran datos.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getListEvents = async (data) => {
+	try {
+		const query = `
+			|> range(start: 2022-11-01)
+            |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events") 
+            |> aggregateWindow(every: 250ms, fn: last, createEmpty: false)
+            |> sort(columns: ["_time"], desc: true)
+            |> limit(n: 200)
+        `
+		const dataInflux = await ConsultaInflux(query)
+		console.log(query)
+		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+
+		let organizedData = []
+		let groupedRecords = {}
+
+		dataInflux.forEach((record) => {
+			const timeKey = record._time
+			if (!groupedRecords[timeKey]) {
+				groupedRecords[timeKey] = []
+			}
+			groupedRecords[timeKey].push({
+				value: record._value,
+				time: timeKey,
+				field: record._field,
+			})
+		})
+		Object.keys(groupedRecords).forEach((timeKey) => {
+			const recordsGroup = groupedRecords[timeKey]
+			for (let i = 0; i < recordsGroup.length; i += 3) {
+				let records = {
+					variable: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '0')[0],
+					event: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '1')[0],
+					time: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '2')[0],
+				}
+				organizedData.push(records)
+			}
+		})
+
+		return organizedData
+	} catch (error) {
+		throw new Error('No se pudieron obtener los datos de InfluxDB.')
+	}
+}
+
+module.exports = { getListEvents, getMetrologiaIntantanea, getAllRecloserDesarrollo, upMigrationRecloser, getAllRecloser, getRecloserId, brandRecloser, dataRecloseInflux }
