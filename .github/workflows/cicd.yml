@@ -64,12 +64,12 @@ jobs:
               run: |
                   REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)
                   docker build \
-                    # --build-arg DB_HOST=${{ secrets.DB_HOST }} \
-                    # --build-arg DB_PASS=${{ secrets.DB_PASS }} \
-                    # --build-arg DB_PORT=${{ secrets.DB_PORT }} \
-                    # --build-arg INFLUX_URL=${{ secrets.INFLUX_URL }} \
-                    # --build-arg INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }} \
-                    # --build-arg INFLUX_ORG=${{ secrets.INFLUX_ORG }} \
-                    # --build-arg INFLUX_BUCKET=${{ secrets.INFLUX_BUCKET }} \
+                     --build-arg DB_HOST=${{ secrets.DB_HOST }} \
+                     --build-arg DB_PASS=${{ secrets.DB_PASS }} \
+                     --build-arg DB_PORT=${{ secrets.DB_PORT }} \
+                     --build-arg INFLUX_URL=${{ secrets.INFLUX_URL }} \
+                     --build-arg INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }} \
+                     --build-arg INFLUX_ORG=${{ secrets.INFLUX_ORG }} \
+                     --build-arg INFLUX_BUCKET=${{ secrets.INFLUX_BUCKET }} \
                     -t ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }} .
                   docker push ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}
