@@ -161,7 +161,7 @@ const dataRecloseInflux = async (data) => {
  * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
  * @returns {Promise<Object|null>} Un objeto que representa los datos encontrados en InfluxDB, o `null` si no se encuentran datos. Lanza un error si ocurre un problema en la consulta.
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
- * @author  [Jose Romani] <jose.romani@hotmail.com>
+ * @author  [Jose Romani]  <jose.romani@hotmail.com>
  *
  */
 const getMetrologiaIntantanea = async (data) => {
@@ -254,4 +254,102 @@ const getListEvents = async (data) => {
 	}
 }
 
-module.exports = { getListEvents, getMetrologiaIntantanea, getAllRecloserDesarrollo, upMigrationRecloser, getAllRecloser, getRecloserId, brandRecloser, dataRecloseInflux }
+/**
+ * Consulta para Graficos de reconectador, para los últimos eventos en un período de 2 horas desde InfluxDB, filtrando los valores de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2) de un reconectador específico.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object>} Un objeto con claves que representan los diferentes campos de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2), y cada clave contiene un array de arrays con los valores de tiempo y tensión correspondientes.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getTensionABC = async (data) => {
+	try {
+		const query = `
+			|> range(start: -2h)
+            |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
+            |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
+			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+        `
+		const dataInflux = await ConsultaInflux(query)
+		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+		let dataReturn = {}
+		for (const element of dataInflux) {
+			if (!dataReturn[element._field]) {
+				dataReturn[element._field] = []
+			}
+
+			dataReturn[element._field].push([element._time, element._value])
+		}
+		return dataReturn
+	} catch (error) {
+		throw new Error('No se pudieron obtener los datos de InfluxDB.')
+	}
+}
+
+/**
+ * Consulta para Graficos de reconectador, para los últimos eventos en un período de 2 horas desde InfluxDB, filtrando los valores de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2) de un reconectador específico.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object>} Un objeto con claves que representan los diferentes campos de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2), y cada clave contiene un array de arrays con los valores de tiempo y tensión correspondientes.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getCorriente = async (data) => {
+	try {
+		const query = `
+			|> range(start: -2h)
+            |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
+            |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
+			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+        `
+		const dataInflux = await ConsultaInflux(query)
+		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+		let dataReturn = {}
+		for (const element of dataInflux) {
+			if (!dataReturn[element._field]) {
+				dataReturn[element._field] = []
+			}
+
+			dataReturn[element._field].push([element._time, element._value])
+		}
+		return dataReturn
+	} catch (error) {
+		throw new Error(error)
+	}
+}
+
+/**
+ * Consulta para Graficos de reconectador, para los últimos eventos en un período de 2 horas desde InfluxDB, filtrando los valores de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2) de un reconectador específico.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object>} Un objeto con claves que representan los diferentes campos de tensión (V_L_ABC_0, V_L_ABC_1, V_L_ABC_2), y cada clave contiene un array de arrays con los valores de tiempo y tensión correspondientes.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getInterruption = async (data) => {
+	try {
+		const query = `
+			|> range(start: -2h)
+            |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2") 
+			|> filter(fn: (r) => r["_field"] == "Int_ABC_0" or r["_field"] == "Int_ABC_1" or r["_field"] == "Int_ABC_2" or r["_field"] == "Int_ABC_3" or r["_field"] == "Int_SRT_0" or r["_field"] == "Int_SRT_1" or r["_field"] == "Int_SRT_2" or r["_field"] == "Int_SRT_3")
+			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+			|> sort(columns: ["_time"], desc: false)
+			|>limit(n: 1)
+        `
+		const dataInflux = await ConsultaInflux(query)
+		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+		let dataReturn = {}
+		for (const element of dataInflux) {
+			if (!dataReturn[element._field]) {
+				dataReturn[element._field] = ''
+			}
+
+			dataReturn[element._field] = element._value
+		}
+		return dataReturn
+	} catch (error) {
+		throw new Error(error)
+	}
+}
+
+module.exports = { getInterruption, getCorriente, getTensionABC, getListEvents, getMetrologiaIntantanea, getAllRecloserDesarrollo, upMigrationRecloser, getAllRecloser, getRecloserId, brandRecloser, dataRecloseInflux }

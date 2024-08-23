@@ -1,4 +1,15 @@
-const { getAllRecloser, getRecloserId, dataRecloseInflux, brandRecloser, upMigrationRecloser, getAllRecloserDesarrollo, getMetrologiaIntantanea, getListEvents } = require('../services/RecloserServices')
+const {
+	getAllRecloser,
+	getRecloserId,
+	dataRecloseInflux,
+	upMigrationRecloser,
+	getAllRecloserDesarrollo,
+	getMetrologiaIntantanea,
+	getListEvents,
+	getTensionABC,
+	getCorriente,
+	getInterruption,
+} = require('../services/RecloserServices')
 const { getListVariables } = require('../services/VariablesServices')
 
 const migrationRecloser = async (req, res) => {
@@ -147,7 +158,73 @@ const listEvents = async (req, res) => {
 	}
 }
 
+const tensionABCGraf = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const recloser = await getRecloserId(id)
+		if (!recloser) {
+			return res.status(404).json({ message: 'Reconectador no encontrado' })
+		}
+		const dataInflux = await getTensionABC({ serial: recloser.serial, brand: recloser.version.brand.name })
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const corrientesGraf = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const recloser = await getRecloserId(id)
+		if (!recloser) {
+			return res.status(404).json({ message: 'Reconectador no encontrado' })
+		}
+		const dataInflux = await getCorriente({ serial: recloser.serial, brand: recloser.version.brand.name })
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const interruptions = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const recloser = await getRecloserId(id)
+		if (!recloser) {
+			return res.status(404).json({ message: 'Reconectador no encontrado' })
+		}
+		const dataInflux = await getInterruption({ serial: recloser.serial, brand: recloser.version.brand.name })
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
+	interruptions,
+	corrientesGraf,
+	tensionABCGraf,
 	listEvents,
 	migrationRecloser,
 	listAllRecloser,
