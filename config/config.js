@@ -19,7 +19,7 @@ module.exports = {
 		timezone: 'America/Argentina/Buenos_Aires',
 	},
 	reconecta: {
-		username: 'root',
+		username: 'DbDesarrollo',
 		password: process.env.DB_PASS,
 		database: 'reconecta',
 		host: process.env.DB_HOST,
