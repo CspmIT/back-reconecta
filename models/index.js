@@ -6,8 +6,8 @@ const Sequelize = require('sequelize')
 const process = require('process')
 const basename = path.basename(__filename)
 const env = process.env.DATABASE || 'reconecta'
-const config = require(__dirname + '/../config/config.json')[env]
-const configDesarrollo = require(__dirname + '/../config/config.json')['coopm_v1']
+const config = require(__dirname + '/../config/config.js')[env]
+const configDesarrollo = require(__dirname + '/../config/config.js')['coopm_v1']
 const db = {}
 const dbDesarrollo = {}
 
