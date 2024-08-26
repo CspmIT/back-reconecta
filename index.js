@@ -10,7 +10,7 @@ const publicRoutes = require('./routes/Public.routes')
 const corsConfig = require('./config/app.conf')
 app.use(corsConfig)
 app.use(cookieParser())
-app.use(publicRoutes)
+app.use('/api', publicRoutes)
 
 // Configuracion para el body parser
 app.use(express.json())
