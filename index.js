@@ -25,7 +25,7 @@ app.use('/api', AuthRoutes)
 app.use('/api', MigrationRoutes)
 app.use('/api', UserRoutes)
 
-app.listen(4004, () => {
-	console.log('Server is running on port 4004')
-	console.log('http://localhost:4004')
+app.listen(4000, () => {
+	console.log('Server is running on port 4000')
+	console.log('http://localhost:4000')
 })
