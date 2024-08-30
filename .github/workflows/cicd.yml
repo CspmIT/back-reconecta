@@ -71,5 +71,6 @@ jobs:
                      --build-arg INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }} \
                      --build-arg INFLUX_ORG=${{ secrets.INFLUX_ORG }} \
                      --build-arg INFLUX_BUCKET=${{ secrets.INFLUX_BUCKET }} \
+                     --build-arg SECRET=${{ secrets.SECRET }} \
                     -t ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }} .
                   docker push ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}
