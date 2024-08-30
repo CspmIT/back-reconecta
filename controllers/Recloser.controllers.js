@@ -41,7 +41,11 @@ const listAllRecloser = async (req, res) => {
 		const reclosers = await getAllRecloser()
 		res.status(200).json(reclosers)
 	} catch (error) {
-		res.status(400).json(error.message)
+		if (error.errors) {
+			res.status(500).json(error.errors)
+		} else {
+			res.status(400).json(error.message)
+		}
 	}
 }
 const getRecloserxID = async (req, res) => {
