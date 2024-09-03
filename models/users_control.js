@@ -9,11 +9,13 @@ module.exports = (sequelize, DataTypes) => {
 		 */
 		static associate(models) {
 			// define association here
+			this.belongsTo(models.Control, { foreignKey: 'id_control', as: 'control' })
 		}
 	}
 	Users_Control.init(
 		{
 			level: DataTypes.INTEGER,
+			ubication: DataTypes.INTEGER,
 			id_user: DataTypes.BIGINT,
 			id_control: DataTypes.BIGINT,
 		},

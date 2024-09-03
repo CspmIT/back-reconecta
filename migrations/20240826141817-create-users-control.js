@@ -12,6 +12,9 @@ module.exports = {
 			level: {
 				type: Sequelize.INTEGER,
 			},
+			ubication: {
+				type: Sequelize.INTEGER,
+			},
 			createdAt: {
 				allowNull: false,
 				type: Sequelize.DATE,
