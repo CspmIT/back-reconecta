@@ -9,6 +9,8 @@ module.exports = (sequelize, DataTypes) => {
 		 */
 		static associate(models) {
 			// define association here
+			this.belongsTo(models.Control, { foreignKey: 'id_version', as: 'version' })
+			this.hasMany(models.Users_Control, { foreignKey: 'id_control', as: 'user' })
 		}
 	}
 	Control.init(
@@ -17,6 +19,7 @@ module.exports = (sequelize, DataTypes) => {
 			field: DataTypes.STRING,
 			level: DataTypes.TINYINT,
 			status: DataTypes.BOOLEAN,
+			type_input: DataTypes.STRING,
 			id_version: DataTypes.BIGINT,
 		},
 		{
