@@ -2,30 +2,35 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('Controls', {
+		await queryInterface.createTable('Nodes', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			title: {
+			name: {
 				type: Sequelize.STRING,
 			},
-			field: {
+			number: {
 				type: Sequelize.STRING,
 			},
-			level: {
-				type: Sequelize.TINYINT,
-			},
-			type_input: {
+			description: {
 				type: Sequelize.STRING,
 			},
-			enabled: {
-				type: Sequelize.TINYINT,
+			lat_location: {
+				type: Sequelize.DECIMAL(11, 6),
+			},
+			lng_location: {
+				type: Sequelize.DECIMAL(11, 6),
 			},
 			status: {
 				type: Sequelize.BOOLEAN,
+				defaultValue: 1,
+			},
+			type: {
+				type: Sequelize.INTEGER,
+				comment: '1: reconectador, 2: sub estación rural, 3: sub estación urbana, 4: otros dispositivos',
 			},
 			createdAt: {
 				allowNull: false,
@@ -38,6 +43,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('Controls')
+		await queryInterface.dropTable('Nodes')
 	},
 }
