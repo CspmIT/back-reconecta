@@ -202,7 +202,6 @@ const validateRelation = async (data) => {
 		if (Node_History === null) {
 			return false
 		} else {
-			console.log(Node_History.id_node, data.id_node)
 			if (Node_History.id_node == data.id_node) {
 				return false
 			} else {

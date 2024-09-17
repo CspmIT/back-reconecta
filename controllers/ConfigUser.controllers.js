@@ -1,4 +1,12 @@
-const { getIdTable, getIdColumn, saveColumnUser, getColumnsUser, getControlsRecloser, saveCrontrolsUser, getControlsUserConfig } = require('../services/ConfigUserService')
+const {
+	getIdTable,
+	getIdColumn,
+	saveColumnUser,
+	getColumnsUser,
+	getControlsRecloser,
+	saveCrontrolsUser,
+	getControlsUserConfig,
+} = require('../services/ConfigUserService')
 const jwt = require('jsonwebtoken')
 require('dotenv')
 const secret = process.env.SECRET
@@ -35,7 +43,6 @@ const getColumnsUserTable = async (req, res) => {
 		const result = column.map((item) => {
 			return { name: item.columnsTable.name, status: item.status }
 		})
-		// console.log(column)
 		return res.status(200).json(result)
 	} catch (error) {
 		if (error.errors) {
@@ -62,9 +69,7 @@ const getControlsRecloserUser = async (req, res) => {
 				})
 				.sort((a, b) => a.level - b.level)
 				.sort((a, b) => a.ubication - b.ubication)
-			console.log(result)
 		} else {
-			console.log(controlsUser)
 			result = await getControlsRecloser(version)
 		}
 		return res.status(200).json(result)

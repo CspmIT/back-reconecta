@@ -319,7 +319,6 @@ const getListEvents = async (data) => {
             |> limit(n: 200)
         `
 		const dataInflux = await ConsultaInflux(query, influxName)
-		console.log(query)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 
 		let organizedData = []

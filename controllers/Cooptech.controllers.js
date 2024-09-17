@@ -32,7 +32,6 @@ const loginCooptech = async (req, res) => {
 		const token = await signTokenCooptech(user, tokenCooptech, schemaName, influx_name)
 		return res.status(200).json({ token })
 	} catch (error) {
-		console.log(error)
 		if (error.errors) {
 			res.status(500).json(error.errors)
 		} else {

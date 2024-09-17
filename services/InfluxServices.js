@@ -4,9 +4,6 @@ const config_influx = require(__dirname + '/../config/config_influx.js')
 
 const ConsultaInflux = async (query, influxName) => {
 	try {
-		console.log(config_influx)
-		console.log(influxName)
-		console.log(config_influx[influxName])
 		const url = config_influx[influxName].INFLUX_URL
 		const token = config_influx[influxName].INFLUXDB_TOKEN
 		const org = config_influx[influxName].INFLUX_ORG
