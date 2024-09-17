@@ -264,7 +264,7 @@ const dataRecloseInflux = async (data, influxName) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  *
  */
-const getMetrologiaIntantanea = async (data) => {
+const getMetrologiaIntantanea = async (data, influxName) => {
 	try {
 		const query = `|> range(start: -30s, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
@@ -309,7 +309,7 @@ const getMetrologiaIntantanea = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getListEvents = async (data) => {
+const getListEvents = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: 2022-11-01)
@@ -361,7 +361,7 @@ const getListEvents = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getTensionABC = async (data) => {
+const getTensionABC = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
@@ -393,7 +393,7 @@ const getTensionABC = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getCorriente = async (data) => {
+const getCorriente = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
@@ -425,7 +425,7 @@ const getCorriente = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getInterruption = async (data) => {
+const getInterruption = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
