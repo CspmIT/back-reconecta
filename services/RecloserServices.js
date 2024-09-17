@@ -228,13 +228,13 @@ const brandRecloser = async (typeRecloser) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const dataRecloseInflux = async (data) => {
+const dataRecloseInflux = async (data, influxName) => {
 	try {
 		const query = `|> range(start: -3m, stop: now())
         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux) throw new Error('No existe ningun reconectador')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -272,7 +272,7 @@ const getMetrologiaIntantanea = async (data) => {
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query)
+		let dataInflux = await ConsultaInflux(query, influxName)
 
 		if (!dataInflux) {
 			const fallbackQuery = `|> range(start: -1d, stop: now())
@@ -281,7 +281,7 @@ const getMetrologiaIntantanea = async (data) => {
 			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 			|> last()`
 
-			dataInflux = await ConsultaInflux(fallbackQuery)
+			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 		}
 		if (!dataInflux) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
@@ -318,7 +318,7 @@ const getListEvents = async (data) => {
             |> sort(columns: ["_time"], desc: true)
             |> limit(n: 200)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		console.log(query)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 
@@ -370,7 +370,7 @@ const getTensionABC = async (data) => {
             |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
 			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -402,7 +402,7 @@ const getCorriente = async (data) => {
             |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
 			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -436,7 +436,7 @@ const getInterruption = async (data) => {
 			|> sort(columns: ["_time"], desc: false)
 			|>limit(n: 1)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {

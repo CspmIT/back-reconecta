@@ -4,7 +4,8 @@ const { addUserCooptech } = require('../services/CooptechService')
 const relationUserCooptech = async (req, res) => {
 	try {
 		const { name, last_name, dni, email, token, profile } = req.body
-		if (!name && !last_name && !dni && !email && !token && !profile) throw new Error('se deben pasar todo los campos (nombre, apellido, dni, email y token)')
+		if (!name && !last_name && !dni && !email && !token && !profile)
+			throw new Error('se deben pasar todo los campos (nombre, apellido, dni, email y token)')
 		const result = await addUserCooptech(req.body)
 		return res.status(200).json(result)
 	} catch (error) {
@@ -17,7 +18,7 @@ const relationUserCooptech = async (req, res) => {
 }
 const loginCooptech = async (req, res) => {
 	try {
-		const { email, tokenCooptech, schemaName } = req.body
+		const { email, tokenCooptech, schemaName, influx_name } = req.body
 		const user = await getEnabledUser(email, schemaName)
 		if (!user) {
 			throw new Error('El usuario o la contraseña son incorrectas')
@@ -28,9 +29,10 @@ const loginCooptech = async (req, res) => {
 		if (user.token_app !== tokenCooptech) {
 			throw new Error('El usuario o la contraseña son incorrectas2')
 		}
-		const token = await signTokenCooptech(user, tokenCooptech, schemaName)
+		const token = await signTokenCooptech(user, tokenCooptech, schemaName, influx_name)
 		return res.status(200).json({ token })
 	} catch (error) {
+		console.log(error)
 		if (error.errors) {
 			res.status(500).json(error.errors)
 		} else {

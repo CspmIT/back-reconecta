@@ -28,7 +28,7 @@ const getEnabledUser = async (email, schemaName) => {
 	}
 }
 // Funcion para firmar el token para usuario interno
-const signTokenCooptech = async (user, token_app, schemaName) => {
+const signTokenCooptech = async (user, token_app, schemaName, influx_name) => {
 	// Seteo de fecha con 8horas mas para expiracion
 	const dateHour = new Date().setHours(new Date().getHours() + 8)
 	const configSing = {
@@ -42,9 +42,28 @@ const signTokenCooptech = async (user, token_app, schemaName) => {
 		dark: user.dark,
 		email: user.email,
 		token: token_app,
+		influx_name: influx_name,
 		img_profile: user.img_profile,
 	}
 	return jwt.sign(configSing, secret)
 }
-
-module.exports = { generateTokenCooptech, getEnabledUser, signTokenCooptech }
+const getUser = async (id) => {
+	try {
+		const data = await db.User.findOne({ where: { id, status: 1 } })
+		if (data) {
+			// Clonamos dataValues para no modificar el objeto original
+			const result = data.get()
+			// Eliminamos los campos que no queremos en el resultado
+			//delete result.password
+			delete result.token_temp
+			delete result.createdAt
+			delete result.updatedAt
+			// Agrega aquí cualquier otro campo que desees eliminar
+			return result
+		}
+		return null // o manejar como prefieras si el usuario no se encuentra
+	} catch (error) {
+		throw error
+	}
+}
+module.exports = { generateTokenCooptech, getEnabledUser, signTokenCooptech, getUser }

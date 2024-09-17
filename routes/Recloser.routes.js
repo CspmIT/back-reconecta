@@ -1,4 +1,6 @@
 const express = require('express')
+const { verifyToken } = require('../middleware/Auth.middleware')
+const router = express.Router()
 const {
 	listAllRecloser,
 	getRecloserxID,
@@ -14,20 +16,20 @@ const {
 	unlinkRelation,
 	listReclosersEnabled,
 } = require('../controllers/Recloser.controllers')
-const router = express.Router()
-router.get('/getDataRecloser', getDataInfluxRecloser)
-router.get('/getAllReclosers', listAllRecloser)
-router.get('/getReclosersEnabled', listReclosersEnabled)
-router.get('/getRecloserxID', getRecloserxID)
-router.get('/getVersions', getVersions)
-router.get('/metrologiaIntantanea', metrologiaIntantanea)
-router.get('/listEvents', listEvents)
-router.get('/tensionABC', tensionABCGraf)
-router.get('/corrientesGraf', corrientesGraf)
-router.get('/interruptions', interruptions)
 
-router.post('/addRecloser', addRecloser)
-router.post('/deleteRecloser', deleteRecloser)
-router.post('/unlinkRelation', unlinkRelation)
+router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
+router.get('/getAllReclosers', verifyToken, listAllRecloser)
+router.get('/getReclosersEnabled', verifyToken, listReclosersEnabled)
+router.get('/getRecloserxID', verifyToken, getRecloserxID)
+router.get('/getVersions', verifyToken, getVersions)
+router.get('/metrologiaIntantanea', verifyToken, metrologiaIntantanea)
+router.get('/listEvents', verifyToken, listEvents)
+router.get('/tensionABC', verifyToken, tensionABCGraf)
+router.get('/corrientesGraf', verifyToken, corrientesGraf)
+router.get('/interruptions', verifyToken, interruptions)
+
+router.post('/addRecloser', verifyToken, addRecloser)
+router.post('/deleteRecloser', verifyToken, deleteRecloser)
+router.post('/unlinkRelation', verifyToken, unlinkRelation)
 
 module.exports = router

@@ -114,7 +114,11 @@ const getDataInfluxRecloser = async (req, res) => {
 			id_version: recloser.version.id,
 			brand: recloser.version.brand.name,
 		}
-		const dataInflux = await dataRecloseInflux({ serial: dataRecloser.serial, brand: dataRecloser.brand })
+		const influxName = req.user.influx_name
+		const dataInflux = await dataRecloseInflux(
+			{ serial: dataRecloser.serial, brand: dataRecloser.brand },
+			influxName
+		)
 		const dataReturn = {
 			recloser: dataRecloser,
 			instantaneo: dataInflux,
@@ -138,10 +142,14 @@ const metrologiaIntantanea = async (req, res) => {
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getMetrologiaIntantanea({
-			serial: recloser.serial,
-			brand: recloser.version.brand.name,
-		})
+		const influxName = req.user.influx_name
+		const dataInflux = await getMetrologiaIntantanea(
+			{
+				serial: recloser.serial,
+				brand: recloser.version.brand.name,
+			},
+			influxName
+		)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
@@ -162,7 +170,11 @@ const listEvents = async (req, res) => {
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getListEvents({ serial: recloser.serial, brand: recloser.version.brand.name })
+		const influxName = req.user.influx_name
+		const dataInflux = await getListEvents(
+			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			influxName
+		)
 		const variables = await getListVariables()
 		const result = dataInflux.map((item) => {
 			item.variable.value = variables.find((variable) => variable.id_variable === item.variable.value).name
@@ -207,7 +219,11 @@ const tensionABCGraf = async (req, res) => {
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getTensionABC({ serial: recloser.serial, brand: recloser.version.brand.name })
+		const influxName = req.user.influx_name
+		const dataInflux = await getTensionABC(
+			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			influxName
+		)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
@@ -228,7 +244,11 @@ const corrientesGraf = async (req, res) => {
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getCorriente({ serial: recloser.serial, brand: recloser.version.brand.name })
+		const influxName = req.user.influx_name
+		const dataInflux = await getCorriente(
+			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			influxName
+		)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
@@ -249,7 +269,11 @@ const interruptions = async (req, res) => {
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getInterruption({ serial: recloser.serial, brand: recloser.version.brand.name })
+		const influxName = req.user.influx_name
+		const dataInflux = await getInterruption(
+			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			influxName
+		)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {

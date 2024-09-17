@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const { getUser } = require('../services/UserService')
+const { getUser } = require('../services/AuthService')
 const secret = process.env.SECRET
 const verifyToken = async (req, res, next) => {
 	try {
@@ -16,7 +16,7 @@ const verifyToken = async (req, res, next) => {
 		if (!user) {
 			throw new Error('El usuario ya no existe o fue suspendido')
 		}
-		req.user = { id: user.id }
+		req.user = { id: user.id, influx_name: decoded.influx_name }
 		next()
 	} catch (err) {
 		res.status(400).json({ message: err.message })
