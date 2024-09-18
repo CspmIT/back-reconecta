@@ -9,7 +9,7 @@ const recloserRoutes = require('./routes/Recloser.routes')
 const AuthRoutes = require('./routes/Auth.routes')
 const MigrationRoutes = require('./routes/Migration.routes')
 const UserRoutes = require('./routes/User.routes')
-// const privateRoutes = require('./routes/Private.routes')
+const NodeRoutes = require('./routes/Node.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -24,6 +24,7 @@ app.use('/api', recloserRoutes)
 app.use('/api', AuthRoutes)
 app.use('/api', MigrationRoutes)
 app.use('/api', UserRoutes)
+app.use('/api', NodeRoutes)
 
 app.listen(4000, () => {
 	console.log('Server is running on port 4000')

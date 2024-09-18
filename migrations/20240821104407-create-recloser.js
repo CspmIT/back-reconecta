@@ -9,17 +9,8 @@ module.exports = {
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			name: {
-				type: Sequelize.STRING,
-			},
 			serial: {
 				type: Sequelize.STRING,
-			},
-			lat_location: {
-				type: Sequelize.DECIMAL(11, 6),
-			},
-			lng_location: {
-				type: Sequelize.DECIMAL(11, 6),
 			},
 			status: {
 				type: Sequelize.BOOLEAN,
@@ -30,11 +21,12 @@ module.exports = {
 				type: Sequelize.TINYINT,
 				comment: '0= cerrado, 1= abierto, 2= sin tension, 3=sin datos o falla',
 			},
-			status_alarm_recloser: {
-				type: Sequelize.BOOLEAN,
+			id_node: {
+				type: Sequelize.INTEGER,
 			},
-			num_recloser: {
-				type: Sequelize.STRING,
+			config: {
+				type: Sequelize.TINYINT,
+				comment: '0= Comun, 1= Especial',
 			},
 			createdAt: {
 				allowNull: false,

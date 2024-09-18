@@ -1,47 +1,69 @@
-const { db, dbDesarrollo } = require('../models')
+const { Op } = require('sequelize')
+const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 
 /**
- * Guarda una lista de nuevos reconectadores en la base de datos.
- *
- * @param {Array<Object>} listRecloser - Un arreglo de objetos que representan los reconectadores a guardar.
- * @returns {Promise<Array<Object>>} Un mensaje de éxito, un arreglo con los reconectadores guardados, o el número total de reconectadores guardados.
- * @throws {Error} Lanza un error si ocurre algún problema al guardar los reconectadores.
- * @author  [Jose Romani] <jose.romani@hotmail.com>
- *
+ * Guarda o actualiza un reconectador en la base de datos.
+ * @param {Object} dataRecloser - Contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
+ * @returns {Promise<Object>} El reconectador guardado o actualizado.
+ * @throws {Error} Si ocurre algún problema durante la transacción.
+ * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const upMigrationRecloser = async (listRecloser) => {
-	return db.sequelize.transaction(async (t) => {
-		try {
-			const savedReclosers = []
-			for (const recloser of listRecloser) {
-				console.log(recloser)
-				const [Recloser, created] = await db.Recloser.findOrCreate({ where: { id: recloser.id }, defaults: { ...recloser }, transaction: t })
-				if (!created) {
-					await Recloser.update(recloser, { transaction: t })
-				}
-				// const savedRecloser = await db.Recloser.findOrCreate(recloser)
-				savedReclosers.push(Recloser)
-			}
-			return savedReclosers
-		} catch (error) {
-			throw error
+const saveRecloser = async (dataRecloser, transaction) => {
+	try {
+		let idVersion = null
+		if (dataRecloser.status) {
+			idVersion = await db.Version.findOne({
+				where: {
+					name: dataRecloser.version,
+				},
+			})
 		}
-	})
+		const data = dataRecloser.status
+			? {
+					id: dataRecloser.id || 0,
+					serial: dataRecloser.serial,
+					status: dataRecloser.status,
+					config: dataRecloser.config,
+					id_version: idVersion.id,
+					status_recloser: dataRecloser.status_recloser || null,
+					id_node: dataRecloser.id_node || null,
+			  }
+			: { ...dataRecloser }
+		const [Recloser, created] = await db.Recloser.findOrCreate({
+			where: { [Op.or]: [{ serial: data.serial }, { id: data.id }] },
+			defaults: { ...data },
+			transaction,
+		})
+		if (!created) {
+			await Recloser.update(data, { transaction })
+		}
+		return Recloser
+	} catch (error) {
+		throw error
+	}
 }
 
 /**
- * Obtiene todos los reconectadores de la base de datos de Desarrollo.
+ * Guarda o actualiza un reconectador en la base de datos.
+ * Si el reconectador con el número de serie especificado ya existe, se actualiza con los nuevos datos.
+ * Si no existe, se crea un nuevo registro en la base de datos.
  *
- * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan todos los reconectadores encontrados, o lanza un error si no se encuentra ninguno.
- * @author  [Jose Romani] <jose.romani@hotmail.com>
- *
+ * @param {Object} dataRecloser - Un objeto que contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
+ * @returns {Promise<Object>} El reconectador guardado o actualizado.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
+ * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const getAllRecloserDesarrollo = async () => {
+const saveNodeRecloser = async (dataRecloser, transaction) => {
 	try {
-		const RecloserDesarrollo = await dbDesarrollo.RecloserDesarrollo.findAll({ where: { status: 1 } })
-		if (!RecloserDesarrollo) throw new Error('No existe ningun reconectador')
-		return RecloserDesarrollo
+		const Recloser = await db.Recloser.update(dataRecloser, {
+			where: {
+				id: dataRecloser.id,
+			},
+			transaction,
+		})
+
+		return Recloser
 	} catch (error) {
 		throw error
 	}
@@ -56,9 +78,54 @@ const getAllRecloserDesarrollo = async () => {
  */
 const getAllRecloser = async () => {
 	try {
-		const RecloserDesarrollo = await db.Recloser.findAll({ where: { status: 1 } })
-		if (!RecloserDesarrollo) throw new Error('No existe ningun reconectador')
+		const RecloserDesarrollo = await db.Recloser.findAll({
+			where: { status: 1 },
+			include: {
+				association: 'version',
+				attributes: ['id', 'name'],
+				include: {
+					association: 'brand',
+					attributes: ['id', 'name'],
+				},
+			},
+		})
 		return RecloserDesarrollo
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Obtiene todos los reconectadores de la base de datos.
+ *
+ * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan todos los reconectadores encontrados, o lanza un error si no se encuentra ninguno.
+ * @author  [Jose Romani] <jose.romani@hotmail.com>
+ *
+ */
+const getReclosersEnabled = async () => {
+	try {
+		const recloser = await db.Recloser.findAll({
+			where: { status: 1 },
+			include: [
+				{
+					association: 'version',
+					attributes: ['id', 'name'],
+					include: {
+						association: 'brand',
+						attributes: ['id', 'name'],
+					},
+				},
+				{
+					association: 'history',
+				},
+			],
+		})
+		const result = recloser.filter((item) => {
+			if (item.history.every((rel) => rel.status == 0) || item.history.length == 0) {
+				return item
+			}
+		})
+		return result
 	} catch (error) {
 		throw error
 	}
@@ -89,6 +156,39 @@ const getRecloserId = async (id) => {
 		})
 		if (!Recloser) throw new Error('No existe ningun reconectador')
 		return Recloser
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Busca un reconectador específico en la base de datos por su ID.
+ *
+ * @param {number} id - El ID del reconectador que se desea buscar.
+ * @returns {Promise<Object|null>} Un objeto que representa el reconectador encontrado o lanza un error si no se encuentra.
+ * @author  [Jose Romani] <jose.romani@hotmail.com>
+ *
+ */
+const validateRecloser = async (id_recloser) => {
+	try {
+		const relationnode = await db.Node_History.findOne({
+			where: [
+				{
+					id_device: id_recloser,
+				},
+				{
+					status: 1,
+				},
+				{
+					type_device: 1,
+				},
+			],
+		})
+		if (relationnode === null) {
+			return false
+		} else {
+			return 'El reconectador ya esta relacionada a otro Nodo'
+		}
 	} catch (error) {
 		throw error
 	}
@@ -128,13 +228,13 @@ const brandRecloser = async (typeRecloser) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const dataRecloseInflux = async (data) => {
+const dataRecloseInflux = async (data, influxName) => {
 	try {
 		const query = `|> range(start: -3m, stop: now())
         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux) throw new Error('No existe ningun reconectador')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -164,7 +264,7 @@ const dataRecloseInflux = async (data) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  *
  */
-const getMetrologiaIntantanea = async (data) => {
+const getMetrologiaIntantanea = async (data, influxName) => {
 	try {
 		const query = `|> range(start: -30s, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
@@ -172,7 +272,7 @@ const getMetrologiaIntantanea = async (data) => {
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query)
+		let dataInflux = await ConsultaInflux(query, influxName)
 
 		if (!dataInflux) {
 			const fallbackQuery = `|> range(start: -1d, stop: now())
@@ -181,7 +281,7 @@ const getMetrologiaIntantanea = async (data) => {
 			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 			|> last()`
 
-			dataInflux = await ConsultaInflux(fallbackQuery)
+			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 		}
 		if (!dataInflux) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
@@ -209,7 +309,7 @@ const getMetrologiaIntantanea = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getListEvents = async (data) => {
+const getListEvents = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: 2022-11-01)
@@ -218,8 +318,7 @@ const getListEvents = async (data) => {
             |> sort(columns: ["_time"], desc: true)
             |> limit(n: 200)
         `
-		const dataInflux = await ConsultaInflux(query)
-		console.log(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 
 		let organizedData = []
@@ -262,7 +361,7 @@ const getListEvents = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getTensionABC = async (data) => {
+const getTensionABC = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
@@ -270,7 +369,7 @@ const getTensionABC = async (data) => {
             |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
 			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -294,7 +393,7 @@ const getTensionABC = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getCorriente = async (data) => {
+const getCorriente = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
@@ -302,7 +401,7 @@ const getCorriente = async (data) => {
             |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
 			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -326,7 +425,7 @@ const getCorriente = async (data) => {
  * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getInterruption = async (data) => {
+const getInterruption = async (data, influxName) => {
 	try {
 		const query = `
 			|> range(start: -2h)
@@ -336,7 +435,7 @@ const getInterruption = async (data) => {
 			|> sort(columns: ["_time"], desc: false)
 			|>limit(n: 1)
         `
-		const dataInflux = await ConsultaInflux(query)
+		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
@@ -352,4 +451,46 @@ const getInterruption = async (data) => {
 	}
 }
 
-module.exports = { getInterruption, getCorriente, getTensionABC, getListEvents, getMetrologiaIntantanea, getAllRecloserDesarrollo, upMigrationRecloser, getAllRecloser, getRecloserId, brandRecloser, dataRecloseInflux }
+/**
+ * Guarda o actualiza un reconectador en la base de datos.
+ * Si el reconectador con el número de serie especificado ya existe, se actualiza con los nuevos datos.
+ * Si no existe, se crea un nuevo registro en la base de datos.
+ *
+ * @param {Object} dataRecloser - Un objeto que contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
+ * @returns {Promise<Object>} El reconectador guardado o actualizado.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ */
+const getListVersions = async () => {
+	try {
+		const versions = await db.Brand.findAll({
+			where: {
+				status: 1,
+			},
+			attributes: ['id', 'name'],
+			include: {
+				association: 'version',
+				attributes: ['id', 'name'],
+			},
+		})
+		return versions
+	} catch (error) {
+		throw error
+	}
+}
+module.exports = {
+	getInterruption,
+	getCorriente,
+	getTensionABC,
+	getListEvents,
+	getMetrologiaIntantanea,
+	saveRecloser,
+	saveNodeRecloser,
+	getAllRecloser,
+	validateRecloser,
+	getRecloserId,
+	brandRecloser,
+	dataRecloseInflux,
+	getListVersions,
+	getReclosersEnabled,
+}
