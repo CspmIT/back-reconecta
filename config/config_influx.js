@@ -8,9 +8,9 @@ module.exports = {
 		INFLUX_BUCKET: 'ENERGIA',
 	},
 	externos: {
-		INFLUX_URL: '',
-		INFLUXDB_TOKEN: '',
-		INFLUX_ORG: '',
-		INFLUX_BUCKET: '',
+		INFLUX_URL: 'http://192.168.15.2:8086/',
+		INFLUXDB_TOKEN: 'y2quVyt0bou-eiGfu9U-q3dYCKbq6ESU-sWU_6BPGa3hgnPmxTHlPKX8vTfL0kALogJbmIYoO3u4C3p7XQdUIg==',
+		INFLUX_ORG: 'CoopMorteros',
+		INFLUX_BUCKET: 'IOT-ENERGIA',
 	},
 }

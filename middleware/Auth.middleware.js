@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const { getUser } = require('../services/AuthService')
+const { changeSchema } = require('../models')
 const secret = process.env.SECRET
 const verifyToken = async (req, res, next) => {
 	try {
@@ -12,6 +13,7 @@ const verifyToken = async (req, res, next) => {
 		if (!new Date(decoded.exp) > new Date()) {
 			throw new Error('El token ha expirado')
 		}
+		await changeSchema(decoded.iss.substring(4))
 		const user = await getUser(decoded.sub)
 		if (!user) {
 			throw new Error('El usuario ya no existe o fue suspendido')
