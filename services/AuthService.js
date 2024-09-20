@@ -9,6 +9,7 @@ const generateTokenCooptech = async (email, tokenCooptech, schemaName) => {
 	const dateHour = new Date().setHours(new Date().getHours() + 1)
 	const configSing = {
 		iss: `app-${schemaName}`,
+		nameApp: schemaName,
 		iat: new Date().getTime(),
 		exp: new Date(dateHour).getTime(),
 		email: email,
@@ -33,6 +34,7 @@ const signTokenCooptech = async (user, token_app, schemaName, influx_name) => {
 	const dateHour = new Date().setHours(new Date().getHours() + 8)
 	const configSing = {
 		iss: `app-${schemaName}`,
+		nameApp: schemaName,
 		sub: user.id,
 		iat: new Date().getTime(),
 		exp: new Date(dateHour).getTime(),
