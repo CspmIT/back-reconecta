@@ -13,6 +13,8 @@ const {
 	validateRecloser,
 	getListVersions,
 	getReclosersEnabled,
+	getInfoMap,
+	getStatusRecloser,
 } = require('../services/RecloserServices')
 const { getListVariables } = require('../services/VariablesServices')
 
@@ -26,11 +28,20 @@ const listAllRecloser = async (req, res) => {
 					const history = await searchRelationActive(recloser.id, 1)
 					relation = history?.nodes?.get() || []
 				}
+				const statusRecloser = await getStatusRecloser(
+					{
+						brand: recloser.version.brand.name,
+						serial: recloser.serial,
+					},
+					req.user.influx_name
+				)
+				const finalStatusRecloser =
+					statusRecloser !== null && statusRecloser !== undefined ? statusRecloser : recloser.status_recloser
 				return {
 					id: recloser.id,
 					serial: recloser.serial,
 					status: recloser.status,
-					status_recloser: recloser.status_recloser,
+					status_recloser: finalStatusRecloser,
 					config: recloser.config,
 					id_node: recloser.id_node || null,
 					id_relation: relation?.id || null,
@@ -392,6 +403,21 @@ const getVersions = async (req, res) => {
 		}
 	}
 }
+const getDataMap = async (req, res) => {
+	try {
+		const dataMap = await getInfoMap()
+		if (!dataMap) {
+			return res.status(404).json({ message: 'Dato de mapa no encontrado' })
+		}
+		res.status(200).json(dataMap)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
 module.exports = {
 	interruptions,
 	corrientesGraf,
@@ -406,4 +432,5 @@ module.exports = {
 	deleteRecloser,
 	unlinkRelation,
 	getVersions,
+	getDataMap,
 }

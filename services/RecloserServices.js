@@ -26,7 +26,7 @@ const saveRecloser = async (dataRecloser, transaction) => {
 					status: dataRecloser.status,
 					config: dataRecloser.config,
 					id_version: idVersion.id,
-					status_recloser: dataRecloser.status_recloser || null,
+					status_recloser: dataRecloser.status_recloser || 3,
 					id_node: dataRecloser.id_node || null,
 			  }
 			: { ...dataRecloser }
@@ -38,31 +38,6 @@ const saveRecloser = async (dataRecloser, transaction) => {
 		if (!created) {
 			await Recloser.update(data, { transaction })
 		}
-		return Recloser
-	} catch (error) {
-		throw error
-	}
-}
-
-/**
- * Guarda o actualiza un reconectador en la base de datos.
- * Si el reconectador con el número de serie especificado ya existe, se actualiza con los nuevos datos.
- * Si no existe, se crea un nuevo registro en la base de datos.
- *
- * @param {Object} dataRecloser - Un objeto que contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
- * @returns {Promise<Object>} El reconectador guardado o actualizado.
- * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
- * @author  [José Romani] <jose.romani@hotmail.com>
- */
-const saveNodeRecloser = async (dataRecloser, transaction) => {
-	try {
-		const Recloser = await db.Recloser.update(dataRecloser, {
-			where: {
-				id: dataRecloser.id,
-			},
-			transaction,
-		})
-
 		return Recloser
 	} catch (error) {
 		throw error
@@ -250,6 +225,62 @@ const dataRecloseInflux = async (data, influxName) => {
 			})
 		}
 		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando hasta 3 minutos hacia atrás.
+ * Si no encuentra datos recientes, lanza un error.
+ *
+ * @param {Object} data - Un objeto con la información del reconectador, incluyendo su marca y número de serie.
+ * @param {string} influxName - El nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<number>} El estado del reconectador, donde:
+ *  0 = Cerrado,
+ *  1 = Abierto,
+ *  2 = Sin Conexion,
+ *  3 = Falla
+ * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
+ * @author  [Jose Romani]  <jose.romani@hotmail.com>
+ */
+const getStatusRecloser = async (data, influxName) => {
+	try {
+		const query = `|> range(start: -3m, stop: now())
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+        |> filter(fn: (r) => r["_field"] == "ac" or r["_field"] == "d/c")
+        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+		|> last()`
+
+		let dataInflux = await ConsultaInflux(query, influxName)
+		if (!dataInflux || dataInflux.length === 0)
+			throw new Error('No se encontraron datos en InfluxDB para el reconectador.')
+		let dataReturn = {}
+		for (const element of dataInflux) {
+			if (!dataReturn[element._field]) {
+				dataReturn[element._field] = []
+			}
+			dataReturn[element._field].push({
+				field: element._field,
+				value: element._value,
+				time: element._time,
+			})
+		}
+
+		let status = 2
+		if (dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 1) {
+			status = 0
+		}
+		if (
+			(dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 0) ||
+			(dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 0)
+		) {
+			status = 1
+		}
+		if (dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 1) {
+			status = 3
+		}
+		return status
 	} catch (error) {
 		throw error
 	}
@@ -478,14 +509,31 @@ const getListVersions = async () => {
 		throw error
 	}
 }
+
+/**
+ * Obtiene todas las ubicaciones del mapa con un estado activo (status = 1).
+ *
+ * @returns {Promise<Array>} Una promesa que resuelve en un array de ubicaciones activas del mapa.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ */
+const getInfoMap = async () => {
+	try {
+		const dataMap = await db.MapLocation.findAll({ where: { status: 1 } })
+		return dataMap
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	getInterruption,
 	getCorriente,
+	getStatusRecloser,
 	getTensionABC,
 	getListEvents,
 	getMetrologiaIntantanea,
 	saveRecloser,
-	saveNodeRecloser,
 	getAllRecloser,
 	validateRecloser,
 	getRecloserId,
@@ -493,4 +541,5 @@ module.exports = {
 	dataRecloseInflux,
 	getListVersions,
 	getReclosersEnabled,
+	getInfoMap,
 }

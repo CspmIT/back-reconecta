@@ -1,3 +1,4 @@
+const { where } = require('sequelize')
 const { db } = require('../models')
 
 /**
@@ -38,6 +39,8 @@ const ListNode = async () => {
 			where: { status: 1 },
 			include: {
 				association: 'node_history',
+				required: false,
+				where: { status: 1 },
 			},
 		})
 		return Nodes
@@ -111,7 +114,7 @@ const addNode = async (dataNode, transaction) => {
 			type: dataNode.type,
 		}
 		const [Node, created] = await db.Node.findOrCreate({
-			where: { number: data.number },
+			where: [{ number: data.number }],
 			defaults: { ...data },
 			transaction,
 		})
@@ -213,6 +216,45 @@ const validateRelation = async (data) => {
 	}
 }
 
+/**
+ * Desvincula un nodo de la base de datos actualizando su estado a inactivo.
+ *
+ * @param {number} id - El ID del nodo que se desea desvincular.
+ * @returns {Promise<Object>} Devuelve el resultado de la actualización del nodo.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la operación.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ *
+ */
+const unLinkNode = async (id) => {
+	try {
+		const Node_History = await db.Node_History.update(
+			{ status: 0 },
+			{ where: { id_node: id }, transaction: transaction }
+		)
+		return Node_History
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Desvincula un nodo de la base de datos actualizando su estado a inactivo.
+ *
+ * @param {number} id - El ID del nodo que se desea desvincular.
+ * @returns {Promise<Object>} Devuelve el resultado de la actualización del nodo.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la operación.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ *
+ */
+const removeNode = async (id) => {
+	try {
+		const Node = await db.Node.update({ status: 0 }, { where: { id: id }, transaction: transaction })
+		return Node
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	searchNode,
 	ListNode,
@@ -222,4 +264,6 @@ module.exports = {
 	saveRelation,
 	validateNode,
 	validateRelation,
+	unLinkNode,
+	removeNode,
 }

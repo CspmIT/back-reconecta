@@ -1,15 +1,16 @@
 const { db } = require('../models')
 const {
 	ListNode,
-	ListNodeEnable,
 	addNode,
 	saveRelation,
 	ListNode_history,
 	validateNode,
 	validateRelation,
 	searchNode,
+	unLinkNode,
+	removeNode,
 } = require('../services/NodeService')
-const { saveNodeRecloser, saveRecloser } = require('../services/RecloserServices')
+const { saveRecloser } = require('../services/RecloserServices')
 
 const getListNode = async (req, res) => {
 	try {
@@ -30,6 +31,45 @@ const getNodexId = async (req, res) => {
 		}
 		const result = await searchNode(req.query.id)
 		return res.status(200).json(result)
+	} catch (error) {
+		if (error.errors) {
+			res.status(500).json(error.errors)
+		} else {
+			res.status(400).json(error.message)
+		}
+	}
+}
+
+const unlinkRelationNode = async (req, res) => {
+	try {
+		transaction = await db.sequelize.transaction()
+		if (!req.body.id) {
+			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
+		}
+		const saveUnLink = await unLinkNode(req.body.id, transaction)
+		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
+		await transaction.commit()
+		res.status(200).json(saveUnLink)
+	} catch (error) {
+		if (error.errors) {
+			res.status(500).json(error.errors)
+		} else {
+			res.status(400).json(error.message)
+		}
+	}
+}
+const deleteNode = async (req, res) => {
+	try {
+		transaction = await db.sequelize.transaction()
+		if (!req.body.id) {
+			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
+		}
+		const saveUnLink = await unLinkNode(req.body.id, transaction)
+		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
+		const saveDelete = await removeNode(req.body.id, transaction)
+		if (!saveDelete) throw new Error('Error al eliminar el Nodo.')
+		await transaction.commit()
+		res.status(200).json(saveDelete)
 	} catch (error) {
 		if (error.errors) {
 			res.status(500).json(error.errors)
@@ -121,4 +161,6 @@ module.exports = {
 	getListNode,
 	saveNode,
 	getNodexId,
+	unlinkRelationNode,
+	deleteNode,
 }
