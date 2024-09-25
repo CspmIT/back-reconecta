@@ -15,6 +15,7 @@ const {
 	deleteRecloser,
 	unlinkRelation,
 	listReclosersEnabled,
+	getDataMap,
 } = require('../controllers/Recloser.controllers')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
@@ -31,5 +32,7 @@ router.get('/interruptions', verifyToken, interruptions)
 router.post('/addRecloser', verifyToken, addRecloser)
 router.post('/deleteRecloser', verifyToken, deleteRecloser)
 router.post('/unlinkRelation', verifyToken, unlinkRelation)
+
+router.get('/getDataMap', verifyToken, getDataMap)
 
 module.exports = router
