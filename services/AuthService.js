@@ -3,22 +3,6 @@ const jwt = require('jsonwebtoken')
 const { changeSchema, db } = require('../models')
 const secret = process.env.SECRET
 
-// Funcion para firmar el token para pasar por url para logearse desde cooptech
-const generateTokenCooptech = async (email, tokenCooptech, schemaName) => {
-	// Seteo de fecha con 8horas mas para expiracion
-	const dateHour = new Date().setHours(new Date().getHours() + 1)
-	const configSing = {
-		iss: `app-${schemaName}`,
-		nameApp: schemaName,
-		iat: new Date().getTime(),
-		exp: new Date(dateHour).getTime(),
-		email: email,
-		token: tokenCooptech,
-		schemaName,
-	}
-
-	return jwt.sign(configSing, secret)
-}
 const getEnabledUser = async (email, schemaName) => {
 	try {
 		await changeSchema(schemaName)
@@ -29,7 +13,7 @@ const getEnabledUser = async (email, schemaName) => {
 	}
 }
 // Funcion para firmar el token para usuario interno
-const signTokenCooptech = async (user, token_app, schemaName, influx_name) => {
+const signTokenCooptech = async (user, tokenApp, schemaName, influx_name) => {
 	// Seteo de fecha con 8horas mas para expiracion
 	const dateHour = new Date().setHours(new Date().getHours() + 8)
 	const configSing = {
@@ -43,9 +27,33 @@ const signTokenCooptech = async (user, token_app, schemaName, influx_name) => {
 		profile: user.profile,
 		dark: user.dark,
 		email: user.email,
-		token: token_app,
+		token: tokenApp,
 		influx_name: influx_name,
 		img_profile: user.img_profile,
+	}
+	return jwt.sign(configSing, secret)
+}
+// Funcion para firmar el token para usuario interno, que viene desde cooptech
+const signTokenCooptechExternal = async (user, tokenApp, schemaName, influx_name, cliente, user_id, tokenCooptech) => {
+	// Seteo de fecha con 8horas mas para expiracion
+	const dateHour = new Date().setHours(new Date().getHours() + 8)
+	const configSing = {
+		iss: `app-${schemaName}`,
+		nameApp: schemaName,
+		sub: user.id,
+		iat: new Date().getTime(),
+		exp: new Date(dateHour).getTime(),
+		name: user.first_name,
+		lastName: user.last_name,
+		profile: user.profile,
+		dark: user.dark,
+		email: user.email,
+		token: tokenApp,
+		influx_name: influx_name,
+		img_profile: user.img_profile,
+		cliente,
+		user_id_cooptech: user_id,
+		tokenCooptech: tokenCooptech,
 	}
 	return jwt.sign(configSing, secret)
 }
@@ -68,4 +76,4 @@ const getUser = async (id) => {
 		throw error
 	}
 }
-module.exports = { generateTokenCooptech, getEnabledUser, signTokenCooptech, getUser }
+module.exports = { getEnabledUser, signTokenCooptech, signTokenCooptechExternal, getUser }
