@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
 	RecloserPassword.init(
 		{
 			password: DataTypes.STRING,
-			status: DataTypes.BOOLEAN,
+			status: { type: DataTypes.BOOLEAN, defaultValue: 1 },
 			id_user: DataTypes.BIGINT,
 		},
 		{
