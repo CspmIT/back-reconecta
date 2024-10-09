@@ -1,0 +1,117 @@
+'use strict'
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+	async up(queryInterface, Sequelize) {
+		const date = new Date()
+		await queryInterface.bulkInsert(
+			'Menus',
+			[
+				{
+					name: 'Mapa',
+					link: 'map',
+					icon: 'FaMapMarkedAlt',
+					level: '1',
+					group_menu: '1',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Diagrama',
+					link: 'Diagram',
+					icon: 'FaProjectDiagram',
+					level: '1',
+					group_menu: '2',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Bitácora',
+					link: 'bitacora',
+					icon: 'MdContentPaste',
+					level: '1',
+					group_menu: '3',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Configuración',
+					link: null,
+					icon: 'FaCogs',
+					level: '1',
+					group_menu: '4',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Accesos',
+					link: 'config/menu',
+					icon: 'BsFillMenuButtonWideFill',
+					level: '2',
+					group_menu: '4',
+					sub_menu: '4',
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Notificaciones',
+					link: '/config/notifications',
+					icon: 'MdNotificationsActive',
+					level: '2',
+					group_menu: '4',
+					sub_menu: '4',
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Dashboard',
+					link: '/home',
+					icon: 'RiDashboardFill',
+					level: '1',
+					group_menu: '5',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'Alerta',
+					link: '/Alert',
+					icon: 'RiAlertFill',
+					level: '1',
+					group_menu: '6',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+				{
+					name: 'ABM Equipos',
+					link: '',
+					icon: 'FaFile',
+					level: '1',
+					group_menu: '7',
+					sub_menu: null,
+					status: '1',
+					createdAt: date,
+					updatedAt: date,
+				},
+			],
+			{}
+		)
+	},
+
+	async down(queryInterface, Sequelize) {
+		await queryInterface.bulkDelete('Menus', null, {})
+	},
+}

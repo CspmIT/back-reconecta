@@ -5,8 +5,10 @@ const secret = process.env.SECRET
 
 const getEnabledUser = async (email, schemaName) => {
 	try {
-		await changeSchema(schemaName)
+		// await changeSchema(schemaName)
+		console.log(schemaName)
 		const user = await db.User.findOne({ where: { email: email } })
+		console.log(schemaName)
 		return user
 	} catch (error) {
 		throw error
