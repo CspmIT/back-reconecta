@@ -19,7 +19,7 @@ const {
 } = require('../controllers/Recloser.controllers')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
-router.get('/getAllReclosers', listAllRecloser)
+router.get('/getAllReclosers', verifyToken, listAllRecloser)
 router.get('/getReclosersEnabled', verifyToken, listReclosersEnabled)
 router.get('/getRecloserxID', verifyToken, getRecloserxID)
 router.get('/getVersions', verifyToken, getVersions)

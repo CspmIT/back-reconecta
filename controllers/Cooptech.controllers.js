@@ -18,10 +18,8 @@ const relationUserCooptech = async (req, res) => {
 }
 const loginCooptech = async (req, res) => {
 	try {
-		console.log('hola')
 		const { email, tokenApp, schemaName, influx_name } = req.body
 		const user = await getEnabledUser(email, schemaName)
-		console.log(user)
 		if (!user) {
 			throw new Error('El usuario o la contraseña son incorrectas')
 		}
