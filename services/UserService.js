@@ -83,9 +83,27 @@ const savePassRecloser = async (dataRecloser, transaction) => {
 	}
 }
 
+/**
+ * Obtiene todos los usuarios activos junto con su relación de contraseñas de reconectadores.
+ * Se incluyen aquellos usuarios cuyo `status` sea igual a 1 y que tengan una asociación con la entidad `passwordRecloser`.
+ *
+ * @returns {Promise<Array<Object>>} Lista de usuarios activos con la relación de contraseñas de reconectadores.
+ * @throws {Error} Si ocurre algún problema durante la consulta o la inclusión de las asociaciones.
+ * @author [José Romani] <jose.romani@hotmail.com>
+ */
+const getAllProfile = async () => {
+	try {
+		const listProfiles = await db.Profile.findAll()
+		return listProfiles
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	getAllUser,
 	getAllUserPass,
 	getPassxID,
 	savePassRecloser,
+	getAllProfile,
 }

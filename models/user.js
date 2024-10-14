@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
 		static associate(models) {
 			// define association here
 			this.belongsTo(models.RecloserPassword, { foreignKey: 'id', targetKey: 'id_user', as: 'passwordRecloser' })
+			this.hasMany(models.Menu_selected, { foreignKey: 'id', targetKey: 'id_user', as: 'Menu' })
 		}
 	}
 	User.init(
