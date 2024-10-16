@@ -16,7 +16,9 @@ const {
 	unlinkRelation,
 	listReclosersEnabled,
 	getDataMap,
+	controlAction,
 } = require('../controllers/Recloser.controllers')
+const { testMQTT, sendMQTT } = require('../controllers/Mqtt.controllers')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
 router.get('/getAllReclosers', verifyToken, listAllRecloser)
@@ -34,5 +36,9 @@ router.post('/deleteRecloser', verifyToken, deleteRecloser)
 router.post('/unlinkRelation', verifyToken, unlinkRelation)
 
 router.get('/getDataMap', verifyToken, getDataMap)
+// Section MQTT
+router.get('/testMQTT', testMQTT)
+router.post('/sendMQTT', verifyToken, sendMQTT)
+router.post('/controlAction', verifyToken, controlAction)
 
 module.exports = router

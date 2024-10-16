@@ -15,6 +15,7 @@ const {
 	getReclosersEnabled,
 	getInfoMap,
 	getStatusRecloser,
+	controlChange,
 } = require('../services/RecloserServices')
 const { getListVariables } = require('../services/VariablesServices')
 
@@ -418,6 +419,19 @@ const getDataMap = async (req, res) => {
 		}
 	}
 }
+const controlAction = async (req, res) => {
+	try {
+		const influxName = req.user.influx_name
+		const dataInflux = await controlChange({ ...req.body }, influxName)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
 module.exports = {
 	interruptions,
 	corrientesGraf,
@@ -433,4 +447,5 @@ module.exports = {
 	unlinkRelation,
 	getVersions,
 	getDataMap,
+	controlAction,
 }

@@ -14,11 +14,8 @@ module.exports = (sequelize, DataTypes) => {
 	RecloserSendMqtt.init(
 		{
 			serial: DataTypes.STRING,
-			type: DataTypes.INTEGER,
 			action: DataTypes.STRING,
-			date_send: DataTypes.DATE,
 			status: DataTypes.BOOLEAN,
-			message: DataTypes.STRING,
 			id_user: DataTypes.BIGINT,
 		},
 		{

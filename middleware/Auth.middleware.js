@@ -18,7 +18,7 @@ const verifyToken = async (req, res, next) => {
 		if (!user) {
 			throw new Error('El usuario ya no existe o fue suspendido')
 		}
-		req.user = { id: user.id, influx_name: decoded.influx_name }
+		req.user = { id: user.id, influx_name: decoded.influx_name, name_Mqtt: decoded.nameApp }
 		next()
 	} catch (err) {
 		res.status(400).json({ message: err.message })

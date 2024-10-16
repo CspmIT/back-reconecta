@@ -1,0 +1,58 @@
+require('dotenv').config() // Para cargar las variables de entorno desde un archivo .env
+
+module.exports = {
+	reconecta: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+	reconecta_rioprimero: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+	reconecta_santarosa: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+	reconecta_devoto: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+	reconecta_caroya: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+	reconecta_arroyito: {
+		host: '200.63.120.50',
+		port: 52883,
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: true,
+	},
+}
