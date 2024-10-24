@@ -10,6 +10,7 @@ const AuthRoutes = require('./routes/Auth.routes')
 const MigrationRoutes = require('./routes/Migration.routes')
 const UserRoutes = require('./routes/User.routes')
 const NodeRoutes = require('./routes/Node.routes')
+const AlarmRoutes = require('./routes/Alarm.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -25,6 +26,7 @@ app.use('/api', AuthRoutes)
 app.use('/api', MigrationRoutes)
 app.use('/api', UserRoutes)
 app.use('/api', NodeRoutes)
+app.use('/api', AlarmRoutes)
 
 app.listen(4000, () => {
 	console.log('Server is running on port 4000')

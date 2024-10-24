@@ -4,7 +4,7 @@ const { changeSchema } = require('../models')
 const secret = process.env.SECRET
 const verifyToken = async (req, res, next) => {
 	try {
-		const token = req.cookies.token || req.headers.authorization.slice(7)
+		const token = req.cookies.token || req.headers?.authorization?.slice(7)
 		// Verifico que el token exista
 		if (!token) {
 			throw new Error('No se ha enviado el token')
@@ -18,7 +18,7 @@ const verifyToken = async (req, res, next) => {
 		if (!user) {
 			throw new Error('El usuario ya no existe o fue suspendido')
 		}
-		req.user = { id: user.id, influx_name: decoded.influx_name, name_Mqtt: decoded.nameApp }
+		req.user = { id: user.id, influx_name: decoded.influx_name, name_coop: decoded.nameApp }
 		next()
 	} catch (err) {
 		res.status(400).json({ message: err.message })

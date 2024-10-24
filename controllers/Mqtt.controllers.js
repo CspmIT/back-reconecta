@@ -1,6 +1,7 @@
 const mqtt = require('mqtt')
 const config_Mqtt = require('../config/config_Mqtt')
 const { saveSendActionMQTT } = require('../services/SendMqttServices')
+const { getConectionMqtt } = require('../services/MqttService')
 const testMQTT = async () => {
 	const client = mqtt.connect({
 		host: '200.63.120.50',
@@ -37,7 +38,7 @@ const sendMQTT = async (req, res) => {
 		if (!req.body.action || !req.body.brand || !req.body.serial || !req.body.id_recloser) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const configMqtt = config_Mqtt[req.user.name_Mqtt]
+		const configMqtt = await getConectionMqtt()
 		const client = mqtt.connect(configMqtt)
 		client.on('connect', () => {
 			// Publicar en el tópico

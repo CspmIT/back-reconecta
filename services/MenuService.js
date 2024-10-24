@@ -11,7 +11,9 @@ const { db } = require('../models')
  */
 const getMenus = async () => {
 	try {
-		const Variables = await db.Menu.findAll()
+		const Variables = await db.Menu.findAll({
+			order: [['order']],
+		})
 		if (!Variables) throw new Error('No existe ningun reconectador')
 		return Variables.map((variable) => variable.get({ plain: true }))
 	} catch (error) {
