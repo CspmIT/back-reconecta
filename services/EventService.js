@@ -1,18 +1,18 @@
 const { db } = require('../models')
 
 const typeDeviceInflux = {
-	Reconectadores: 'Recloser',
+	Reconectadores: 'Reconectador',
 	Analizador: 'Analizador',
 	Meter: 'Medidor',
 }
 /**
- * Obtiene la configuración MQTT de una cooperativa desde la base de datos.
+ * Busca y habilita la alarma de un dispositivo recloser basado en el evento MQTT recibido.
  *
- * @returns {Promise<Object>} Un objeto con la configuración MQTT que incluye el host, puerto y contraseña.
- * @throws {Error} Si no se encuentran los parámetros necesarios en la base de datos.
- * @author  Jose Romani <jose.romani@hotmail.com>
+ * @param {Object} event - El evento MQTT recibido, contiene información del dispositivo y el evento.
+ * @returns {Promise<Object|boolean>} Un objeto con información del dispositivo, evento y tipo de dispositivo si la alarma es válida, o false si no.
+ * @throws {Error} Si ocurre un error al obtener la información o procesar el evento.
+ * @author Jose Romani <jose.romani@hotmail.com>
  */
-
 const searchEnableAlarm = async (event) => {
 	try {
 		const nroSerie = event.topic.split('/')[4]
@@ -53,6 +53,16 @@ const searchEnableAlarm = async (event) => {
 		throw new Error(`Error al obtener configuración MQTT: ${error.message}`)
 	}
 }
+
+/**
+ * Obtiene un dispositivo recloser por su número de serie y marca.
+ *
+ * @param {string} nroSerie - El número de serie del dispositivo.
+ * @param {string} brand - La marca del dispositivo.
+ * @returns {Promise<Array>} Una lista de dispositivos recloser que coinciden con el número de serie y la marca.
+ * @throws {Error} Si ocurre un error al buscar el dispositivo en la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
 const getDevicexSerieBrand = async (nroSerie, brand) => {
 	const Recloser = await db.Recloser.findAll({
 		where: [{ serial: nroSerie }],
@@ -76,6 +86,16 @@ const getDevicexSerieBrand = async (nroSerie, brand) => {
 	const recoEnable = Recloser.filter((item) => item.version)
 	return recoEnable
 }
+
+/**
+ * Guarda o actualiza una alerta enviada para un dispositivo.
+ *
+ * @param {Object} data - Los datos de la alerta que se enviará, incluye id_device, type, id_event, entre otros.
+ * @returns {Promise<Object>} La alerta enviada o actualizada en la base de datos.
+ * @throws {Error} Si ocurre un error durante la transacción o la operación en la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
+
 const saveAlertSend = async (data) => {
 	return db.sequelize.transaction(async (t) => {
 		try {
@@ -93,6 +113,16 @@ const saveAlertSend = async (data) => {
 		}
 	})
 }
+
+/**
+ * Guarda un registro en el log de alarmas.
+ *
+ * @param {Object} data - Los datos de la alarma que se guardarán en el log.
+ * @returns {Promise<Object>} El log de la alarma creada en la base de datos.
+ * @throws {Error} Si ocurre un error al crear el log en la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
+
 const saveLogAlert = async (data) => {
 	try {
 		const Logs_Alarm = await db.Logs_Alarm.create(data)
@@ -101,9 +131,45 @@ const saveLogAlert = async (data) => {
 		throw error
 	}
 }
+
+const getAllEvents = async () => {
+	const Events = await db.Event.findAll({
+		where: { status: 1 },
+	})
+	const versions = await db.Version.findAll({
+		where: { status: 1 },
+		include: [
+			{
+				association: 'brand',
+			},
+		],
+	})
+
+	const dataResult = Events.reduce((acc, current) => {
+		const version = versions.find((item) => item.id == current.id_version)
+		if (!acc[current.type]) {
+			acc[current.type] = { [version?.brand?.name]: { [version.name]: [] } }
+		}
+		if (!acc[current.type][version?.brand?.name]) {
+			acc[current.type][version?.brand?.name][version.name] = []
+		}
+		acc[current.type][version?.brand?.name][version.name].push(current.get({ plain: true }))
+		return acc
+	}, {})
+
+	return dataResult
+}
+const saveNotify = async (data) => {
+	const dataResult = await db.Event.bulkCreate(data, {
+		updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
+	})
+	return dataResult
+}
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
 	saveAlertSend,
 	saveLogAlert,
+	getAllEvents,
+	saveNotify,
 }
