@@ -153,6 +153,9 @@ const getAllEvents = async () => {
 		if (!acc[current.type][version?.brand?.name]) {
 			acc[current.type][version?.brand?.name][version.name] = []
 		}
+		if (!acc[current.type][version?.brand?.name][version.name]) {
+			acc[current.type][version?.brand?.name][version.name] = []
+		}
 		acc[current.type][version?.brand?.name][version.name].push(current.get({ plain: true }))
 		return acc
 	}, {})

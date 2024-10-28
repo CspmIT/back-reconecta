@@ -1,5 +1,4 @@
 const mqtt = require('mqtt')
-const config_Mqtt = require('../config/config_Mqtt')
 const { saveSendActionMQTT } = require('../services/SendMqttServices')
 const { getConectionMqtt } = require('../services/MqttService')
 const testMQTT = async () => {

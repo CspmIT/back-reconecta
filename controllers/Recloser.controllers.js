@@ -50,6 +50,7 @@ const listAllRecloser = async (req, res) => {
 					number: relation?.number || null,
 					version: `${recloser.version.name} ${recloser.version.brand.name}`,
 					id_version: recloser.version.id,
+					brand: recloser.version.brand.name,
 				}
 			})
 		)
