@@ -3,7 +3,7 @@ const { verifyToken } = require('../middleware/Auth.middleware')
 const router = express.Router()
 let isComponentInUse = false
 let accessExpiration = null
-const ACCESS_TIMEOUT = 1 * 60 * 5000 // 5 minutes
+const ACCESS_TIMEOUT = 1 * 60 * 1500
 
 router.get('/check-access-Config', verifyToken, (req, res) => {
 	if (isComponentInUse && isComponentInUse != req.user.id && Date.now() < accessExpiration) {
