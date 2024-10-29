@@ -27,16 +27,15 @@ module.exports = {
 				}
 			})
 			socket.on('disconnect-acces-config', async (user) => {
-				const Parameter = await db.Parameter.findOne({
-					where: [{ name: 'userActConfig' }, { value: user }],
+				const parameter = await db.Parameter.findOne({
+					where: [{ name: 'userActConfig' }],
 				})
-				if (!Parameter) {
+				if (parameter.value == user) {
 					await db.Parameter.update({ value: 0 }, { where: [{ type: 'Config' }, { name: 'userActConfig' }] })
 				}
 			})
 
 			socket.on('disconnect', async () => {
-				//
 				console.log('Cliente desconectado:', socket.id)
 			})
 		})
