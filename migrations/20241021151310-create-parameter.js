@@ -15,7 +15,7 @@ module.exports = {
 			},
 			type: {
 				type: Sequelize.ENUM,
-				values: ['Telegram', 'Mqtt', 'Influx'],
+				values: ['Telegram', 'Mqtt', 'Influx', 'Config'],
 			},
 			value: {
 				type: Sequelize.JSON,
