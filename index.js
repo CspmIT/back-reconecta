@@ -33,7 +33,10 @@ app.use('/api', AlarmRoutes)
 app.use('/api', AlarmEvent)
 
 const server = http.createServer(app)
-socketConfig.init(server)
+app.use('/api', (req, res, next) => {
+	socketConfig.init(server) // Inicializa el socket en la ruta /api/socket
+	next()
+})
 server.listen(4000, () => {
 	console.log('Server is running on port 4000')
 	console.log('http://localhost:4000')

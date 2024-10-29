@@ -4,6 +4,7 @@ let io
 module.exports = {
 	init: (server) => {
 		io = socketIo(server, {
+			path: '/api/socket.io',
 			cors: {
 				origin: '*',
 				methods: ['GET', 'POST'],
