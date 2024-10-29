@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
 	Parameter.init(
 		{
 			name: DataTypes.STRING,
-			type: DataTypes.ENUM('Telegram', 'Mqtt', 'Influx'),
+			type: DataTypes.ENUM('Telegram', 'Mqtt', 'Influx', 'Config'),
 			value: DataTypes.JSON,
 		},
 		{

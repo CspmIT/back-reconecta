@@ -6,6 +6,7 @@ const verifyToken = async (req, res, next) => {
 	try {
 		const token = req.cookies.token || req.headers?.authorization?.slice(7)
 		// Verifico que el token exista
+		console.log(token)
 		if (!token) {
 			throw new Error('No se ha enviado el token')
 		}
