@@ -1,7 +1,7 @@
 'use strict'
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
-	class Menu extends Model {
+	class Alarms_sents extends Model {
 		/**
 		 * Helper method for defining associations.
 		 * This method is not a part of Sequelize lifecycle.
@@ -11,21 +11,17 @@ module.exports = (sequelize, DataTypes) => {
 			// define association here
 		}
 	}
-	Menu.init(
+	Alarms_sents.init(
 		{
-			name: DataTypes.STRING,
-			link: DataTypes.STRING,
-			icon: DataTypes.STRING,
-			level: DataTypes.TINYINT,
-			group_menu: DataTypes.TINYINT,
-			sub_menu: DataTypes.INTEGER,
+			id_device: DataTypes.INTEGER,
+			type: DataTypes.ENUM('Recloser', 'Medidor', 'Analizador'),
+			id_event: DataTypes.INTEGER,
 			status: DataTypes.BOOLEAN,
-			order: DataTypes.INTEGER,
 		},
 		{
 			sequelize,
-			modelName: 'Menu',
+			modelName: 'Alarms_sents',
 		}
 	)
-	return Menu
+	return Alarms_sents
 }

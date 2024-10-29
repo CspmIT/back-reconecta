@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
 			serial: DataTypes.STRING,
 			status: DataTypes.BOOLEAN,
 			status_recloser: DataTypes.INTEGER,
+			status_alarm: DataTypes.BOOLEAN,
 			config: DataTypes.TINYINT,
 			id_node: DataTypes.INTEGER,
 			id_version: DataTypes.INTEGER,

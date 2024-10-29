@@ -2,18 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('RecloserSendMqtts', {
+		await queryInterface.createTable('Alarms_sents', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			serial: {
-				type: Sequelize.STRING,
+			id_device: {
+				type: Sequelize.INTEGER,
+				allowNull: false,
 			},
-			action: {
-				type: Sequelize.STRING,
+			type: {
+				type: Sequelize.ENUM,
+				values: ['Recloser', 'Medidor', 'Analizador'],
+			},
+			id_event: {
+				type: Sequelize.INTEGER,
+				references: {
+					model: 'Events',
+					key: 'id',
+				},
+				allowNull: false,
+				onUpdate: 'CASCADE',
+				onDelete: 'CASCADE',
 			},
 			status: {
 				type: Sequelize.BOOLEAN,
@@ -29,6 +41,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('RecloserSendMqtts')
+		await queryInterface.dropTable('Alarms_sents')
 	},
 }

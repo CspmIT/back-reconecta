@@ -253,8 +253,8 @@ const getStatusRecloser = async (data, influxName) => {
 		|> last()`
 
 		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0)
-			throw new Error('No se encontraron datos en InfluxDB para el reconectador.')
+		if (!dataInflux || dataInflux.length === 0) return 3
+		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
 		let dataReturn = {}
 		for (const element of dataInflux) {
 			if (!dataReturn[element._field]) {
@@ -483,6 +483,71 @@ const getInterruption = async (data, influxName) => {
 }
 
 /**
+ * Controla cambios en el estado de un reconectador consultando los últimos eventos en InfluxDB.
+ * Realiza una consulta para verificar si un comando fue ejecutado correctamente, buscando un valor específico en el campo de datos de un reconectador en un período de 3 minutos.
+ * Si el comando no se ejecuta correctamente, intenta verificar un campo de reconocimiento ('c/d_ack').
+ *
+ * @param {Object} data - Un objeto con la información del reconectador, incluyendo la marca, número de serie, campo a consultar y acción esperada.
+ * @param {string} influxName - El nombre de la base de datos de InfluxDB donde se realizará la consulta.
+ * @returns {Promise<boolean>} - Retorna un valor booleano que indica si el reconectador ejecutó el comando correctamente.
+ * @throws {Error} Lanza un error si no se encuentran datos en la base de datos o si el reconectador no ejecuta el comando.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const controlChange = async (data, influxName) => {
+	try {
+		const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+		const baseQuery = `|> range(start: -3m, stop: now())
+                        |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+                        |> filter(fn: (r) => r["_field"] == "${data.field}")
+                        |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
+		let status = false
+		for (let attempt = 0; attempt < 11; attempt++) {
+			const dataInflux = await ConsultaInflux(baseQuery, influxName)
+
+			if (!dataInflux || dataInflux.length === 0) {
+				throw new Error('No se encontró valor en la base de datos.')
+			}
+
+			for (const element of dataInflux) {
+				if (element._value == data.action) {
+					status = true
+					break
+				}
+			}
+			if (attempt === 10) {
+				if (data.field === 'd/c') {
+					const queryDC = `|> range(start: -1m, stop: now())
+                        |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+                        |> filter(fn: (r) => r["_field"] == "c/d_ack")
+                        |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
+
+					const newDataInflux2 = await ConsultaInflux(queryDC, influxName)
+
+					if (!newDataInflux2 || newDataInflux2.length === 0) {
+						throw new Error('No se encontró valor en la base de datos.')
+					}
+
+					for (const element of newDataInflux2) {
+						if (element._value == data.action) {
+							throw new Error('El reconectador no ejecutó el comando.')
+						}
+					}
+				} else {
+					throw new Error('El reconectador no ejecutó el comando.')
+				}
+			}
+
+			// Esperar 1 segundo antes del próximo intento
+			await sleep(1000)
+		}
+
+		return status
+	} catch (error) {
+		throw new Error(`Error: ${error.message}`)
+	}
+}
+
+/**
  * Guarda o actualiza un reconectador en la base de datos.
  * Si el reconectador con el número de serie especificado ya existe, se actualiza con los nuevos datos.
  * Si no existe, se crea un nuevo registro en la base de datos.
@@ -539,6 +604,7 @@ module.exports = {
 	getRecloserId,
 	brandRecloser,
 	dataRecloseInflux,
+	controlChange,
 	getListVersions,
 	getReclosersEnabled,
 	getInfoMap,

@@ -2,21 +2,24 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('RecloserSendMqtts', {
+		await queryInterface.createTable('Parameters', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			serial: {
+			name: {
 				type: Sequelize.STRING,
+				allowNull: false,
 			},
-			action: {
-				type: Sequelize.STRING,
+			type: {
+				type: Sequelize.ENUM,
+				values: ['Telegram', 'Mqtt', 'Influx'],
 			},
-			status: {
-				type: Sequelize.BOOLEAN,
+			value: {
+				type: Sequelize.JSON,
+				allowNull: false,
 			},
 			createdAt: {
 				allowNull: false,
@@ -29,6 +32,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('RecloserSendMqtts')
+		await queryInterface.dropTable('Parameters')
 	},
 }
