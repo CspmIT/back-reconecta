@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
 			alarm: DataTypes.BOOLEAN,
 			flash_screen: DataTypes.BOOLEAN,
 			id_version: DataTypes.INTEGER,
-			type: DataTypes.ENUM('Recloser', 'Medidor', 'Analizador'),
+			type: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
 		},
 		{
 			sequelize,

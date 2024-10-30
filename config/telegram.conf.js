@@ -7,6 +7,12 @@ const telegramConf = {
 			chatIdReconecta: '-1002497012158',
 		},
 	},
+	reconecta_desarrollo: {
+		reconecta: {
+			token: '7674157293:AAFoJbSWzgYPm5ARbUm_qMMqY1uREm1hWxU',
+			chatIdReconecta: '-1002497012158',
+		},
+	},
 	reconecta_rioprimero: {
 		reconecta: {
 			token: '7674157293:AAFoJbSWzgYPm5ARbUm_qMMqY1uREm1hWxU',
