@@ -1,4 +1,6 @@
 const { db } = require('../models')
+const { getDateCheck } = require('../services/ChecksAlarmsService')
+const { getEventsDevice } = require('../services/EventService')
 const { saveRelation, searchRelationActive } = require('../services/NodeService')
 const {
 	getAllRecloser,
@@ -16,6 +18,7 @@ const {
 	getInfoMap,
 	getStatusRecloser,
 	controlChange,
+	getStatusAlarm,
 } = require('../services/RecloserServices')
 const { getListVariables } = require('../services/VariablesServices')
 
@@ -132,9 +135,26 @@ const getDataInfluxRecloser = async (req, res) => {
 			{ serial: dataRecloser.serial, brand: dataRecloser.brand },
 			influxName
 		)
+		const Events = await getEventsDevice(recloser.version.id, 'Reconectador')
+		const eventActiveReco = Events.filter((item) => item.priority == 1 && item.flash_screen == 1).map((item) => {
+			return { id: item.id_event_influx, name: item.name }
+		})
+		const event_date = await getDateCheck(recloser.id, 'Reconectador')
+
+		const statusAlarm = await getStatusAlarm(
+			{
+				brand: recloser?.version?.brand?.name,
+				serial: recloser?.serial,
+				event: eventActiveReco,
+				event_date: event_date?.date_check,
+			},
+			req.user.influx_name
+		)
+
 		const dataReturn = {
 			recloser: dataRecloser,
 			instantaneo: dataInflux,
+			alarm: statusAlarm,
 		}
 		res.status(200).json(dataReturn)
 	} catch (error) {

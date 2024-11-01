@@ -730,6 +730,65 @@ const getEventRecloserOld = async (data, influxName) => {
 	}
 }
 
+/**
+ * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando hasta 3 minutos hacia atrás.
+ * Si no encuentra datos recientes, lanza un error.
+ *
+ * @param {Object} data - Un objeto con la información del reconectador, incluyendo su marca y número de serie.
+ * @param {string} influxName - El nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<number>} El estado del reconectador, donde:
+ *  0 = Cerrado,
+ *  1 = Abierto,
+ *  2 = Sin Conexion,
+ *  3 = Falla
+ * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
+ * @author  [Jose Romani]  <jose.romani@hotmail.com>
+ */
+const getStatusAlarm = async (data, influxName) => {
+	try {
+		const query = ` |> range(start: 2022-11-01)
+		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
+		 	|> sort(columns: ["_time"], desc: true)
+		 	|> limit (n: 200)`
+
+		let dataInflux = await ConsultaInflux(query, influxName)
+		if (!dataInflux || dataInflux.length === 0) return []
+		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
+		let packsEvents = {}
+
+		for (const element of dataInflux) {
+			if (!packsEvents[element._time]) {
+				packsEvents[element._time] = {}
+			}
+			const [name, event, pack] = element._field.split('_')
+			if (!packsEvents[element._time][event]) {
+				packsEvents[element._time][event] = []
+			}
+
+			packsEvents[element._time][event].push({
+				field: element._field,
+				value: element._value,
+				time: element._time,
+			})
+		}
+		let statusAlarm = false
+		for (const reg of Object.values(packsEvents)) {
+			for (const item of Object.values(reg)) {
+				if (data.event.some((even) => even.id == item[0].value)) {
+					if (data.event_date) {
+						statusAlarm = new Date(item[0].time) > new Date(data.event_date) ? true : statusAlarm
+					} else {
+						statusAlarm = true
+					}
+				}
+			}
+		}
+		return statusAlarm
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	getInterruption,
 	getCorriente,
@@ -749,4 +808,5 @@ module.exports = {
 	getInfoMap,
 	getEventRecloserOld,
 	getEventCheckRecloserOld,
+	getStatusAlarm,
 }
