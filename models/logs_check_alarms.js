@@ -1,27 +1,27 @@
 'use strict'
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
-	class Logs_Alarm extends Model {
+	class Logs_check_alarms extends Model {
 		/**
 		 * Helper method for defining associations.
 		 * This method is not a part of Sequelize lifecycle.
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			// define association here
+			this.belongsTo(models.User, { foreignKey: 'id_user', as: 'user' })
 		}
 	}
-	Logs_Alarm.init(
+	Logs_check_alarms.init(
 		{
 			id_device: DataTypes.INTEGER,
 			type: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
-			id_event: DataTypes.INTEGER,
-			errors: DataTypes.STRING,
+			id_user: DataTypes.INTEGER,
+			date_check: DataTypes.DATE,
 		},
 		{
 			sequelize,
-			modelName: 'Logs_Alarm',
+			modelName: 'Logs_check_alarms',
 		}
 	)
-	return Logs_Alarm
+	return Logs_check_alarms
 }

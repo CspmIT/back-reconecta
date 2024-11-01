@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('Logs_Alarms', {
+		await queryInterface.createTable('Logs_check_alarms', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
@@ -17,19 +17,18 @@ module.exports = {
 				type: Sequelize.ENUM,
 				values: ['Reconectador', 'Medidor', 'Analizador'],
 			},
-			id_event: {
+			id_user: {
 				type: Sequelize.INTEGER,
 				references: {
-					model: 'Events',
+					model: 'Users',
 					key: 'id',
 				},
 				allowNull: false,
 				onUpdate: 'CASCADE',
 				onDelete: 'CASCADE',
 			},
-			errors: {
-				type: Sequelize.STRING,
-				allowNull: true,
+			date_check: {
+				type: Sequelize.DATE,
 			},
 			createdAt: {
 				allowNull: false,
@@ -42,6 +41,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('Logs_Alarms')
+		await queryInterface.dropTable('Logs_check_alarms')
 	},
 }

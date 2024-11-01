@@ -1,4 +1,8 @@
+const { Op } = require('sequelize')
 const { db } = require('../models')
+const { getAllRecloser, getEventCheckRecloserOld } = require('./RecloserServices')
+const { searchRelationActive } = require('./NodeService')
+const { getDateCheck } = require('./ChecksAlarmsService')
 
 const typeDeviceInflux = {
 	Reconectadores: 'Reconectador',
@@ -162,17 +166,70 @@ const getAllEvents = async () => {
 
 	return dataResult
 }
+
+const getEventsActive = async () => {
+	const Events = await db.Event.findAll({
+		where: [{ status: 1 }, { priority: { [Op.lte]: 2 } }],
+	})
+	return Events
+}
+const getEventsDevice = async (id_version, type) => {
+	const Events = await db.Event.findAll({
+		where: [{ status: 1 }, { id_version: id_version }, { type: type }],
+	})
+	return Events
+}
+
+const getEventsInflux = async (influx_name, Events) => {
+	const reclosers = await getAllRecloser()
+	const result = await Promise.all(
+		reclosers.map(async (recloser) => {
+			if (Events.some((item) => item.id_version == recloser.version.id)) {
+				let relation = []
+				if (recloser.id_node) {
+					const history = await searchRelationActive(recloser.id, 1)
+					relation = history?.nodes?.get() || []
+				}
+				const eventActiveReco = Events.filter((item) => item.id_version == recloser.version.id).map((item) => {
+					return { id: item.id_event_influx, name: item.name, priority: item.priority }
+				})
+				const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
+
+				const eventsRecloser = await getEventCheckRecloserOld(
+					{
+						brand: recloser?.version?.brand?.name,
+						serial: recloser?.serial,
+						name: relation?.name || '-',
+						number: relation?.number || '-',
+						id_device: recloser.id,
+						typeDevice: 'Reconectador',
+						event: eventActiveReco,
+						dateCheck: dateCheck?.date_check || null,
+					},
+					influx_name
+				)
+				return eventsRecloser
+			}
+		})
+	)
+	return result
+}
+
 const saveNotify = async (data) => {
 	const dataResult = await db.Event.bulkCreate(data, {
 		updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
 	})
 	return dataResult
 }
+
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
 	saveAlertSend,
 	saveLogAlert,
 	getAllEvents,
+	getEventsDevice,
 	saveNotify,
+	getEventsActive,
+	getEventsInflux,
 }
