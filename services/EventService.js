@@ -135,91 +135,157 @@ const saveLogAlert = async (data) => {
 		throw error
 	}
 }
-
+/**
+ * Obtiene todos los eventos activos y los organiza por tipo, marca y versión.
+ *
+ * @returns {Promise<Object>} Un objeto estructurado donde los eventos están agrupados por:
+ * - tipo de evento
+ * - marca
+ * - versión
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
 const getAllEvents = async () => {
-	const Events = await db.Event.findAll({
-		where: { status: 1 },
-	})
-	const versions = await db.Version.findAll({
-		where: { status: 1 },
-		include: [
-			{
-				association: 'brand',
-			},
-		],
-	})
+	try {
+		const [Events, versions] = await Promise.all([
+			db.Event.findAll({ where: { status: 1 } }),
+			db.Version.findAll({
+				where: { status: 1 },
+				include: [{ association: 'brand' }],
+			}),
+		])
 
-	const dataResult = Events.reduce((acc, current) => {
-		const version = versions.find((item) => item.id == current.id_version)
-		if (!acc[current.type]) {
-			acc[current.type] = { [version?.brand?.name]: { [version.name]: [] } }
-		}
-		if (!acc[current.type][version?.brand?.name]) {
-			acc[current.type][version?.brand?.name][version.name] = []
-		}
-		if (!acc[current.type][version?.brand?.name][version.name]) {
-			acc[current.type][version?.brand?.name][version.name] = []
-		}
-		acc[current.type][version?.brand?.name][version.name].push(current.get({ plain: true }))
-		return acc
-	}, {})
+		const dataResult = Events.reduce((acc, current) => {
+			const version = versions.find((item) => item.id === current.id_version)
+			const brandName = version?.brand?.name
+			const versionName = version?.name
+			const eventType = current.type
 
-	return dataResult
+			acc[eventType] ??= {}
+			acc[eventType][brandName] ??= {}
+			acc[eventType][brandName][versionName] ??= []
+
+			acc[eventType][brandName][versionName].push(current.get({ plain: true }))
+
+			return acc
+		}, {})
+		return dataResult
+	} catch (error) {
+		throw error
+	}
 }
-
+/**
+ * Obtiene todos los eventos activos con prioridad igual o menor a 2.
+ *
+ * @returns {Promise<Array>} Un arreglo de eventos activos con prioridad <= 2.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
 const getEventsActive = async () => {
-	const Events = await db.Event.findAll({
-		where: [{ status: 1 }, { priority: { [Op.lte]: 2 } }],
-	})
-	return Events
-}
-const getEventsDevice = async (id_version, type) => {
-	const Events = await db.Event.findAll({
-		where: [{ status: 1 }, { id_version: id_version }, { type: type }],
-	})
-	return Events
-}
-
-const getEventsInflux = async (influx_name, Events) => {
-	const reclosers = await getAllRecloser()
-	const result = await Promise.all(
-		reclosers.map(async (recloser) => {
-			if (Events.some((item) => item.id_version == recloser.version.id)) {
-				let relation = []
-				if (recloser.id_node) {
-					const history = await searchRelationActive(recloser.id, 1)
-					relation = history?.nodes?.get() || []
-				}
-				const eventActiveReco = Events.filter((item) => item.id_version == recloser.version.id).map((item) => {
-					return { id: item.id_event_influx, name: item.name, priority: item.priority }
-				})
-				const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
-
-				const eventsRecloser = await getEventCheckRecloserOld(
-					{
-						brand: recloser?.version?.brand?.name,
-						serial: recloser?.serial,
-						name: relation?.name || '-',
-						number: relation?.number || '-',
-						id_device: recloser.id,
-						typeDevice: 'Reconectador',
-						event: eventActiveReco,
-						dateCheck: dateCheck?.date_check || null,
-					},
-					influx_name
-				)
-				return eventsRecloser
-			}
+	try {
+		const Events = await db.Event.findAll({
+			where: {
+				status: 1,
+				priority: { [Op.lte]: 2 },
+			},
 		})
-	)
-	return result
+		return Events
+	} catch (error) {
+		throw error
+	}
 }
+/**
+ * Obtiene eventos activos específicos para un dispositivo según el ID de versión y el tipo.
+ *
+ * @param {number} id_version - El ID de la versión del dispositivo.
+ * @param {string} type - El tipo de evento a filtrar.
+ * @returns {Promise<Array>} Un arreglo de eventos activos para el dispositivo especificado.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
+const getEventsDevice = async (id_version, type) => {
+	try {
+		const Events = await db.Event.findAll({
+			where: {
+				status: 1,
+				id_version,
+				type,
+			},
+		})
+		return Events
+	} catch (error) {
+		throw error
+	}
+}
+/**
+ * Obtiene el estado de eventos activos de reconectadores desde InfluxDB.
+ *
+ * @param {string} influx_name - Nombre de la base de datos en InfluxDB.
+ * @param {Array} Events - Lista de eventos activos para consultar.
+ * @returns {Promise<Array>} Un arreglo con los estados de eventos de reconectadores desde InfluxDB.
+ * @throws {Error} Lanza un error si ocurre algún problema durante las consultas.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
+const getEventsInflux = async (influx_name, Events) => {
+	try {
+		const reclosers = await getAllRecloser()
+		const result = await Promise.all(
+			reclosers.map(async (recloser) => {
+				if (Events.some((item) => item.id_version === recloser.version.id)) {
+					let relation = []
+					if (recloser.id_node) {
+						const history = await searchRelationActive(recloser.id, 1)
+						relation = history?.nodes?.get() || []
+					}
+					const eventActiveReco = Events.filter((item) => item.id_version === recloser.version.id).map(
+						(item) => ({
+							id: item.id_event_influx,
+							name: item.name,
+							priority: item.priority,
+						})
+					)
+					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
 
+					return await getEventCheckRecloserOld(
+						{
+							brand: recloser.version.brand.name,
+							serial: recloser.serial,
+							name: relation.name || '-',
+							number: relation.number || '-',
+							id_device: recloser.id,
+							typeDevice: 'Reconectador',
+							event: eventActiveReco,
+							dateCheck: dateCheck?.date_check || null,
+						},
+						influx_name
+					)
+				}
+				return null
+			})
+		)
+		return result.filter(Boolean)
+	} catch (error) {
+		throw error
+	}
+}
+/**
+ * Guarda o actualiza múltiples notificaciones de eventos en la base de datos.
+ * Si una notificación ya existe, actualiza los campos especificados.
+ *
+ * @param {Array<Object>} data - Un arreglo de objetos de eventos a guardar o actualizar.
+ * @returns {Promise<Array>} Un arreglo de los registros de eventos guardados o actualizados.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
+ * @author Jose Romani <jose.romani@hotmail.com>
+ */
 const saveNotify = async (data) => {
-	const dataResult = await db.Event.bulkCreate(data, {
-		updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
-	})
-	return dataResult
+	try {
+		const dataResult = await db.Event.bulkCreate(data, {
+			updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
+		})
+		return dataResult
+	} catch (error) {
+		throw error
+	}
 }
 
 module.exports = {

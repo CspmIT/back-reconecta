@@ -548,14 +548,15 @@ const controlChange = async (data, influxName) => {
 }
 
 /**
- * Guarda o actualiza un reconectador en la base de datos.
- * Si el reconectador con el número de serie especificado ya existe, se actualiza con los nuevos datos.
- * Si no existe, se crea un nuevo registro en la base de datos.
+ * Recupera una lista de marcas y sus versiones activas desde la base de datos.
+ * Solo incluye marcas cuyo estado es activo (`status: 1`).
  *
- * @param {Object} dataRecloser - Un objeto que contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
- * @returns {Promise<Object>} El reconectador guardado o actualizado.
- * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
- * @author  [José Romani] <jose.romani@hotmail.com>
+ * @returns {Promise<Array>} Un arreglo de objetos que representa las marcas activas, cada una con:
+ *  - id: el identificador de la marca,
+ *  - name: el nombre de la marca,
+ *  - version: un array de versiones asociadas, cada una con su id y nombre.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+ * @author
  */
 const getListVersions = async () => {
 	try {
@@ -592,20 +593,19 @@ const getInfoMap = async () => {
 }
 
 /**
- * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando hasta 3 minutos hacia atrás.
+ * Consulta eventos históricos de un reconectador en InfluxDB, desde el 2022-11-01 hasta el presente.
  * Si no encuentra datos recientes, lanza un error.
  *
- * @param {Object} data - Un objeto con la información del reconectador, incluyendo su marca y número de serie.
- * @param {string} influxName - El nombre de la base de datos en InfluxDB donde se realiza la consulta.
- * @returns {Promise<number>} El estado del reconectador, donde:
- *  0 = Cerrado,
- *  1 = Abierto,
- *  2 = Sin Conexion,
- *  3 = Falla
+ * @param {Object} data - Información del reconectador, que incluye marca y número de serie.
+ * @param {string} influxName - Nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<Object>} Un objeto con el estado de eventos organizados por tiempos y eventos, donde cada clave de tiempo contiene un array de objetos con:
+ *  - field: nombre del campo del evento,
+ *  - value: valor del evento,
+ *  - time: timestamp del evento.
  * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
-const getEventCheckRecloserOld = async (data, influxName) => {
+const consultEventRecloserInfluxOld = async (data, influxName) => {
 	try {
 		const query = ` |> range(start: 2022-11-01)
 		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
@@ -615,41 +615,65 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 		let dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) return []
 		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		let packsEvents = {}
-
+		const packsEvents = {}
 		for (const element of dataInflux) {
-			if (!packsEvents[element._time]) {
-				packsEvents[element._time] = {}
-			}
-			const [name, event, pack] = element._field.split('_')
-			if (!packsEvents[element._time][event]) {
-				packsEvents[element._time][event] = []
-			}
-
-			packsEvents[element._time][event].push({
+			const [name, event] = element._field.split('_')
+			const timeGroup = (packsEvents[element._time] ||= {})
+			timeGroup[event] ||= []
+			timeGroup[event].push({
 				field: element._field,
 				value: element._value,
 				time: element._time,
 			})
 		}
+
+		return packsEvents
+	} catch (error) {
+		throw error
+	}
+}
+/**
+ * Verifica el estado de eventos específicos de un reconectador consultado en InfluxDB.
+ *
+ * @param {Object} data - Información del reconectador, incluyendo marca, número de serie, y eventos a evaluar.
+ * @param {string} influxName - Nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<Array>} Un arreglo de objetos con el estado de los eventos, cada uno contiene:
+ *  - event: nombre y estado ('ON'/'OFF') del evento,
+ *  - priority: prioridad del evento,
+ *  - name: nombre del dispositivo,
+ *  - nro_recloser: número del reconectador,
+ *  - typeDevice: tipo de dispositivo,
+ *  - id_device: identificador del dispositivo,
+ *  - id: identificador del evento,
+ *  - dateAlert: fecha del evento o paquete,
+ *  - statusAlert: estado de alerta (0 = sin alerta, 1 = alerta),
+ *  - infoAdd: información adicional.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta o el procesamiento de los datos.
+ * @author
+ */
+const getEventCheckRecloserOld = async (data, influxName) => {
+	try {
+		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
+
 		for (const reg of Object.values(packsEvents)) {
 			for (const item of Object.values(reg)) {
-				if (data.event.some((even) => even.id == item[0].value)) {
-					const eventData = data.event.find((even) => even.id == item[0].value)
+				const eventData = data.event.find((even) => even.id == item[0].value)
+				if (eventData) {
 					const dataPack =
-						item[2]?.value && item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
-							? new Date(item[2]?.value)
+						item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
+							? new Date(item[2].value)
 							: item[0].time
 					const value = item[1]?.value >= 0 ? (item[1].value ? 'ON' : 'OFF') : ''
+
 					packsReturn.push({
-						event: `${eventData?.name} - ${value}`,
-						priority: eventData?.priority,
+						event: `${eventData.name} - ${value}`,
+						priority: eventData.priority,
 						name: data.name,
 						nro_recloser: data.number,
 						typeDevice: data.typeDevice,
 						id_device: data.id_device,
-						id: item[0]?.value,
+						id: item[0].value,
 						dateAlert: dataPack,
 						statusAlert: data.dateCheck >= dataPack ? 0 : 1,
 						infoAdd: '-',
@@ -657,66 +681,44 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 				}
 			}
 		}
+
 		return packsReturn
 	} catch (error) {
 		throw error
 	}
 }
 /**
- * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando hasta 3 minutos hacia atrás.
+ * Consulta eventos históricos de un reconectador en InfluxDB, desde el 2022-11-01 hasta el presente.
  * Si no encuentra datos recientes, lanza un error.
  *
- * @param {Object} data - Un objeto con la información del reconectador, incluyendo su marca y número de serie.
- * @param {string} influxName - El nombre de la base de datos en InfluxDB donde se realiza la consulta.
- * @returns {Promise<number>} El estado del reconectador, donde:
- *  0 = Cerrado,
- *  1 = Abierto,
- *  2 = Sin Conexion,
- *  3 = Falla
+ * @param {Object} data - Información del reconectador, incluyendo marca, número de serie y eventos a evaluar.
+ * @param {string} influxName - Nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<Array>} Un arreglo de objetos que representan los eventos del reconectador, cada uno contiene:
+ *  - event: nombre del evento y estado ('ON'/'OFF'),
+ *  - id: identificador del evento,
+ *  - dateAlert: fecha del evento o paquete,
+ *  - infoAdd: información adicional.
  * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
+
 const getEventRecloserOld = async (data, influxName) => {
 	try {
-		const query = ` |> range(start: 2022-11-01)
-		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
-		 	|> sort(columns: ["_time"], desc: true)
-		 	|> limit (n: 200)`
-
-		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) return []
-		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		let packsEvents = {}
-
-		for (const element of dataInflux) {
-			if (!packsEvents[element._time]) {
-				packsEvents[element._time] = {}
-			}
-			const [name, event, pack] = element._field.split('_')
-			if (!packsEvents[element._time][event]) {
-				packsEvents[element._time][event] = []
-			}
-
-			packsEvents[element._time][event].push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
-		}
-		// console.log(packsEvents)
+		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
 		for (const reg of Object.values(packsEvents)) {
 			for (const item of Object.values(reg)) {
-				if (data.event.some((even) => even.id == item[0].value)) {
-					const eventData = data.event.find((even) => even.id == item[0].value)
+				const matchingEvent = data.event.find((even) => even.id == item[0].value)
+				if (matchingEvent) {
 					const dataPack =
-						item[2]?.value && item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
-							? new Date(item[2]?.value)
+						item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
+							? new Date(item[2].value)
 							: item[0].time
 					const value = item[1]?.value >= 0 ? (item[1].value ? 'ON' : 'OFF') : ''
+
 					packsReturn.push({
-						event: `${eventData?.name} - ${value}`,
-						id: item[0]?.value,
+						event: `${matchingEvent.name} - ${value}`,
+						id: item[0].value,
 						dateAlert: dataPack,
 						infoAdd: '-',
 					})
@@ -731,57 +733,30 @@ const getEventRecloserOld = async (data, influxName) => {
 }
 
 /**
- * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando hasta 3 minutos hacia atrás.
+ * Consulta el estado instantáneo de un reconectador en InfluxDB, buscando desde 2022-11-01 hasta ahora.
  * Si no encuentra datos recientes, lanza un error.
  *
- * @param {Object} data - Un objeto con la información del reconectador, incluyendo su marca y número de serie.
- * @param {string} influxName - El nombre de la base de datos en InfluxDB donde se realiza la consulta.
- * @returns {Promise<number>} El estado del reconectador, donde:
- *  0 = Cerrado,
- *  1 = Abierto,
- *  2 = Sin Conexion,
- *  3 = Falla
+ * @param {Object} data - Información del reconectador, incluyendo su marca, número de serie y eventos a evaluar.
+ * @param {string} influxName - Nombre de la base de datos en InfluxDB donde se realiza la consulta.
+ * @returns {Promise<boolean>} El estado de alarma del reconectador:
+ *  - true = Alarma activada
+ *  - false = Sin alarma
  * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
+
 const getStatusAlarm = async (data, influxName) => {
 	try {
-		const query = ` |> range(start: 2022-11-01)
-		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
-		 	|> sort(columns: ["_time"], desc: true)
-		 	|> limit (n: 200)`
-
-		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) return []
-		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		let packsEvents = {}
-
-		for (const element of dataInflux) {
-			if (!packsEvents[element._time]) {
-				packsEvents[element._time] = {}
-			}
-			const [name, event, pack] = element._field.split('_')
-			if (!packsEvents[element._time][event]) {
-				packsEvents[element._time][event] = []
-			}
-
-			packsEvents[element._time][event].push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
-		}
+		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		let statusAlarm = false
 		for (const reg of Object.values(packsEvents)) {
 			for (const item of Object.values(reg)) {
 				if (data.event.some((even) => even.id == item[0].value)) {
-					if (data.event_date) {
-						statusAlarm = new Date(item[0].time) > new Date(data.event_date) ? true : statusAlarm
-					} else {
-						statusAlarm = true
-					}
+					statusAlarm = !data.event_date || new Date(item[0].time) > new Date(data.event_date)
+					if (statusAlarm) break
 				}
 			}
+			if (statusAlarm) break
 		}
 		return statusAlarm
 	} catch (error) {
@@ -806,6 +781,7 @@ module.exports = {
 	getListVersions,
 	getReclosersEnabled,
 	getInfoMap,
+	consultEventRecloserInfluxOld,
 	getEventRecloserOld,
 	getEventCheckRecloserOld,
 	getStatusAlarm,
