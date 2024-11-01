@@ -39,7 +39,7 @@ module.exports = {
 			},
 			type: {
 				type: Sequelize.ENUM,
-				values: ['Recloser', 'Medidor', 'Analizador'],
+				values: ['Reconectador', 'Medidor', 'Analizador'],
 			},
 			createdAt: {
 				allowNull: false,

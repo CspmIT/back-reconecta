@@ -10,6 +10,15 @@ module.exports = {
 		clientId: 'MQTT_COOP',
 		clean: 'true',
 	},
+	reconecta_desarrollo: {
+		host: '200.63.120.50',
+		port: '52883',
+		username: 'energia',
+		password: 'NojaPower2022',
+		protocol: 'mqtt',
+		clientId: 'MQTT_COOP',
+		clean: 'true',
+	},
 	reconecta_rioprimero: {
 		host: '200.63.120.50',
 		port: '52883',

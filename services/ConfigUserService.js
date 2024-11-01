@@ -52,7 +52,11 @@ const saveColumnUser = async (Columns) => {
 		try {
 			const savedColumns = []
 			for (const item of Columns) {
-				const [Column, created] = await db.User_Column.findOrCreate({ where: { id_columnsTable: item.id_columnsTable, id_user: item.id_user }, defaults: { ...item }, transaction: t })
+				const [Column, created] = await db.User_Column.findOrCreate({
+					where: { id_columnsTable: item.id_columnsTable, id_user: item.id_user },
+					defaults: { ...item },
+					transaction: t,
+				})
 				if (!created) {
 					await Column.update(item, { transaction: t })
 				}
@@ -150,22 +154,27 @@ const getControlsUserConfig = async (user, version) => {
 		throw error
 	}
 }
+
 /**
- * Migra las tablas proporcionadas a la base de datos, creando nuevas entradas si no existen
- * o actualizando las existentes.
+ * Guarda o actualiza los controles de usuario en la base de datos en una transacción.
+ * Si un control para el usuario ya existe, se actualiza con los datos proporcionados; de lo contrario, se crea un nuevo registro.
  *
- * @param {Array<Object>} Tables - Un arreglo de objetos que representan las tablas a migrar.
- * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan las tablas migradas.
- * @throws {Error} Lanza un error si ocurre un problema durante la transacción.
+ * @param {Array<Object>} Controls - Un arreglo de objetos que representan los controles de usuario a guardar o actualizar,
+ *                                    cada objeto incluye `id_control` y `id_user` junto con otros atributos opcionales.
+ * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan los controles de usuario guardados o actualizados.
+ * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author Jose Romani <jose.romani@hotmail.com>
- *
  */
 const saveCrontrolsUser = async (Controls) => {
 	return db.sequelize.transaction(async (t) => {
 		try {
 			const savedControls = []
 			for (const item of Controls) {
-				const [Control, created] = await db.Users_Control.findOrCreate({ where: { id_control: item.id_control, id_user: item.id_user }, defaults: { ...item }, transaction: t })
+				const [Control, created] = await db.Users_Control.findOrCreate({
+					where: { id_control: item.id_control, id_user: item.id_user },
+					defaults: { ...item },
+					transaction: t,
+				})
 				if (!created) {
 					await Control.update(item, { transaction: t })
 				}

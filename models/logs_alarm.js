@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
 	Logs_Alarm.init(
 		{
 			id_device: DataTypes.INTEGER,
-			type: DataTypes.ENUM('Recloser', 'Medidor', 'Analizador'),
+			type: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
 			id_event: DataTypes.INTEGER,
 			errors: DataTypes.STRING,
 		},
