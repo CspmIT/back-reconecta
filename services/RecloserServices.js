@@ -45,6 +45,22 @@ const saveRecloser = async (dataRecloser, transaction) => {
 }
 
 /**
+ * Guarda o actualiza un reconectador en la base de datos.
+ * @param {Object} dataRecloser - Contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
+ * @returns {Promise<Object>} El reconectador guardado o actualizado.
+ * @throws {Error} Si ocurre algún problema durante la transacción.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ */
+const updateRecloser = async (dataRecloser) => {
+	try {
+		const Recloser = await db.Recloser.update(dataRecloser, { where: { id: dataRecloser.id } })
+		return Recloser
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
  * Obtiene todos los reconectadores de la base de datos.
  *
  * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan todos los reconectadores encontrados, o lanza un error si no se encuentra ninguno.
@@ -326,6 +342,42 @@ const getMetrologiaIntantanea = async (data, influxName) => {
 				time: element._time,
 			})
 		}
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta los datos instantaneos de un reconectador si no encuentra busca hasta 1 dia hacia atras, en InfluxDB.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object|null>} Un objeto que representa los datos encontrados en InfluxDB, o `null` si no se encuentran datos. Lanza un error si ocurre un problema en la consulta.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author  [Jose Romani]  <jose.romani@hotmail.com>
+ *
+ */
+const acRecloser = async (data, influxName) => {
+	try {
+		const query = `|> range(start: -30s, stop: now())
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+        |> filter(fn: (r) => r["_field"] == "ac" )
+        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+		|> last()`
+
+		let dataInflux = await ConsultaInflux(query, influxName)
+
+		if (!dataInflux || !dataInflux.length) {
+			const fallbackQuery = `|> range(start: -1d, stop: now())
+			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+			|> filter(fn: (r) => r["_field"] == "ac" )
+			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+			|> last()`
+
+			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
+		}
+		if (!dataInflux || !dataInflux.length) return null
+		let dataReturn = dataInflux[0]._value
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -785,4 +837,6 @@ module.exports = {
 	getEventRecloserOld,
 	getEventCheckRecloserOld,
 	getStatusAlarm,
+	updateRecloser,
+	acRecloser,
 }

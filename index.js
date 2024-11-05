@@ -35,7 +35,7 @@ app.use('/api', AlarmEvent)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
-	await socketConfig.init(server) // Inicializa el socket en la ruta /api/socket
+	await socketConfig.init(server, req, res) // Inicializa el socket en la ruta /api/socket
 	next()
 })
 server.listen(4000, () => {

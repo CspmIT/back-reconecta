@@ -86,6 +86,7 @@ const alarmRecloser = async (req, res) => {
 		})
 	}
 }
+
 module.exports = {
 	sendMsjTelegram,
 	contrlAlarm,
