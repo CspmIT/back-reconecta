@@ -13,11 +13,16 @@ const searchNode = async (id, required = false) => {
 	try {
 		const Nodes = await db.Node.findOne({
 			where: { id: id },
-			include: {
-				association: 'node_history',
-				required: required,
-				where: { status: 1 },
-			},
+			include: [
+				{
+					association: 'node_history',
+					required: required,
+					where: { status: 1 },
+				},
+				{
+					association: 'maps',
+				},
+			],
 		})
 		return Nodes
 	} catch (error) {
@@ -36,11 +41,13 @@ const ListNode = async () => {
 	try {
 		const Nodes = await db.Node.findAll({
 			where: { status: 1 },
-			include: {
-				association: 'node_history',
-				required: false,
-				where: { status: 1 },
-			},
+			include: [
+				{
+					association: 'node_history',
+					required: false,
+					where: { status: 1 },
+				},
+			],
 		})
 		return Nodes
 	} catch (error) {
@@ -109,6 +116,7 @@ const addNode = async (dataNode, transaction) => {
 			description: dataNode.description,
 			lat_location: dataNode.lat_location,
 			lng_location: dataNode.lng_location,
+			id_map: dataNode.id_map,
 			status: dataNode.status,
 			type: dataNode.type,
 		}
