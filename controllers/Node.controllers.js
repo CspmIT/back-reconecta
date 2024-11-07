@@ -1,4 +1,5 @@
 const { db } = require('../models')
+const { getListMaps } = require('../services/MapLocationService')
 const {
 	ListNode,
 	addNode,
@@ -157,10 +158,25 @@ const saveNode = async (req, res) => {
 	}
 }
 
+const getMaps = async (req, res) => {
+	try {
+		const listMap = await getListMaps()
+		if (!listMap) throw new Error('Error al eliminar las relaciones.')
+		res.status(200).json(listMap)
+	} catch (error) {
+		if (error.errors) {
+			res.status(500).json(error.errors)
+		} else {
+			res.status(400).json(error.message)
+		}
+	}
+}
+
 module.exports = {
 	getListNode,
 	saveNode,
 	getNodexId,
 	unlinkRelationNode,
 	deleteNode,
+	getMaps,
 }

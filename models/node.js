@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
 		static associate(models) {
 			// define association here
 			this.hasMany(models.Node_History, { foreignKey: 'id_node', as: 'node_history' })
+			this.belongsTo(models.MapLocation, { foreignKey: 'id_map', as: 'maps' })
 		}
 	}
 	Node.init(
@@ -24,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
 			status: DataTypes.BOOLEAN,
 			lat_location: DataTypes.DECIMAL,
 			lng_location: DataTypes.DECIMAL,
+			id_map: DataTypes.INTEGER,
 		},
 		{
 			sequelize,
