@@ -71,14 +71,19 @@ const getAllRecloser = async () => {
 	try {
 		const RecloserDesarrollo = await db.Recloser.findAll({
 			where: { status: 1 },
-			include: {
-				association: 'version',
-				attributes: ['id', 'name'],
-				include: {
-					association: 'brand',
+			include: [
+				{
+					association: 'version',
 					attributes: ['id', 'name'],
+					include: {
+						association: 'brand',
+						attributes: ['id', 'name'],
+					},
 				},
-			},
+				{
+					association: 'history',
+				},
+			],
 		})
 		return RecloserDesarrollo
 	} catch (error) {
@@ -95,22 +100,7 @@ const getAllRecloser = async () => {
  */
 const getReclosersEnabled = async () => {
 	try {
-		const recloser = await db.Recloser.findAll({
-			where: { status: 1 },
-			include: [
-				{
-					association: 'version',
-					attributes: ['id', 'name'],
-					include: {
-						association: 'brand',
-						attributes: ['id', 'name'],
-					},
-				},
-				{
-					association: 'history',
-				},
-			],
-		})
+		const recloser = await getAllRecloser()
 		const result = recloser.filter((item) => {
 			if (item.history.every((rel) => rel.status == 0) || item.history.length == 0) {
 				return item
@@ -270,33 +260,33 @@ const getStatusRecloser = async (data, influxName) => {
 
 		let dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) return 3
-		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+		const dataReturn = new Map()
+
+		dataInflux.forEach((element) => {
+			if (!dataReturn.has(element._field)) {
+				dataReturn.set(element._field, [])
 			}
-			dataReturn[element._field].push({
+			dataReturn.get(element._field).push({
 				field: element._field,
 				value: element._value,
 				time: element._time,
 			})
-		}
+		})
 
-		let status = 2
-		if (dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 1) {
-			status = 0
+		const acValue = dataReturn.get('ac')?.[0]?.value
+		const dcValue = dataReturn.get('d/c')?.[0]?.value
+
+		if (acValue === undefined || dcValue === undefined) {
+			return 2
 		}
-		if (
-			(dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 0) ||
-			(dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 0)
-		) {
-			status = 1
+		if (acValue === 1 && dcValue === 1) {
+			return 0 // Cerrado
+		} else if ((acValue === 1 && dcValue === 0) || (acValue === 0 && dcValue === 0)) {
+			return 1 // Abierto
+		} else if (acValue === 0 && dcValue === 1) {
+			return 3 // Falla
 		}
-		if (dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 1) {
-			status = 3
-		}
-		return status
+		return 2 // Sin Señal
 	} catch (error) {
 		throw error
 	}
@@ -535,6 +525,24 @@ const getInterruption = async (data, influxName) => {
 }
 
 /**
+ * Consulta todo los envios de acciones sobre un reconectador en especifico
+ *
+ * @param {string} serial - El serial del reconectador específico para la consulta.
+ * @returns {Promise<Object>} Un array de objetos que representa las acciones ejecutadas desde el tablero del SCADA.
+ *
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getManauver = async (serial) => {
+	try {
+		let dataReturn = await db.RecloserSendMqtt.findAll({ where: { status: 1, serial: serial } })
+		return dataReturn
+	} catch (error) {
+		throw new Error(error)
+	}
+}
+
+/**
  * Controla cambios en el estado de un reconectador consultando los últimos eventos en InfluxDB.
  * Realiza una consulta para verificar si un comando fue ejecutado correctamente, buscando un valor específico en el campo de datos de un reconectador en un período de 3 minutos.
  * Si el comando no se ejecuta correctamente, intenta verificar un campo de reconocimiento ('c/d_ack').
@@ -654,7 +662,8 @@ const getInfoMap = async () => {
  *  - field: nombre del campo del evento,
  *  - value: valor del evento,
  *  - time: timestamp del evento.
- * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
+ *  Retorna un array vacío si no se encuentran datos recientes
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
 const consultEventRecloserInfluxOld = async (data, influxName) => {
@@ -839,4 +848,5 @@ module.exports = {
 	getStatusAlarm,
 	updateRecloser,
 	acRecloser,
+	getManauver,
 }

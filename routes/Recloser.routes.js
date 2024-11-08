@@ -20,6 +20,7 @@ const {
 	changeStatusAlarm,
 	recloserAlarm,
 	getAcRecloser,
+	manauvers,
 } = require('../controllers/Recloser.controllers')
 const { testMQTT, sendMQTT } = require('../controllers/Mqtt.controllers')
 
@@ -34,6 +35,7 @@ router.get('/listEvents', verifyToken, listEvents)
 router.get('/tensionABC', verifyToken, tensionABCGraf)
 router.get('/corrientesGraf', verifyToken, corrientesGraf)
 router.get('/interruptions', verifyToken, interruptions)
+router.get('/manauvers', verifyToken, manauvers)
 
 router.post('/addRecloser', verifyToken, addRecloser)
 router.post('/deleteRecloser', verifyToken, deleteRecloser)

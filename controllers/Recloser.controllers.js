@@ -21,6 +21,7 @@ const {
 	getStatusAlarm,
 	updateRecloser,
 	acRecloser,
+	getManauver,
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
@@ -347,6 +348,28 @@ const interruptions = async (req, res) => {
 		}
 	}
 }
+
+const manauvers = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const recloser = await getRecloserId(id)
+		if (!recloser) {
+			return res.status(404).json({ message: 'Reconectador no encontrado' })
+		}
+		const dataInflux = await getManauver(recloser.serial)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 const addRecloser = async (req, res) => {
 	let transaction
 	try {
@@ -547,4 +570,5 @@ module.exports = {
 	changeStatusAlarm,
 	recloserAlarm,
 	getAcRecloser,
+	manauvers,
 }

@@ -11,10 +11,9 @@ module.exports = {
 				{ name: 'num_recloser', id_table: 1, status: 1, createdAt: date, updatedAt: date },
 				{ name: 'name', id_table: 1, status: 1, createdAt: date, updatedAt: date },
 				{ name: 'serial', id_table: 1, status: 1, createdAt: date, updatedAt: date },
-				{ name: 'type_recloser', id_table: 1, status: 1, createdAt: date, updatedAt: date },
+				{ name: 'version', id_table: 1, status: 1, createdAt: date, updatedAt: date },
 				{ name: 'status_recloser', id_table: 1, status: 1, createdAt: date, updatedAt: date },
-				{ name: 'online', id_table: 1, status: 1, createdAt: date, updatedAt: date },
-				{ name: 'status_alarm_recloser', id_table: 1, status: 1, createdAt: date, updatedAt: date },
+				{ name: 'status_alarm', id_table: 1, status: 1, createdAt: date, updatedAt: date },
 				// Tabla Meter
 				{ name: 'num_serie', status: 1, id_table: 2, createdAt: date, updatedAt: date },
 				{ name: 'device_name', status: 1, id_table: 2, createdAt: date, updatedAt: date },
@@ -43,7 +42,7 @@ module.exports = {
 				{ name: 'number', status: 1, id_table: 6, createdAt: date, updatedAt: date },
 				{ name: 'name', status: 1, id_table: 6, createdAt: date, updatedAt: date },
 				{ name: 'description', status: 1, id_table: 6, createdAt: date, updatedAt: date },
-				{ name: 'status', status: 1, id_table: 6, createdAt: date, updatedAt: date },
+				{ name: 'node_history', status: 1, id_table: 6, createdAt: date, updatedAt: date },
 			],
 			{}
 		)
