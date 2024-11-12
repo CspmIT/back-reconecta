@@ -67,6 +67,12 @@ const addPassRecloser = async (req, res) => {
 		if (!req.body.password || !req.body.id_user) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
+		console.log(req.body.id)
+		if (req.body.id > 0) {
+			req.body.id_user_edit = req.user.id
+		} else {
+			req.body.id_user_create = req.user.id
+		}
 		const passRecloser = await savePassRecloser(req.body, transaction)
 		if (!passRecloser) throw new Error('Error al guardar la contraseña.')
 		// Si todo está bien, se confirma la transacción

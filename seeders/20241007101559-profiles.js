@@ -7,11 +7,10 @@ module.exports = {
 		await queryInterface.bulkInsert(
 			'Profiles',
 			[
-				// Tabla Recloser
-				{ description: 'Super Admin', createdAt: date, updatedAt: date },
 				{ description: 'Moderador', createdAt: date, updatedAt: date },
 				{ description: 'Operador', createdAt: date, updatedAt: date },
 				{ description: 'Lector', createdAt: date, updatedAt: date },
+				{ description: 'Super Admin', createdAt: date, updatedAt: date },
 			],
 			{}
 		)

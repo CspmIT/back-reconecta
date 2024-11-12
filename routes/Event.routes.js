@@ -7,7 +7,7 @@ const {
 	AllEvents,
 	saveLogsChecks,
 	eventsDevices,
-} = require('../controllers/Event.controllers')
+} = require('../controllers/Event.controller')
 const router = express.Router()
 
 router.get('/AllEvents', verifyToken, AllEvents)

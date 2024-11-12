@@ -10,6 +10,8 @@ module.exports = (sequelize, DataTypes) => {
 		static associate(models) {
 			// define association here
 			this.belongsTo(models.Node, { foreignKey: 'id_node', as: 'nodes' })
+			this.belongsTo(models.User, { foreignKey: 'id_user_create', targetKey: 'id', as: 'user_create' })
+			this.belongsTo(models.User, { foreignKey: 'id_user_edit', targetKey: 'id', as: 'user_edit' })
 		}
 	}
 	Node_History.init(
@@ -18,6 +20,8 @@ module.exports = (sequelize, DataTypes) => {
 			id_device: DataTypes.BIGINT,
 			type_device: DataTypes.TINYINT,
 			status: DataTypes.TINYINT,
+			id_user_create: DataTypes.INTEGER,
+			id_user_edit: DataTypes.INTEGER,
 		},
 		{
 			sequelize,

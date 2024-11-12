@@ -47,7 +47,7 @@ const unlinkRelationNode = async (req, res) => {
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}
-		const saveUnLink = await unLinkNode(req.body.id, transaction)
+		const saveUnLink = await unLinkNode(req.body.id, req.user.id, transaction)
 		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
 		await transaction.commit()
 		res.status(200).json(saveUnLink)
@@ -65,9 +65,9 @@ const deleteNode = async (req, res) => {
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}
-		const saveUnLink = await unLinkNode(req.body.id, transaction)
+		const saveUnLink = await unLinkNode(req.body.id, req.user.id, transaction)
 		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
-		const saveDelete = await removeNode(req.body.id, transaction)
+		const saveDelete = await removeNode(req.body.id, req.user.id, transaction)
 		if (!saveDelete) throw new Error('Error al eliminar el Nodo.')
 		await transaction.commit()
 		res.status(200).json(saveDelete)
@@ -93,7 +93,7 @@ const saveNode = async (req, res) => {
 		if (validationNode) throw new Error(validationNode)
 
 		// Guardado de Nodo
-		const Nodo = await addNode(req.body, transaction)
+		const Nodo = await addNode(req.body, req.user.id, transaction)
 		if (!Nodo) throw new Error('Error al guardar el Nodo.')
 
 		// Cancelar todas las relaciones no utilizadas
@@ -109,6 +109,7 @@ const saveNode = async (req, res) => {
 					id_device: relation.id_device,
 					id_node: relation.id_node,
 					type_device: relation.type_device,
+					id_user_edit: req.user.id,
 					status: 0,
 				}
 				await saveRelation(dataRelation, transaction)
@@ -129,6 +130,7 @@ const saveNode = async (req, res) => {
 					id_device: device.id,
 					id_node: Nodo.id,
 					type_device: device.type_element,
+					id_user_create: req.user.id,
 					status: 1,
 				}
 				const Relation = await saveRelation(dataRelation, transaction)
