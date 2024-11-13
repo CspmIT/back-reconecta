@@ -14,14 +14,13 @@ module.exports = {
 		await queryInterface.changeColumn('Nodes', 'type', {
 			type: Sequelize.ENUM,
 			values: ['Reconectador', 'Sub estación rural', 'Sub estación urbana'],
-			comment: '',
 		})
 		await queryInterface.changeColumn('Node_Histories', 'type_device', {
 			type: Sequelize.ENUM,
 			values: ['Reconectador', 'Sub estación rural', 'Sub estación urbana'],
-			comment: '',
 		})
 		await queryInterface.changeColumn('Alarms_sents', 'type', {
+			type: Sequelize.ENUM,
 			values: ['Reconectador', 'Medidor', 'Analizador'],
 		})
 	},
