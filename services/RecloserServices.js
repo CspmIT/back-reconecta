@@ -30,6 +30,13 @@ const saveRecloser = async (dataRecloser, transaction) => {
 					id_node: dataRecloser.id_node || null,
 			  }
 			: { ...dataRecloser }
+		if (dataRecloser.id_user_create) {
+			data.id_user_create = dataRecloser.id_user_create
+		}
+		if (dataRecloser.id_user_edit) {
+			data.id_user_edit = dataRecloser.id_user_edit
+		}
+
 		const [Recloser, created] = await db.Recloser.findOrCreate({
 			where: { [Op.or]: [{ serial: data.serial }, { id: data.id }] },
 			defaults: { ...data },
@@ -608,35 +615,6 @@ const controlChange = async (data, influxName) => {
 }
 
 /**
- * Recupera una lista de marcas y sus versiones activas desde la base de datos.
- * Solo incluye marcas cuyo estado es activo (`status: 1`).
- *
- * @returns {Promise<Array>} Un arreglo de objetos que representa las marcas activas, cada una con:
- *  - id: el identificador de la marca,
- *  - name: el nombre de la marca,
- *  - version: un array de versiones asociadas, cada una con su id y nombre.
- * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
- * @author
- */
-const getListVersions = async () => {
-	try {
-		const versions = await db.Brand.findAll({
-			where: {
-				status: 1,
-			},
-			attributes: ['id', 'name'],
-			include: {
-				association: 'version',
-				attributes: ['id', 'name'],
-			},
-		})
-		return versions
-	} catch (error) {
-		throw error
-	}
-}
-
-/**
  * Obtiene todas las ubicaciones del mapa con un estado activo (status = 1).
  *
  * @returns {Promise<Array>} Una promesa que resuelve en un array de ubicaciones activas del mapa.
@@ -839,7 +817,6 @@ module.exports = {
 	brandRecloser,
 	dataRecloseInflux,
 	controlChange,
-	getListVersions,
 	getReclosersEnabled,
 	getInfoMap,
 	consultEventRecloserInfluxOld,

@@ -18,6 +18,7 @@ module.exports = (sequelize, DataTypes) => {
 			name: DataTypes.STRING,
 			status: DataTypes.BOOLEAN,
 			id_brand: DataTypes.INTEGER,
+			type_device: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
 		},
 		{
 			sequelize,

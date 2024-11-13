@@ -21,15 +21,15 @@ const {
 	recloserAlarm,
 	getAcRecloser,
 	manauvers,
-} = require('../controllers/Recloser.controllers')
-const { testMQTT, sendMQTT } = require('../controllers/Mqtt.controllers')
+} = require('../controllers/Recloser.controller')
+const { testMQTT, sendMQTT } = require('../controllers/Mqtt.controller')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
 router.post('/changeStatusAlarm', verifyToken, changeStatusAlarm)
 router.get('/getAllReclosers', verifyToken, listAllRecloser)
 router.get('/getReclosersEnabled', verifyToken, listReclosersEnabled)
 router.get('/getRecloserxID', verifyToken, getRecloserxID)
-router.get('/getVersions', verifyToken, getVersions)
+router.get('/getVersionsRecloser', verifyToken, getVersions)
 router.get('/metrologiaIntantanea', verifyToken, metrologiaIntantanea)
 router.get('/listEvents', verifyToken, listEvents)
 router.get('/tensionABC', verifyToken, tensionABCGraf)

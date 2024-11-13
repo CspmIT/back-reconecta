@@ -6,7 +6,7 @@ const {
 	unlinkRelationNode,
 	deleteNode,
 	getMaps,
-} = require('../controllers/Node.controllers')
+} = require('../controllers/Node.controller')
 const { verifyToken } = require('../middleware/Auth.middleware')
 const router = express.Router()
 

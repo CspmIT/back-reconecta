@@ -13,7 +13,6 @@ const {
 	getInterruption,
 	saveRecloser,
 	validateRecloser,
-	getListVersions,
 	getReclosersEnabled,
 	getInfoMap,
 	getStatusRecloser,
@@ -25,6 +24,7 @@ const {
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
+const { getListVersions } = require('../services/VersionService')
 
 const listAllRecloser = async (req, res) => {
 	try {
@@ -384,6 +384,9 @@ const addRecloser = async (req, res) => {
 			if (validateReclosers) {
 				throw new Error(validateReclosers)
 			}
+			req.body.id_user_edit = req.user.id
+		} else {
+			req.body.id_user_create = req.user.id
 		}
 		const Recloser = await saveRecloser(req.body, transaction)
 		if (!Recloser) throw new Error('Error al guardar el recloser.')
@@ -414,8 +417,14 @@ const deleteRecloser = async (req, res) => {
 			id_device: req.body.id,
 			type_device: req.body.type_device,
 			status: 0,
+			id_user_edit: req.user.id,
 		}
 		req.body.id_node = null
+		if (req.body.id > 1) {
+			req.body.id_user_edit = req.user.id
+		} else {
+			req.body.id_user_create = req.user.id
+		}
 		const Recloser = await saveRecloser(req.body, transaction)
 		if (!Recloser) throw new Error('Error al guardar el recloser.')
 		if (Recloser.id_node) {
@@ -447,11 +456,15 @@ const unlinkRelation = async (req, res) => {
 			id_node: req.body.id_node,
 			id_device: req.body.id,
 			type_device: req.body.type_device,
+			id_user_edit: req.user.id,
 			status: 0,
 		}
 		const dataRelation = await saveRelation(relation, transaction)
 		if (!dataRelation) throw new Error('Error al guardar la relación entre entidad y recloser.')
-		const Recloser = await saveRecloser({ id: req.body.id, id_node: null, serial: req.body.serial }, transaction)
+		const Recloser = await saveRecloser(
+			{ id: req.body.id, id_node: null, serial: req.body.serial, id_user_edit: req.user.id },
+			transaction
+		)
 		if (!Recloser) throw new Error('Error al guardar los cambios del reconectador.')
 		await transaction.commit()
 		res.status(200).json(dataRelation)
@@ -470,7 +483,7 @@ const getVersions = async (req, res) => {
 		if (!versions) {
 			return res.status(404).json({ message: 'Versiones no encontrado' })
 		}
-		res.status(200).json(versions)
+		res.status(200).json(versions.filter((item) => item.dataValues.type_device == 'Reconectador'))
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })
@@ -506,12 +519,11 @@ const recloserAlarm = async (req, res) => {
 			.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
 			.reduce((acc, value) => {
 				if (value.statusAlert == 1 && value.priority == 1) {
-					acc++
+					acc[value.id_device] = 1
 				}
 				return acc
-			}, 0)
-
-		return res.status(200).json(returnData)
+			}, {})
+		return res.status(200).json(Object.keys(returnData).length)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })

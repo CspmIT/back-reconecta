@@ -9,6 +9,8 @@ module.exports = (sequelize, DataTypes) => {
 		 */
 		static associate(models) {
 			// define association here
+			this.belongsTo(models.User, { foreignKey: 'id_user_create', targetKey: 'id', as: 'user_create' })
+			this.belongsTo(models.User, { foreignKey: 'id_user_edit', targetKey: 'id', as: 'user_edit' })
 		}
 	}
 	RecloserPassword.init(
@@ -16,6 +18,8 @@ module.exports = (sequelize, DataTypes) => {
 			password: DataTypes.STRING,
 			status: { type: DataTypes.BOOLEAN, defaultValue: 1 },
 			id_user: DataTypes.BIGINT,
+			id_user_create: DataTypes.INTEGER,
+			id_user_edit: DataTypes.INTEGER,
 		},
 		{
 			sequelize,
