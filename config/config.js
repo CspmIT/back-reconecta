@@ -21,7 +21,7 @@ module.exports = {
 	reconecta: {
 		username: 'DbDesarrollo',
 		password: process.env.DB_PASS,
-		database: 'reconecta',
+		database: 'reconecta_desarrollo',
 		host: process.env.DB_HOST,
 		port: process.env.DB_PORT || 3306,
 		dialect: 'mysql',
