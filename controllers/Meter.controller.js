@@ -1,5 +1,20 @@
 const { db } = require('../models')
-const { validateMeter, MeterAdd, getListMeter, getStatusMeter, getMetersEnabled } = require('../services/MeterService')
+const {
+	validateEnable,
+	save,
+	getList,
+	getStatus,
+	getEnabled,
+	getxID,
+	getVIinflux,
+	getMetrologyPower,
+	getMetrologyEnergy,
+	getMetrologyBasic,
+	getCurva,
+	getVoltageCurrent,
+	getCosenoFi,
+	getInfoGraf,
+} = require('../services/MeterService')
 const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
 const getVersions = async (req, res) => {
@@ -20,7 +35,7 @@ const getVersions = async (req, res) => {
 
 const listMeter = async (req, res) => {
 	try {
-		const MeterList = await getListMeter()
+		const MeterList = await getList()
 		if (!MeterList) {
 			return res.status(404).json({ message: 'Versiones no encontrado' })
 		}
@@ -32,7 +47,7 @@ const listMeter = async (req, res) => {
 					const history = await searchRelationActive(meter.id, 2)
 					relation = history?.nodes?.get() || []
 				}
-				const statusMeter = await getStatusMeter(
+				const statusMeter = await getStatus(
 					{
 						brand: meter.version.brand.name,
 						version: meter.version.name,
@@ -70,7 +85,7 @@ const listMeter = async (req, res) => {
 
 const metersEnabled = async (req, res) => {
 	try {
-		const meters = await getMetersEnabled()
+		const meters = await getEnabled()
 		const result = meters.map((item) => {
 			return {
 				id: item.id,
@@ -100,7 +115,7 @@ const addMeter = async (req, res) => {
 		// Inicia la transacción
 		transaction = await db.sequelize.transaction()
 		const version = await getersionxName(req.body.version)
-		const validationNode = await validateMeter(req.body.serial, version.dataValues.id, req.body.id)
+		const validationNode = await validateEnable(req.body.serial, version.dataValues.id, req.body.id)
 		if (validationNode) throw new Error(validationNode)
 		const data = {
 			...req.body,
@@ -108,7 +123,7 @@ const addMeter = async (req, res) => {
 			[req.body.id > 0 ? 'id_user_edit' : 'id_user_create']: req.user.id,
 		}
 		// Guardado de Nodo
-		const Meter = await MeterAdd(data, transaction)
+		const Meter = await save(data, transaction)
 		if (!Meter) throw new Error('Error al guardar el Medidor.')
 		await transaction.commit()
 		res.status(200).json(Meter)
@@ -122,9 +137,291 @@ const addMeter = async (req, res) => {
 	}
 }
 
+const dataMetrologyVI = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.query
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dataInflux = await getVIinflux({ serial: serial, brand: brand, version: version }, influxName)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataMetrologyEnergy = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.query
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dataInflux = await getMetrologyEnergy({ serial: serial, brand: brand, version: version }, influxName)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataMetrologyPower = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.query
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dataInflux = await getMetrologyPower({ serial: serial, brand: brand, version: version }, influxName)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataMetrologyBasic = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.query
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dataInflux = await getMetrologyBasic({ serial: serial, brand: brand, version: version }, influxName)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataMeter = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const meter = await getxID(id)
+		if (!meter) {
+			throw new Error('Medidor no encontrado')
+		}
+		const dataMeter = {
+			...meter.get(),
+			name: meter.history?.[0]?.nodes?.name || null,
+			number: meter.history?.[0]?.nodes?.number || null,
+			version: meter.version.name,
+			id_version: meter.version.id,
+			brand: meter.version.brand.name,
+		}
+		const influxName = req.user.influx_name
+		const dataInflux = await getVIinflux(
+			{ serial: dataMeter.serial, brand: dataMeter.brand, version: dataMeter.version },
+			influxName
+		)
+
+		const fechaValue = dataInflux.VI.Date.value.split('/')
+		const [day, month, yearPart] = fechaValue
+		const year = yearPart.substring(0, 4)
+		const hourMinuteSecond = yearPart.substring(5)
+		const time2 = new Date(`${year}-${month}-${day} ${hourMinuteSecond}`)
+		const dif = getTimeDifference(new Date(dataInflux.VI.Date.time), time2)
+
+		dataMeter.Dif_Time = formatTextDifTime(dif)
+		dataMeter.Bat_0 = dataInflux?.VI?.Bat_0?.value >= 0 ? dataInflux.VI.Bat_0.value : 'sin datos'
+		dataMeter.Date = dataInflux?.VI?.Date?.value || 'sin datos'
+		res.status(200).json(dataMeter)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const formatTextDifTime = (dif) => {
+	const dias = dif.days > 0 ? `${dif.days} días ` : ''
+	const meses = dif.months > 0 ? `${dif.months} ${dif.months === 1 ? 'mes ' : 'meses '}` : ''
+	const text = (dataMeter.Dif_Time = `${meses}${dias}${String(dif.hours).padStart(2, '0')}:${String(
+		dif.minutes
+	).padStart(2, '0')}:${String(dif.seconds).padStart(2, '0')}`)
+	return text
+}
+
+const getTimeDifference = (startDate, endDate) => {
+	const diff = endDate - startDate
+	const seconds = Math.floor(diff / 1000)
+	const minutes = Math.floor(seconds / 60)
+	const hours = Math.floor(minutes / 60)
+	const days = Math.floor(hours / 24)
+	const months = Math.floor(days / 30) // Aproximado a 30 días por mes
+
+	return {
+		seconds: seconds % 60,
+		minutes: minutes % 60,
+		hours: hours % 24,
+		days: days % 30,
+		months: months,
+	}
+}
+
+const dataCurva = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getCurva(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+		const calculateValues = (fieldKey) => {
+			return dataInflux[fieldKey].map((item, index) => {
+				const value = (
+					(parseFloat(item.value) * dataInflux.VT_0[index].value) /
+					dataInflux.VT_1[index].value
+				).toFixed(0)
+				return { ...item, value }
+			})
+		}
+		dataInflux.V_0 = calculateValues('V_0')
+		dataInflux.V_1 = calculateValues('V_1')
+		dataInflux.V_2 = calculateValues('V_2')
+		delete dataInflux.VT_0
+		delete dataInflux.VT_1
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+const dataVoltageCurrent = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getVoltageCurrent(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+		const calculateCorriente = (fieldKey) => {
+			return dataInflux[fieldKey].map((item, index) => {
+				const value = (
+					(parseFloat(item.value) * dataInflux.VT_0[index].value) /
+					dataInflux.VT_1[index].value
+				).toFixed(0)
+				return { ...item, value }
+			})
+		}
+		const calculateTension = (fieldKey) => {
+			return dataInflux[fieldKey].map((item, index) => {
+				const value = (
+					(parseFloat(item.value) * dataInflux.CT_0[index].value) /
+					dataInflux.CT_1[index].value
+				).toFixed(0)
+				return { ...item, value }
+			})
+		}
+		dataInflux.V_0 = calculateCorriente('V_0')
+		dataInflux.V_1 = calculateCorriente('V_1')
+		dataInflux.V_2 = calculateCorriente('V_2')
+		dataInflux.I_0 = calculateTension('I_0')
+		dataInflux.I_1 = calculateTension('I_1')
+		dataInflux.I_2 = calculateTension('I_2')
+		delete dataInflux.VT_0
+		delete dataInflux.VT_1
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataCosenoFi = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getCosenoFi(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataInfoGraf = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoGraf(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	getVersions,
 	listMeter,
 	addMeter,
 	metersEnabled,
+	dataMeter,
+	dataMetrologyPower,
+	dataMetrologyBasic,
+	dataMetrologyEnergy,
+	dataMetrologyVI,
+	dataCurva,
+	dataVoltageCurrent,
+	dataCosenoFi,
+	dataInfoGraf,
 }
