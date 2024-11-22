@@ -14,6 +14,14 @@ const {
 	getVoltageCurrent,
 	getCosenoFi,
 	getInfoGraf,
+	getInfoSurge,
+	getInfoUnderVoltage,
+	getInfoSurgeSummary,
+	getInfoUnderVoltageSummary,
+	getInfoCourt,
+	getInfoCourtSummary,
+	getInfoInterruption,
+	getInfoInterruptionSummary,
 } = require('../services/MeterService')
 const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
@@ -410,6 +418,197 @@ const dataInfoGraf = async (req, res) => {
 	}
 }
 
+const dataSurge = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoSurge(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataSurgeSummary = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoSurgeSummary(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataUnderVoltage = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoUnderVoltage(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataUnderVoltageSummary = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoUnderVoltageSummary(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataCourt = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoCourt(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataCourtSummary = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoCourtSummary(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataInterruption = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoInterruption(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataInterruptionSummary = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoInterruptionSummary(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	getVersions,
 	listMeter,
@@ -424,4 +623,12 @@ module.exports = {
 	dataVoltageCurrent,
 	dataCosenoFi,
 	dataInfoGraf,
+	dataSurge,
+	dataUnderVoltage,
+	dataSurgeSummary,
+	dataUnderVoltageSummary,
+	dataCourt,
+	dataCourtSummary,
+	dataInterruption,
+	dataInterruptionSummary,
 }

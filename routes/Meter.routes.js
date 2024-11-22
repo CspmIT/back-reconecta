@@ -14,6 +14,14 @@ const {
 	dataVoltageCurrent,
 	dataCosenoFi,
 	dataInfoGraf,
+	dataSurge,
+	dataUnderVoltage,
+	dataSurgeSummary,
+	dataUnderVoltageSummary,
+	dataCourt,
+	dataCourtSummary,
+	dataInterruption,
+	dataInterruptionSummary,
 } = require('../controllers/Meter.controller')
 const router = express.Router()
 
@@ -32,5 +40,15 @@ router.post('/getCurva', verifyToken, dataCurva)
 router.post('/getVoltageCurrent', verifyToken, dataVoltageCurrent)
 router.post('/getCosenoFi', verifyToken, dataCosenoFi)
 router.post('/getInfoGraf', verifyToken, dataInfoGraf)
+
+// CALIDAD DE TENSION
+router.post('/getQualitySurge', verifyToken, dataSurge)
+router.post('/getQualitySurgeSummary', verifyToken, dataSurgeSummary)
+router.post('/getQualityUnderVoltage', verifyToken, dataUnderVoltage)
+router.post('/getQualityUnderVoltageSummary', verifyToken, dataUnderVoltageSummary)
+router.post('/getQualityCourt', verifyToken, dataCourt)
+router.post('/getQualityCourtSummary', verifyToken, dataCourtSummary)
+router.post('/getQualityInterruption', verifyToken, dataInterruption)
+router.post('/getQualityInterruptionSummary', verifyToken, dataInterruptionSummary)
 
 module.exports = router

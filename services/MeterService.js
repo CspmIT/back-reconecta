@@ -333,6 +333,7 @@ const processInfluxDataArray = async (influxData) => {
 			field: element._field,
 			value: element._value,
 			time: element._time,
+			topic: element.topic,
 		})
 	})
 
@@ -368,7 +369,7 @@ const getCurva = async (data, influxName) => {
 						|> filter(fn: (r) => r["_field"] == "V_0" or r["_field"] == "V_1" or r["_field"] == "V_2" or r["_field"] == "Ev" or r["_field"] == "Date" or r["_field"] == "CFi" or r["_field"] == "AIP_1" or r["_field"] == "AcP_0" or r["_field"] == "AcP_1" or r["_field"] == "AcP_2" or r["_field"] == "VT_0" or r["_field"] == "VT_1")
 						${attrQuery.limit}`
 		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = await processInfluxDataArray(result)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -405,7 +406,7 @@ const getVoltageCurrent = async (data, influxName) => {
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
 		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = await processInfluxDataArray(result)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -442,7 +443,7 @@ const getCosenoFi = async (data, influxName) => {
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
 		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = await processInfluxDataArray(result)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -481,7 +482,307 @@ const getInfoGraf = async (data, influxName) => {
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
 		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = await processInfluxDataArray(result)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoSurge = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_1" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_2" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_3" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial") 
+						|> filter(fn: (r) => r["_field"] == "VT_0" or r["_field"] == "VT_1" or r["_field"] == "D10_0" 
+						or r["_field"] == "D10_1" or r["_field"] == "D10_2" or r["_field"] == "D10_3" or r["_field"] == "D1_0" 
+						or r["_field"] == "D1_1" or r["_field"] == "D1_2" or r["_field"] == "D1_3" or r["_field"] == "D2_0" 
+						or r["_field"] == "D2_1" or r["_field"] == "D2_2" or r["_field"] == "D2_3" or r["_field"] == "D3_0" 
+						or r["_field"] == "D3_2" or r["_field"] == "D3_1" or r["_field"] == "D3_3" or r["_field"] == "D4_0" 
+						or r["_field"] == "D4_1" or r["_field"] == "D4_2" or r["_field"] == "D4_3" or r["_field"] == "D5_0" 
+						or r["_field"] == "D5_1" or r["_field"] == "D5_2" or r["_field"] == "D5_3" or r["_field"] == "D6_0" 
+						or r["_field"] == "D6_1" or r["_field"] == "D6_2" or r["_field"] == "D6_3" or r["_field"] == "D7_0" 
+						or r["_field"] == "D7_1" or r["_field"] == "D7_2" or r["_field"] == "D7_3" or r["_field"] == "D8_0" 
+						or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
+						or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")     
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoSurgeSummary = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_1" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_2" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_3") 
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+						|> last()`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoUnderVoltage = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_1" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_2" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_3"
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial") 
+						|> filter(fn: (r) => r["_field"] == "VT_0" or r["_field"] == "VT_1" or r["_field"] == "D10_0" 
+							or r["_field"] == "D10_1" or r["_field"] == "D10_2" or r["_field"] == "D10_3" or r["_field"] == "D1_0"
+							or r["_field"] == "D1_1" or r["_field"] == "D1_2" or r["_field"] == "D1_3" or r["_field"] == "D2_0" 
+							or r["_field"] == "D2_1" or r["_field"] == "D2_2" or r["_field"] == "D2_3" or r["_field"] == "D3_0" 
+							or r["_field"] == "D3_2" or r["_field"] == "D3_1" or r["_field"] == "D3_3" or r["_field"] == "D4_0" 
+							or r["_field"] == "D4_1" or r["_field"] == "D4_2" or r["_field"] == "D4_3" or r["_field"] == "D5_0" 
+							or r["_field"] == "D5_1" or r["_field"] == "D5_2" or r["_field"] == "D5_3" or r["_field"] == "D6_0" 
+							or r["_field"] == "D6_1" or r["_field"] == "D6_2" or r["_field"] == "D6_3" or r["_field"] == "D7_0" 
+							or r["_field"] == "D7_1" or r["_field"] == "D7_2" or r["_field"] == "D7_3" or r["_field"] == "D8_0" 
+							or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
+							or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")                    
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoUnderVoltageSummary = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_1" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_2" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_3") 
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+						|> last()`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoCourt = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_1" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_2" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_3"
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial") 
+						|> filter(fn: (r) => r["_field"] == "VT_0" or r["_field"] == "VT_1" or r["_field"] == "D10_0" 
+							or r["_field"] == "D10_1" or r["_field"] == "D10_2" or r["_field"] == "D10_3" or r["_field"] == "D1_0"
+							or r["_field"] == "D1_1" or r["_field"] == "D1_2" or r["_field"] == "D1_3" or r["_field"] == "D2_0" 
+							or r["_field"] == "D2_1" or r["_field"] == "D2_2" or r["_field"] == "D2_3" or r["_field"] == "D3_0" 
+							or r["_field"] == "D3_2" or r["_field"] == "D3_1" or r["_field"] == "D3_3" or r["_field"] == "D4_0" 
+							or r["_field"] == "D4_1" or r["_field"] == "D4_2" or r["_field"] == "D4_3" or r["_field"] == "D5_0" 
+							or r["_field"] == "D5_1" or r["_field"] == "D5_2" or r["_field"] == "D5_3" or r["_field"] == "D6_0" 
+							or r["_field"] == "D6_1" or r["_field"] == "D6_2" or r["_field"] == "D6_3" or r["_field"] == "D7_0" 
+							or r["_field"] == "D7_1" or r["_field"] == "D7_2" or r["_field"] == "D7_3" or r["_field"] == "D8_0" 
+							or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
+							or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")                    
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoCourtSummary = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_1" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_2" 
+						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_3") 
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+						|> last()`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoInterruption = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_1" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_2" 
+							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_3") 
+						|> filter(fn: (r) =>  r["_field"] == "D10_0" or r["_field"] == "D10_1" or r["_field"] == "D1_0" 
+							or r["_field"] == "D1_1" or r["_field"] == "D2_0" or r["_field"] == "D2_1" or r["_field"] == "D3_0" 
+							or r["_field"] == "D3_1" or r["_field"] == "D4_0" or r["_field"] == "D4_1" or r["_field"] == "D5_0" 
+							or r["_field"] == "D5_1" or r["_field"] == "D6_0" or r["_field"] == "D6_1" or r["_field"] == "D7_0" 
+							or r["_field"] == "D7_1" or r["_field"] == "D8_0" or r["_field"] == "D8_1"  or r["_field"] == "D9_0" 
+							or r["_field"] == "D9_1")                   
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta el estado más reciente de un reconectador específico en InfluxDB.
+ *
+ * @param {Object} data - Contiene la información del reconectador, incluyendo `brand`, `version`, `serial`, y opcionalmente `dateStart` y `dateFinished`.
+ * @param {string} influxName - Nombre de la base de datos InfluxDB.
+ * @returns {Promise<Object|null>} Un objeto con los datos procesados desde InfluxDB o `null` si no se encuentran datos.
+ * @throws {Error} Si ocurre un error durante la consulta o procesamiento.
+ * @author [Jose Romani] <jose.romani@hotmail.com>
+ */
+const getInfoInterruptionSummary = async (data, influxName) => {
+	try {
+		const attrQuery = {
+			dateStart: '-1mo',
+			dateFinished: 'now()',
+		}
+		if (data.dateStart) {
+			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		}
+		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReInt") 
+						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+						|> last()`
+		const result = await ConsultaInflux(query, influxName)
+		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -503,4 +804,12 @@ module.exports = {
 	getVoltageCurrent,
 	getCosenoFi,
 	getInfoGraf,
+	getInfoSurge,
+	getInfoUnderVoltage,
+	getInfoSurgeSummary,
+	getInfoUnderVoltageSummary,
+	getInfoCourt,
+	getInfoCourtSummary,
+	getInfoInterruption,
+	getInfoInterruptionSummary,
 }
