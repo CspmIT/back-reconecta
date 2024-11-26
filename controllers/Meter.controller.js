@@ -22,6 +22,10 @@ const {
 	getInfoCourtSummary,
 	getInfoInterruption,
 	getInfoInterruptionSummary,
+	getInfoHistoryReset,
+	getInfoHistorySummary,
+	getInfoEnergyTarifa,
+	getInfoEnergyTotal,
 } = require('../services/MeterService')
 const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
@@ -247,7 +251,7 @@ const dataMeter = async (req, res) => {
 		const hourMinuteSecond = yearPart.substring(5)
 		const time2 = new Date(`${year}-${month}-${day} ${hourMinuteSecond}`)
 		const dif = getTimeDifference(new Date(dataInflux.VI.Date.time), time2)
-
+		console.log(dif)
 		dataMeter.Dif_Time = formatTextDifTime(dif)
 		dataMeter.Bat_0 = dataInflux?.VI?.Bat_0?.value >= 0 ? dataInflux.VI.Bat_0.value : 'sin datos'
 		dataMeter.Date = dataInflux?.VI?.Date?.value || 'sin datos'
@@ -271,13 +275,12 @@ const formatTextDifTime = (dif) => {
 }
 
 const getTimeDifference = (startDate, endDate) => {
-	const diff = endDate - startDate
+	const diff = startDate - endDate
 	const seconds = Math.floor(diff / 1000)
 	const minutes = Math.floor(seconds / 60)
 	const hours = Math.floor(minutes / 60)
 	const days = Math.floor(hours / 24)
 	const months = Math.floor(days / 30) // Aproximado a 30 días por mes
-
 	return {
 		seconds: seconds % 60,
 		minutes: minutes % 60,
@@ -301,6 +304,7 @@ const dataCurva = async (req, res) => {
 			influxName
 		)
 		const calculateValues = (fieldKey) => {
+			if (!dataInflux[fieldKey]) return []
 			return dataInflux[fieldKey].map((item, index) => {
 				const value = (
 					(parseFloat(item.value) * dataInflux.VT_0[index].value) /
@@ -314,7 +318,7 @@ const dataCurva = async (req, res) => {
 		dataInflux.V_2 = calculateValues('V_2')
 		delete dataInflux.VT_0
 		delete dataInflux.VT_1
-		res.status(200).json(dataInflux)
+		return res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })
@@ -609,6 +613,101 @@ const dataInterruptionSummary = async (req, res) => {
 	}
 }
 
+const dataHistoryReset = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoHistoryReset(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataHistorySummary = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoHistorySummary(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const dataHistoryEnergyTarifa = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoEnergyTarifa(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+const dataHistoryEnergyTotal = async (req, res) => {
+	try {
+		const { version, brand, serial } = req.body
+		if ((!version, !brand, !serial)) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		const influxName = req.user.influx_name
+		const dateStart = req.body.dateStart ?? null
+		const dateFinished = req.body.dateFinished ?? null
+		const dataInflux = await getInfoEnergyTotal(
+			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
+			influxName
+		)
+
+		res.status(200).json(dataInflux)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	getVersions,
 	listMeter,
@@ -631,4 +730,8 @@ module.exports = {
 	dataCourtSummary,
 	dataInterruption,
 	dataInterruptionSummary,
+	dataHistoryReset,
+	dataHistorySummary,
+	dataHistoryEnergyTarifa,
+	dataHistoryEnergyTotal,
 }

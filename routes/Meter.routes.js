@@ -22,6 +22,10 @@ const {
 	dataCourtSummary,
 	dataInterruption,
 	dataInterruptionSummary,
+	dataHistoryReset,
+	dataHistorySummary,
+	dataHistoryEnergyTarifa,
+	dataHistoryEnergyTotal,
 } = require('../controllers/Meter.controller')
 const router = express.Router()
 
@@ -50,5 +54,11 @@ router.post('/getQualityCourt', verifyToken, dataCourt)
 router.post('/getQualityCourtSummary', verifyToken, dataCourtSummary)
 router.post('/getQualityInterruption', verifyToken, dataInterruption)
 router.post('/getQualityInterruptionSummary', verifyToken, dataInterruptionSummary)
+
+// HISTORICO
+router.post('/getHistoryReset', verifyToken, dataHistoryReset)
+router.post('/getHistorySummary', verifyToken, dataHistorySummary)
+router.post('/getHistoryEnergyTarifa', verifyToken, dataHistoryEnergyTarifa)
+router.post('/getHistoryEnergyTotal', verifyToken, dataHistoryEnergyTotal)
 
 module.exports = router
