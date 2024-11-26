@@ -284,16 +284,16 @@ const getStatusRecloser = async (data, influxName) => {
 		const dcValue = dataReturn.get('d/c')?.[0]?.value
 
 		if (acValue === undefined || dcValue === undefined) {
-			return 2
+			return 3
 		}
 		if (acValue === 1 && dcValue === 1) {
 			return 0 // Cerrado
 		} else if ((acValue === 1 && dcValue === 0) || (acValue === 0 && dcValue === 0)) {
 			return 1 // Abierto
 		} else if (acValue === 0 && dcValue === 1) {
-			return 3 // Falla
+			return 2 // Cerrado sin tensión
 		}
-		return 2 // Sin Señal
+		return 3 // Sin Señal
 	} catch (error) {
 		throw error
 	}
