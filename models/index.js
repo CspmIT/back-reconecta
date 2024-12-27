@@ -11,17 +11,8 @@ const configDesarrollo = require(__dirname + '/../config/config.js')['coopm_v1']
 const db = {}
 const dbDesarrollo = {}
 let sequelize
-let sequelizeDesarrollo = new Sequelize(
-	configDesarrollo.database,
-	configDesarrollo.username,
-	configDesarrollo.password,
-	configDesarrollo
-)
-if (config.use_env_variable) {
-	sequelize = new Sequelize(process.env[config.use_env_variable], config)
-} else {
-	sequelize = new Sequelize(config.database, config.username, config.password, config)
-}
+
+sequelize = new Sequelize(config.database, config.username, config.password, config)
 
 fs.readdirSync(__dirname)
 	.filter((file) => {
@@ -31,9 +22,7 @@ fs.readdirSync(__dirname)
 	})
 	.forEach((file) => {
 		const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes)
-		const model2 = require(path.join(__dirname, file))(sequelizeDesarrollo, Sequelize.DataTypes)
 		db[model.name] = model
-		dbDesarrollo[model2.name] = model2
 	})
 
 Object.keys(db).forEach((modelName) => {
@@ -41,16 +30,9 @@ Object.keys(db).forEach((modelName) => {
 		db[modelName].associate(db)
 	}
 })
-Object.keys(dbDesarrollo).forEach((modelName) => {
-	if (dbDesarrollo[modelName].associate) {
-		dbDesarrollo[modelName].associate(dbDesarrollo)
-	}
-})
 
 db.Sequelize = Sequelize
 db.sequelize = sequelize
-dbDesarrollo.Sequelize = Sequelize
-dbDesarrollo.sequelize = sequelizeDesarrollo
 
 const changeSchema = async (schemaName) => {
 	const sequelize = new Sequelize(schemaName, config.username, config.password, config)
