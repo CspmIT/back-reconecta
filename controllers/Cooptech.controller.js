@@ -26,7 +26,7 @@ const loginCooptech = async (req, res) => {
 		if (user.status == 0) {
 			throw new Error('El usuario no tiene Permisos para ingresar')
 		}
-		if (user.token_app !== tokenApp) {
+		if (user.token_apps !== tokenApp) {
 			throw new Error('El usuario o la contraseña son incorrectas2')
 		}
 		const token = await signTokenCooptech(user, tokenApp, schemaName, influx_name)
