@@ -26,7 +26,6 @@ module.exports = {
 		host: process.env.DB_HOST,
 		port: process.env.DB_PORT || 3306,
 		dialect: 'mysql',
-
 		timezone: 'America/Argentina/Buenos_Aires',
 	},
 	reconecta_desarrollo: {

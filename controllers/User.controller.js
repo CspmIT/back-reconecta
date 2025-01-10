@@ -67,7 +67,6 @@ const addPassRecloser = async (req, res) => {
 		if (!req.body.password || !req.body.id_user) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		console.log(req.body.id)
 		if (req.body.id > 0) {
 			req.body.id_user_edit = req.user.id
 		} else {
