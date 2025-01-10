@@ -1,3 +1,4 @@
+const { Op } = require('sequelize')
 const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 
@@ -156,10 +157,10 @@ const validateEnable = async (serial, id_version, id) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante el guardado o la actualización.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const save = async (data, transaction) => {
+const saveMeter = async (data, transaction) => {
 	try {
 		const [MeterElectricity, created] = await db.MeterElectricity.findOrCreate({
-			where: [{ serial: data.serial, id_version: data.id_version }],
+			where: { [Op.or]: [{ id: data.id }, { serial: data.serial, id_version: data.id_version }] },
 			defaults: { ...data },
 			transaction,
 		})
@@ -213,8 +214,7 @@ const getMetrologyBasic = async (data, influxName) => {
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_6")
 		 |> filter(fn: (r) => r["_field"] == "RMS_Max_0" or r["_field"] == "RMS_Max_2" or r["_field"] == "RMS_Max_4" or r["_field"] == "RMS_Max_6" or r["_field"] == "RMS_Max_8" or r["_field"] == "RMS_Max_10")
 		|> max()`
-
-		const [result1, result2, result3, result4] = await Promise.all([
+		const [result1, result2, result3] = await Promise.all([
 			ConsultaInflux(query, influxName),
 			ConsultaInflux(maxMensual, influxName),
 			ConsultaInflux(maxHistorico, influxName),
@@ -951,7 +951,6 @@ const getInfoEnergyTarifa = async (data, influxName) => {
 			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
 			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
 		}
-		console.log(attrQuery)
 		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_4") 
 						|> filter(fn: (r) => r["_field"] == "RTE_0" or r["_field"] == "RTE_1" or r["_field"] == "RTE_2")  
@@ -991,7 +990,6 @@ const getInfoEnergyTotal = async (data, influxName) => {
 			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
 			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
 		}
-		console.log(attrQuery)
 		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_1" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_2" 
@@ -1029,7 +1027,7 @@ module.exports = {
 	getList,
 	getxID,
 	validateEnable,
-	save,
+	saveMeter,
 	getStatus,
 	getEnabled,
 	getMetrologyBasic,

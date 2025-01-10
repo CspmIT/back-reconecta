@@ -18,7 +18,6 @@ const {
 	getStatusRecloser,
 	controlChange,
 	getStatusAlarm,
-	updateRecloser,
 	acRecloser,
 	getManauver,
 } = require('../services/RecloserServices')

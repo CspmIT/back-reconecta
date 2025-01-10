@@ -1,7 +1,6 @@
 const { db } = require('../models')
 const {
 	validateEnable,
-	save,
 	getList,
 	getStatus,
 	getEnabled,
@@ -26,6 +25,7 @@ const {
 	getInfoHistorySummary,
 	getInfoEnergyTarifa,
 	getInfoEnergyTotal,
+	saveMeter,
 } = require('../services/MeterService')
 const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
@@ -135,7 +135,7 @@ const addMeter = async (req, res) => {
 			[req.body.id > 0 ? 'id_user_edit' : 'id_user_create']: req.user.id,
 		}
 		// Guardado de Nodo
-		const Meter = await save(data, transaction)
+		const Meter = await saveMeter(data, transaction)
 		if (!Meter) throw new Error('Error al guardar el Medidor.')
 		await transaction.commit()
 		res.status(200).json(Meter)
@@ -244,17 +244,17 @@ const dataMeter = async (req, res) => {
 			{ serial: dataMeter.serial, brand: dataMeter.brand, version: dataMeter.version },
 			influxName
 		)
-
-		const fechaValue = dataInflux.VI.Date.value.split('/')
-		const [day, month, yearPart] = fechaValue
-		const year = yearPart.substring(0, 4)
-		const hourMinuteSecond = yearPart.substring(5)
-		const time2 = new Date(`${year}-${month}-${day} ${hourMinuteSecond}`)
-		const dif = getTimeDifference(new Date(dataInflux.VI.Date.time), time2)
-		console.log(dif)
-		dataMeter.Dif_Time = formatTextDifTime(dif)
-		dataMeter.Bat_0 = dataInflux?.VI?.Bat_0?.value >= 0 ? dataInflux.VI.Bat_0.value : 'sin datos'
-		dataMeter.Date = dataInflux?.VI?.Date?.value || 'sin datos'
+		if (dataInflux?.VI?.Date) {
+			const fechaValue = dataInflux?.VI?.Date?.value?.split('/')
+			const [day, month, yearPart] = fechaValue
+			const year = yearPart.substring(0, 4)
+			const hourMinuteSecond = yearPart.substring(5)
+			const time2 = new Date(`${year}-${month}-${day} ${hourMinuteSecond}`)
+			const dif = getTimeDifference(new Date(dataInflux.VI.Date.time), time2)
+			dataMeter.Dif_Time = formatTextDifTime(dif)
+			dataMeter.Bat_0 = dataInflux?.VI?.Bat_0?.value >= 0 ? dataInflux.VI.Bat_0.value : 'sin datos'
+			dataMeter.Date = dataInflux?.VI?.Date?.value || 'sin datos'
+		}
 		res.status(200).json(dataMeter)
 	} catch (error) {
 		if (error.errors) {

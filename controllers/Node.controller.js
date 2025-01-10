@@ -1,6 +1,6 @@
 const { db } = require('../models')
 const { getListMaps } = require('../services/MapLocationService')
-const { MeterAdd } = require('../services/MeterService')
+const { saveMeter } = require('../services/MeterService')
 const {
 	ListNode,
 	addNode,
@@ -141,7 +141,7 @@ const saveNode = async (req, res) => {
 						await saveRecloser({ ...device, id_node: Nodo.id }, transaction)
 						break
 					case 2:
-						await MeterAdd({ ...device, id_node: Nodo.id }, transaction)
+						await saveMeter({ ...device, id_node: Nodo.id }, transaction)
 						break
 					// FALTA AGREGAR LOS DEMAS DISPOSITIVOS
 					default:
