@@ -1,3 +1,4 @@
+const { Op } = require('sequelize')
 const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 
@@ -159,7 +160,7 @@ const validateEnable = async (serial, id_version, id) => {
 const saveMeter = async (data, transaction) => {
 	try {
 		const [MeterElectricity, created] = await db.MeterElectricity.findOrCreate({
-			where: [{ serial: data.serial, id_version: data.id_version }],
+			where: { [Op.or]: [{ id: data.id }, { serial: data.serial, id_version: data.id_version }] },
 			defaults: { ...data },
 			transaction,
 		})
