@@ -20,7 +20,9 @@ module.exports = (sequelize, DataTypes) => {
 			alarm: DataTypes.BOOLEAN,
 			flash_screen: DataTypes.BOOLEAN,
 			id_version: DataTypes.INTEGER,
-			type: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
+			type_device: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
+			type_var: DataTypes.ENUM('Event', 'Output', 'Log'),
+			description: DataTypes.STRING,
 		},
 		{
 			sequelize,

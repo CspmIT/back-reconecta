@@ -29,7 +29,7 @@ const searchEnableAlarm = async (event) => {
 		}
 		// OBTENGO EL EVENTO SEGUN LA VERSION Y EL TIPO DE DISPOSITIVO
 		const Event = await db.Event.findOne({
-			where: { id_event_influx: event.id, id_version: Recloser[0].version.id, type: typeDevice, alarm: 1 },
+			where: { id_event_influx: event.id, id_version: Recloser[0].version.id, type_device: typeDevice, alarm: 1 },
 		})
 		if (!Event) {
 			return false
@@ -159,7 +159,7 @@ const getAllEvents = async () => {
 			const version = versions.find((item) => item.id === current.id_version)
 			const brandName = version?.brand?.name
 			const versionName = version?.name
-			const eventType = current.type
+			const eventType = current.type_device
 
 			acc[eventType] ??= {}
 			acc[eventType][brandName] ??= {}
@@ -203,13 +203,13 @@ const getEventsActive = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsDevice = async (id_version, type) => {
+const getEventsDevice = async (id_version, type_device) => {
 	try {
 		const Events = await db.Event.findAll({
 			where: {
 				status: 1,
 				id_version,
-				type,
+				type_device,
 			},
 		})
 		return Events
