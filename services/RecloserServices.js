@@ -30,6 +30,13 @@ const saveRecloser = async (dataRecloser, transaction) => {
 					id_node: dataRecloser.id_node || null,
 			  }
 			: { ...dataRecloser }
+		if (dataRecloser.id_user_create) {
+			data.id_user_create = dataRecloser.id_user_create
+		}
+		if (dataRecloser.id_user_edit) {
+			data.id_user_edit = dataRecloser.id_user_edit
+		}
+
 		const [Recloser, created] = await db.Recloser.findOrCreate({
 			where: { [Op.or]: [{ serial: data.serial }, { id: data.id }] },
 			defaults: { ...data },
@@ -38,6 +45,22 @@ const saveRecloser = async (dataRecloser, transaction) => {
 		if (!created) {
 			await Recloser.update(data, { transaction })
 		}
+		return Recloser
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Guarda o actualiza un reconectador en la base de datos.
+ * @param {Object} dataRecloser - Contiene los datos del reconectador, incluyendo número de serie, marca, versión y configuración.
+ * @returns {Promise<Object>} El reconectador guardado o actualizado.
+ * @throws {Error} Si ocurre algún problema durante la transacción.
+ * @author  [José Romani] <jose.romani@hotmail.com>
+ */
+const updateRecloser = async (dataRecloser) => {
+	try {
+		const Recloser = await db.Recloser.update(dataRecloser, { where: { id: dataRecloser.id } })
 		return Recloser
 	} catch (error) {
 		throw error
@@ -55,14 +78,19 @@ const getAllRecloser = async () => {
 	try {
 		const RecloserDesarrollo = await db.Recloser.findAll({
 			where: { status: 1 },
-			include: {
-				association: 'version',
-				attributes: ['id', 'name'],
-				include: {
-					association: 'brand',
+			include: [
+				{
+					association: 'version',
 					attributes: ['id', 'name'],
+					include: {
+						association: 'brand',
+						attributes: ['id', 'name'],
+					},
 				},
-			},
+				{
+					association: 'history',
+				},
+			],
 		})
 		return RecloserDesarrollo
 	} catch (error) {
@@ -79,22 +107,7 @@ const getAllRecloser = async () => {
  */
 const getReclosersEnabled = async () => {
 	try {
-		const recloser = await db.Recloser.findAll({
-			where: { status: 1 },
-			include: [
-				{
-					association: 'version',
-					attributes: ['id', 'name'],
-					include: {
-						association: 'brand',
-						attributes: ['id', 'name'],
-					},
-				},
-				{
-					association: 'history',
-				},
-			],
-		})
+		const recloser = await getAllRecloser()
 		const result = recloser.filter((item) => {
 			if (item.history.every((rel) => rel.status == 0) || item.history.length == 0) {
 				return item
@@ -254,33 +267,33 @@ const getStatusRecloser = async (data, influxName) => {
 
 		let dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) return 3
-		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+		const dataReturn = new Map()
+
+		dataInflux.forEach((element) => {
+			if (!dataReturn.has(element._field)) {
+				dataReturn.set(element._field, [])
 			}
-			dataReturn[element._field].push({
+			dataReturn.get(element._field).push({
 				field: element._field,
 				value: element._value,
 				time: element._time,
 			})
-		}
+		})
 
-		let status = 2
-		if (dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 1) {
-			status = 0
+		const acValue = dataReturn.get('ac')?.[0]?.value
+		const dcValue = dataReturn.get('d/c')?.[0]?.value
+
+		if (acValue === undefined || dcValue === undefined) {
+			return 3
 		}
-		if (
-			(dataReturn?.ac?.[0]?.value == 1 && dataReturn?.['d/c']?.[0]?.value == 0) ||
-			(dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 0)
-		) {
-			status = 1
+		if (acValue === 1 && dcValue === 1) {
+			return 0 // Cerrado
+		} else if ((acValue === 1 && dcValue === 0) || (acValue === 0 && dcValue === 0)) {
+			return 1 // Abierto
+		} else if (acValue === 0 && dcValue === 1) {
+			return 2 // Cerrado sin tensión
 		}
-		if (dataReturn?.ac?.[0]?.value == 0 && dataReturn?.['d/c']?.[0]?.value == 1) {
-			status = 3
-		}
-		return status
+		return 3 // Sin Señal
 	} catch (error) {
 		throw error
 	}
@@ -326,6 +339,42 @@ const getMetrologiaIntantanea = async (data, influxName) => {
 				time: element._time,
 			})
 		}
+		return dataReturn
+	} catch (error) {
+		throw error
+	}
+}
+
+/**
+ * Consulta los datos instantaneos de un reconectador si no encuentra busca hasta 1 dia hacia atras, en InfluxDB.
+ *
+ * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
+ * @returns {Promise<Object|null>} Un objeto que representa los datos encontrados en InfluxDB, o `null` si no se encuentran datos. Lanza un error si ocurre un problema en la consulta.
+ * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
+ * @author  [Jose Romani]  <jose.romani@hotmail.com>
+ *
+ */
+const acRecloser = async (data, influxName) => {
+	try {
+		const query = `|> range(start: -30s, stop: now())
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+        |> filter(fn: (r) => r["_field"] == "ac" )
+        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+		|> last()`
+
+		let dataInflux = await ConsultaInflux(query, influxName)
+
+		if (!dataInflux || !dataInflux.length) {
+			const fallbackQuery = `|> range(start: -1d, stop: now())
+			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+			|> filter(fn: (r) => r["_field"] == "ac" )
+			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+			|> last()`
+
+			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
+		}
+		if (!dataInflux || !dataInflux.length) return null
+		let dataReturn = dataInflux[0]._value
 		return dataReturn
 	} catch (error) {
 		throw error
@@ -483,6 +532,24 @@ const getInterruption = async (data, influxName) => {
 }
 
 /**
+ * Consulta todo los envios de acciones sobre un reconectador en especifico
+ *
+ * @param {string} serial - El serial del reconectador específico para la consulta.
+ * @returns {Promise<Object>} Un array de objetos que representa las acciones ejecutadas desde el tablero del SCADA.
+ *
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
+ * @author José Romani <jose.romani@hotmail.com>
+ */
+const getManauver = async (serial) => {
+	try {
+		let dataReturn = await db.RecloserSendMqtt.findAll({ where: { status: 1, serial: serial } })
+		return dataReturn
+	} catch (error) {
+		throw new Error(error)
+	}
+}
+
+/**
  * Controla cambios en el estado de un reconectador consultando los últimos eventos en InfluxDB.
  * Realiza una consulta para verificar si un comando fue ejecutado correctamente, buscando un valor específico en el campo de datos de un reconectador en un período de 3 minutos.
  * Si el comando no se ejecuta correctamente, intenta verificar un campo de reconocimiento ('c/d_ack').
@@ -548,35 +615,6 @@ const controlChange = async (data, influxName) => {
 }
 
 /**
- * Recupera una lista de marcas y sus versiones activas desde la base de datos.
- * Solo incluye marcas cuyo estado es activo (`status: 1`).
- *
- * @returns {Promise<Array>} Un arreglo de objetos que representa las marcas activas, cada una con:
- *  - id: el identificador de la marca,
- *  - name: el nombre de la marca,
- *  - version: un array de versiones asociadas, cada una con su id y nombre.
- * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
- * @author
- */
-const getListVersions = async () => {
-	try {
-		const versions = await db.Brand.findAll({
-			where: {
-				status: 1,
-			},
-			attributes: ['id', 'name'],
-			include: {
-				association: 'version',
-				attributes: ['id', 'name'],
-			},
-		})
-		return versions
-	} catch (error) {
-		throw error
-	}
-}
-
-/**
  * Obtiene todas las ubicaciones del mapa con un estado activo (status = 1).
  *
  * @returns {Promise<Array>} Una promesa que resuelve en un array de ubicaciones activas del mapa.
@@ -602,7 +640,8 @@ const getInfoMap = async () => {
  *  - field: nombre del campo del evento,
  *  - value: valor del evento,
  *  - time: timestamp del evento.
- * @throws {Error} Lanza un error si no se encuentran datos en InfluxDB o si ocurre algún problema durante la consulta.
+ *  Retorna un array vacío si no se encuentran datos recientes
+ * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
 const consultEventRecloserInfluxOld = async (data, influxName) => {
@@ -778,11 +817,13 @@ module.exports = {
 	brandRecloser,
 	dataRecloseInflux,
 	controlChange,
-	getListVersions,
 	getReclosersEnabled,
 	getInfoMap,
 	consultEventRecloserInfluxOld,
 	getEventRecloserOld,
 	getEventCheckRecloserOld,
 	getStatusAlarm,
+	updateRecloser,
+	acRecloser,
+	getManauver,
 }

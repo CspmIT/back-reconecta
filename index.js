@@ -14,10 +14,10 @@ const UserRoutes = require('./routes/User.routes')
 const NodeRoutes = require('./routes/Node.routes')
 const AlarmRoutes = require('./routes/Alarm.routes')
 const AlarmEvent = require('./routes/Event.routes')
+const Meter = require('./routes/Meter.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
-const { verifyToken } = require('./middleware/Auth.middleware')
 app.use(corsConfig)
 app.use(cookieParser())
 
@@ -32,10 +32,11 @@ app.use('/api', UserRoutes)
 app.use('/api', NodeRoutes)
 app.use('/api', AlarmRoutes)
 app.use('/api', AlarmEvent)
+app.use('/api', Meter)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
-	await socketConfig.init(server) // Inicializa el socket en la ruta /api/socket
+	await socketConfig.init(server, req, res)
 	next()
 })
 server.listen(4000, () => {

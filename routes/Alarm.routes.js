@@ -1,5 +1,5 @@
 const express = require('express')
-const { sendMsjTelegram, contrlAlarm, alarmRecloser } = require('../controllers/Alarma.controllers')
+const { sendMsjTelegram, contrlAlarm, alarmRecloser } = require('../controllers/Alarma.controller')
 const { verifyToken } = require('../middleware/Auth.middleware')
 const router = express.Router()
 

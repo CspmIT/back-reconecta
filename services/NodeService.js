@@ -13,11 +13,16 @@ const searchNode = async (id, required = false) => {
 	try {
 		const Nodes = await db.Node.findOne({
 			where: { id: id },
-			include: {
-				association: 'node_history',
-				required: required,
-				where: { status: 1 },
-			},
+			include: [
+				{
+					association: 'node_history',
+					required: required,
+					where: { status: 1 },
+				},
+				{
+					association: 'maps',
+				},
+			],
 		})
 		return Nodes
 	} catch (error) {
@@ -36,11 +41,13 @@ const ListNode = async () => {
 	try {
 		const Nodes = await db.Node.findAll({
 			where: { status: 1 },
-			include: {
-				association: 'node_history',
-				required: false,
-				where: { status: 1 },
-			},
+			include: [
+				{
+					association: 'node_history',
+					required: false,
+					where: { status: 1 },
+				},
+			],
 		})
 		return Nodes
 	} catch (error) {
@@ -101,7 +108,7 @@ const searchRelationActive = async (id, type) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const addNode = async (dataNode, transaction) => {
+const addNode = async (dataNode, id_user, transaction) => {
 	try {
 		const data = {
 			name: dataNode.name,
@@ -109,15 +116,20 @@ const addNode = async (dataNode, transaction) => {
 			description: dataNode.description,
 			lat_location: dataNode.lat_location,
 			lng_location: dataNode.lng_location,
+			id_map: dataNode.id_map,
 			status: dataNode.status,
 			type: dataNode.type,
+			id_user_create: id_user,
 		}
+
 		const [Node, created] = await db.Node.findOrCreate({
 			where: [{ number: data.number }],
 			defaults: { ...data },
 			transaction,
 		})
 		if (!created) {
+			delete data.id_user_create
+			data.id_user_edit = id_user
 			await Node.update(data, { transaction })
 		}
 		return Node
@@ -224,11 +236,11 @@ const validateRelation = async (data) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  *
  */
-const unLinkNode = async (id) => {
+const unLinkNode = async (data, id_user, transaction) => {
 	try {
 		const Node_History = await db.Node_History.update(
-			{ status: 0 },
-			{ where: { id_node: id }, transaction: transaction }
+			{ status: 0, id_user_edit: id_user },
+			{ where: { id_node: data.id }, transaction: transaction }
 		)
 		return Node_History
 	} catch (error) {
@@ -245,9 +257,12 @@ const unLinkNode = async (id) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  *
  */
-const removeNode = async (id) => {
+const removeNode = async (id, id_user, transaction) => {
 	try {
-		const Node = await db.Node.update({ status: 0 }, { where: { id: id }, transaction: transaction })
+		const Node = await db.Node.update(
+			{ status: 0, id_user_edit: id_user },
+			{ where: { id: id }, transaction: transaction }
+		)
 		return Node
 	} catch (error) {
 		throw error

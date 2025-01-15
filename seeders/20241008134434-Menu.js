@@ -69,7 +69,7 @@ module.exports = {
 				},
 				{
 					name: 'Notificaciones',
-					link: '/config/notifications',
+					link: 'config/notifications',
 					icon: 'MdNotificationsActive',
 					level: '2',
 					group_menu: '4',
@@ -81,7 +81,7 @@ module.exports = {
 				},
 				{
 					name: 'Dashboard',
-					link: '/home',
+					link: 'home',
 					icon: 'RiDashboardFill',
 					level: '1',
 					group_menu: '5',
@@ -93,7 +93,7 @@ module.exports = {
 				},
 				{
 					name: 'Alerta',
-					link: '/Alert',
+					link: 'Alert',
 					icon: 'RiAlertFill',
 					level: '1',
 					group_menu: '6',
@@ -105,7 +105,7 @@ module.exports = {
 				},
 				{
 					name: 'ABM Equipos',
-					link: '',
+					link: 'Abm',
 					icon: 'FaFile',
 					level: '1',
 					group_menu: '7',
