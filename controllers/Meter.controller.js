@@ -250,7 +250,7 @@ const dataMeter = async (req, res) => {
 			const year = yearPart.substring(0, 4)
 			const hourMinuteSecond = yearPart.substring(5)
 			const time2 = new Date(`${year}-${month}-${day} ${hourMinuteSecond}`)
-			const dif = getTimeDifference(new Date(dataInflux.VI.Date.time), time2)
+			const dif = getTimeDifference(time2, new Date(dataInflux.VI.Date.time))
 			dataMeter.Dif_Time = formatTextDifTime(dif)
 			dataMeter.Bat_0 = dataInflux?.VI?.Bat_0?.value >= 0 ? dataInflux.VI.Bat_0.value : 'sin datos'
 			dataMeter.Date = dataInflux?.VI?.Date?.value || 'sin datos'
@@ -268,9 +268,9 @@ const dataMeter = async (req, res) => {
 const formatTextDifTime = (dif) => {
 	const dias = dif.days > 0 ? `${dif.days} días ` : ''
 	const meses = dif.months > 0 ? `${dif.months} ${dif.months === 1 ? 'mes ' : 'meses '}` : ''
-	const text = (dataMeter.Dif_Time = `${meses}${dias}${String(dif.hours).padStart(2, '0')}:${String(
-		dif.minutes
-	).padStart(2, '0')}:${String(dif.seconds).padStart(2, '0')}`)
+	const text = `${meses}${dias}${String(dif.hours).padStart(2, '0')}:${String(dif.minutes).padStart(2, '0')}:${String(
+		dif.seconds
+	).padStart(2, '0')}`
 	return text
 }
 

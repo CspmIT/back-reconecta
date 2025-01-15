@@ -37,7 +37,7 @@ module.exports = {
 				type: Sequelize.INTEGER,
 				allowNull: false,
 			},
-			type: {
+			type_device: {
 				type: Sequelize.ENUM,
 				values: ['Reconectador', 'Medidor', 'Analizador'],
 			},

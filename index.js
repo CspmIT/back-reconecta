@@ -18,7 +18,6 @@ const Meter = require('./routes/Meter.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
-const { verifyToken } = require('./middleware/Auth.middleware')
 app.use(corsConfig)
 app.use(cookieParser())
 
