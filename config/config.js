@@ -20,7 +20,7 @@ module.exports = {
 	},
 	reconecta: {
 		// username: 'DbDesarrollo',
-		username: 'desarrollo',
+		username: process.env.DB_USER,
 		password: process.env.DB_PASS,
 		database: 'reconecta_desarrollo',
 		host: process.env.DB_HOST,
@@ -29,7 +29,7 @@ module.exports = {
 		timezone: 'America/Argentina/Buenos_Aires',
 	},
 	reconecta_desarrollo: {
-		username: 'desarrollo',
+		username: process.env.DB_USER,
 		password: process.env.DB_PASS,
 		database: 'reconecta_desarrollo',
 		host: process.env.DB_HOST,
