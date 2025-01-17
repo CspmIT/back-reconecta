@@ -75,6 +75,7 @@ const AllEvents = async (req, res) => {
 	try {
 		const Events = await getEventsActive()
 		const eventsInflux = await getEventsInflux(req.user.influx_name, Events)
+
 		const returnData = eventsInflux
 			.reduce((acc, value) => {
 				acc.push(...value)
@@ -88,7 +89,6 @@ const AllEvents = async (req, res) => {
 				},
 				{ alta: [], baja: [] }
 			)
-
 		return res.status(200).json(returnData)
 	} catch (error) {
 		if (error.errors) {
@@ -107,7 +107,7 @@ const eventsDevices = async (req, res) => {
 		const recloser = await getRecloserId(id)
 		const Events = await getEventsDevice(recloser.version.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
-			return { id: item.id_event_influx, name: item.name }
+			return { id: item.id_event_influx, name: item.name, priority: item.priority }
 		})
 		const eventsInflux = await getEventRecloserOld(
 			{

@@ -694,7 +694,6 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 	try {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
-
 		for (const reg of Object.values(packsEvents)) {
 			for (const item of Object.values(reg)) {
 				const eventData = data.event.find((even) => even.id == item[0].value)
@@ -703,8 +702,13 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 						item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
 							? new Date(item[2].value)
 							: item[0].time
+
 					const value = item[1]?.value >= 0 ? (item[1].value ? 'ON' : 'OFF') : ''
 
+					const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
+					const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
+
+					const statusAlarm = newdate >= dateEvent ? 0 : 1
 					packsReturn.push({
 						event: `${eventData.name} - ${value}`,
 						priority: eventData.priority,
@@ -714,7 +718,8 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 						id_device: data.id_device,
 						id: item[0].value,
 						dateAlert: dataPack,
-						statusAlert: data.dateCheck >= dataPack ? 0 : 1,
+						dateEvent: data.dateCheck,
+						statusAlert: statusAlarm,
 						infoAdd: '-',
 					})
 				}
@@ -759,6 +764,7 @@ const getEventRecloserOld = async (data, influxName) => {
 						event: `${matchingEvent.name} - ${value}`,
 						id: item[0].value,
 						dateAlert: dataPack,
+						priority: matchingEvent.priority,
 						infoAdd: '-',
 					})
 				}

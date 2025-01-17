@@ -237,6 +237,7 @@ const getEventsInflux = async (influx_name, Events) => {
 						const history = await searchRelationActive(recloser.id, 1)
 						relation = history?.nodes?.get() || []
 					}
+
 					const eventActiveReco = Events.filter((item) => item.id_version === recloser.version.id).map(
 						(item) => ({
 							id: item.id_event_influx,
@@ -245,7 +246,6 @@ const getEventsInflux = async (influx_name, Events) => {
 						})
 					)
 					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
-
 					return await getEventCheckRecloserOld(
 						{
 							brand: recloser.version.brand.name,
