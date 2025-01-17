@@ -243,6 +243,7 @@ const getEventsInflux = async (influx_name, Events) => {
 							id: item.id_event_influx,
 							name: item.name,
 							priority: item.priority,
+							description: item.description,
 						})
 					)
 					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')

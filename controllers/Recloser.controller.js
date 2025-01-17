@@ -20,6 +20,7 @@ const {
 	getStatusAlarm,
 	acRecloser,
 	getManauver,
+	getReclosersxVersion,
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
@@ -562,6 +563,23 @@ const changeStatusAlarm = async (req, res) => {
 		}
 	}
 }
+
+const reclosersxVersion = async (req, res) => {
+	try {
+		if (!req.query.id_version) {
+			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
+		}
+		const listReclosers = await getReclosersxVersion(req.query.id_version)
+		return res.status(200).json(listReclosers)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	interruptions,
 	corrientesGraf,
@@ -582,4 +600,5 @@ module.exports = {
 	recloserAlarm,
 	getAcRecloser,
 	manauvers,
+	reclosersxVersion,
 }

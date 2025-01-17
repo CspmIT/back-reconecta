@@ -712,6 +712,7 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 					packsReturn.push({
 						event: `${eventData.name} - ${value}`,
 						priority: eventData.priority,
+						description: eventData.description,
 						name: data.name,
 						nro_recloser: data.number,
 						typeDevice: data.typeDevice,
@@ -809,6 +810,26 @@ const getStatusAlarm = async (data, influxName) => {
 	}
 }
 
+const getReclosersxVersion = async (id_version) => {
+	try {
+		const recloser = await db.Recloser.findAll({
+			where: { id_version: id_version },
+			include: [
+				{
+					association: 'version',
+					include: [
+						{
+							association: 'brand',
+						},
+					],
+				},
+			],
+		})
+		return recloser
+	} catch (error) {
+		throw error
+	}
+}
 module.exports = {
 	getInterruption,
 	getCorriente,
@@ -832,4 +853,5 @@ module.exports = {
 	updateRecloser,
 	acRecloser,
 	getManauver,
+	getReclosersxVersion,
 }
