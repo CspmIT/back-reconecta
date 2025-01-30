@@ -109,7 +109,7 @@ const getReclosersEnabled = async () => {
 	try {
 		const recloser = await getAllRecloser()
 		const result = recloser.filter((item) => {
-			if (item.history.every((rel) => rel.status == 0) || item.history.length == 0) {
+			if (item.history.every((rel) => rel.status == 0) || item.history.length == 1) {
 				return item
 			}
 		})
