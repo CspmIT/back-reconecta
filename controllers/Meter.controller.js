@@ -1,4 +1,5 @@
 const { db } = require('../models')
+const { getEquipment } = require('../services/ElementService')
 const {
 	validateEnable,
 	getList,
@@ -227,21 +228,23 @@ const dataMeter = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const meter = await getxID(id)
+		const filter = { id: id }
+		const meterFilter = await getEquipment(filter)
+		const meter = meterFilter[0]
 		if (!meter) {
 			throw new Error('Medidor no encontrado')
 		}
 		const dataMeter = {
 			...meter.get(),
-			name: meter.history?.[0]?.nodes?.name || null,
-			number: meter.history?.[0]?.nodes?.number || null,
-			version: meter.version.name,
-			id_version: meter.version.id,
-			brand: meter.version.brand.name,
+			name: meter.observation || null,
+			number: meter.serial,
+			version: meter.equipmentmodels.brand,
+			id_version: meter.equipmentmodels.id,
+			brand: meter.equipmentmodels.name,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getVIinflux(
-			{ serial: dataMeter.serial, brand: dataMeter.brand, version: dataMeter.version },
+			{ serial: dataMeter.number, brand: dataMeter.brand, version: dataMeter.version },
 			influxName
 		)
 		if (dataInflux?.VI?.Date) {

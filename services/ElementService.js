@@ -75,6 +75,8 @@ const saveElement = async (element, equipment = []) => {
 			equipment.map((equip) => {
 				equip.id_element = data.id
 				equip.id_user = data.id_user
+				equip.observation = equip.observation || null
+				delete equip.id
 			})
 			console.log(equipment)
 			await db.Equipment.bulkCreate(equipment, { transaction })
@@ -83,6 +85,7 @@ const saveElement = async (element, equipment = []) => {
 		return data
 	} catch (e) {
 		await transaction.rollback()
+		console.error(e)
 		throw e
 	}
 }
