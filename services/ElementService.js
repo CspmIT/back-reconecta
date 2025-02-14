@@ -92,8 +92,16 @@ const saveElement = async (element, equipment = []) => {
 
 const saveEquipment = async (data) => {
 	try {
-		return await db.Equipment.bulkCreate(data)
+		if (data.id) {
+			const equipment = await db.Equipment.findByPk(data.id)
+			if (equipment) {
+				await equipment.update(data)
+				return await equipment
+			}
+		}
+		return await db.Equipment.create(data)
 	} catch (e) {
+		console.log(e)
 		throw e
 	}
 }

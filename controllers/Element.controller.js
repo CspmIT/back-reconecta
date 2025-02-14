@@ -11,7 +11,8 @@ const listElements = async (req, res) => {
 
 const listEquipments = async (req, res) => {
 	try {
-		const equipments = await getEquipment()
+		const filters = req.params
+		const equipments = await getEquipment(filters)
 		return res.status(200).json(equipments)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
@@ -38,9 +39,21 @@ const addElement = async (req, res) => {
 	}
 }
 
+const addEquipment = async (req, res) => {
+	try {
+		const equipment = req.body
+		equipment.id_user = req.user.id
+		const data = await saveEquipment(equipment)
+		return res.status(200).json({ message: 'Equipo creado correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	listElements,
 	listEquipments,
 	listModels,
 	addElement,
+	addEquipment,
 }
