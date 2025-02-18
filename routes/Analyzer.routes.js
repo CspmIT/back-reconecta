@@ -1,9 +1,10 @@
 const express = require('express')
 const { verifyToken } = require('../middleware/Auth.middleware')
-const { getAnalyzer } = require('../controllers/Analyzer.controller')
+const { getMetrology, getHistory } = require('../controllers/Analyzer.controller')
 
 const router = express.Router()
 
-router.post('/Analyzer', verifyToken, getAnalyzer)
+router.post('/Analyzer', verifyToken, getMetrology)
+router.post('/AnalyzerHistory', verifyToken, getHistory)
 
 module.exports = router

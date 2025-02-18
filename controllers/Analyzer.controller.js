@@ -1,8 +1,9 @@
-const { getData, getDataAnalyzer } = require('../services/AnalyzerService')
+const { getDataAnalyzer, getHistoryAnalyzer } = require('../services/AnalyzerService')
 
-const getAnalyzer = async (req, res) => {
+const getMetrology = async (req, res) => {
 	try {
-		const analyzer = await getDataAnalyzer(req.body)
+		const { influx_name } = req.user
+		const analyzer = await getDataAnalyzer(req.body, influx_name)
 		const dataAnalyzer = {}
 		let pot_activa = 0
 		let pot_reactiva = 0
@@ -58,6 +59,79 @@ const getAnalyzer = async (req, res) => {
 	}
 }
 
+const getHistory = async (req, res) => {
+	try {
+		const { influx_name } = req.user
+		const analyzer = await getHistoryAnalyzer(req.body, influx_name)
+		const dataAnalyzer = []
+		const fieldsMap = {
+			f_0_v: 'tr',
+			f_1_v: 'ts',
+			f_2_v: 'tt',
+			f_0_i: 'cr',
+			f_1_i: 'cs',
+			f_2_i: 'ct',
+			f_0_p: 'p0',
+			f_1_p: 'p1',
+			f_2_p: 'p2',
+			f_0_q: 'q0',
+			f_1_q: 'q1',
+			f_2_q: 'q2',
+			f_0_a: 'a0',
+			f_1_a: 'a1',
+			f_2_a: 'a2',
+			f_0_r: 'r0',
+			f_1_r: 'r1',
+			f_2_r: 'r2',
+		}
+		let i = 0
+		analyzer.forEach((value) => {
+			if (!dataAnalyzer[i]) {
+				dataAnalyzer[i] = {}
+			}
+			value.map((item) => {
+				if (!dataAnalyzer[i].time) {
+					dataAnalyzer[i].date = item.time
+				}
+				if (fieldsMap[item.field]) {
+					dataAnalyzer[i][fieldsMap[item.field]] = item.value
+				}
+			})
+			i++
+		})
+		dataAnalyzer.forEach((item, index) => {
+			let ptotal = 0
+			let qtotal = 0
+			let atotal = 0
+			for (let j = 0; j <= 2; j++) {
+				if (!item[`p${j}`] || !item[`q${j}`]) {
+					item[`p${j}`] = '-'
+					item[`q${j}`] = '-'
+					item[`a${j}`] = '-'
+					continue
+				}
+				const aparente = Math.sqrt(Math.pow(item[`p${j}`], 2) + Math.pow(item[`q${j}`], 2))
+				dataAnalyzer[index][`aparente_${j}`] = Math.round(aparente, 1) / 1000
+				const cos = !aparente || !item[`p${j}`] ? null : (item[`p${j}`] / aparente).toFixed(2)
+				dataAnalyzer[index][`cos_${j}`] = cos
+				dataAnalyzer[index][`p${j}`] = item[`p${j}`] / 1000
+				dataAnalyzer[index][`q${j}`] = item[`q${j}`] / 1000
+				ptotal += item[`p${j}`]
+				qtotal += item[`q${j}`]
+				atotal += dataAnalyzer[index][`aparente_${j}`]
+				if (j === 2) {
+					dataAnalyzer[index].cos_total = (ptotal / atotal).toFixed(2)
+					dataAnalyzer[index].aparente_total = parseFloat(atotal.toFixed(3))
+				}
+			}
+		})
+		return res.status(200).json(dataAnalyzer)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
-	getAnalyzer,
+	getMetrology,
+	getHistory,
 }
