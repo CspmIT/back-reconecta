@@ -4,6 +4,7 @@ const {
 	getColumnsUserTable,
 	getControlsRecloserUser,
 	saveControlsRecloser,
+	getControlsRecloserNewData,
 } = require('../controllers/ConfigUser.controller')
 const { verifyToken } = require('../middleware/Auth.middleware')
 const {
@@ -23,6 +24,7 @@ const router = express.Router()
 router.post('/saveConfigTable', verifyToken, saveConfigTable)
 router.post('/getColumnsTable', verifyToken, getColumnsUserTable)
 router.post('/getControlsRecloserUser', verifyToken, getControlsRecloserUser)
+router.get('/getControlsTest', getControlsRecloserNewData)
 router.post('/saveControlsRecloser', verifyToken, saveControlsRecloser)
 router.get('/listUsers', verifyToken, getListUser)
 router.get('/listUsersPass', verifyToken, getListUserPass)
