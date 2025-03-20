@@ -9,6 +9,7 @@ const {
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
 const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
+const { getEquipment } = require('../services/ElementService')
 const getConfigNotify = async (req, res) => {
 	try {
 		const Events = await getAllEvents()
@@ -75,7 +76,6 @@ const AllEvents = async (req, res) => {
 	try {
 		const Events = await getEventsActive()
 		const eventsInflux = await getEventsInflux(req.user.influx_name, Events)
-
 		const returnData = eventsInflux
 			.reduce((acc, value) => {
 				acc.push(...value)
@@ -104,20 +104,21 @@ const eventsDevices = async (req, res) => {
 		if (!id || !type) {
 			return res.status(400).json({ message: 'Debe enviar todo los parametros necesarios tanto id como type' })
 		}
-		const recloser = await getRecloserId(id)
-		const Events = await getEventsDevice(recloser.version.id, 'Reconectador')
+		//const recloser = await getRecloserId(id)
+		const recloser = await getEquipment({ id })
+		const Events = await getEventsDevice(recloser[0].equipmentmodels.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
 			return { id: item.id_event_influx, name: item.name, priority: item.priority }
 		})
 		const eventsInflux = await getEventRecloserOld(
 			{
-				brand: recloser?.version?.brand?.name,
-				serial: recloser?.serial,
+				serial: recloser[0].serial,
+				brand: recloser[0].equipmentmodels.name,
 				event: eventActiveReco,
 			},
 			req.user.influx_name
 		)
-		const returnData = await eventsInflux.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
+		const returnData = eventsInflux.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
 
 		return res.status(200).json(returnData)
 	} catch (error) {

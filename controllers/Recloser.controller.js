@@ -365,11 +365,11 @@ const manauvers = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getManauver(recloser.serial)
+		const dataInflux = await getManauver(recloser[0].serial)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {

@@ -56,8 +56,7 @@ const getColumnsUserTable = async (req, res) => {
 
 const getControlsRecloserNewData = async (req, res) => {
 	try {
-		// const { version } = req.body
-		const version = 4
+		const { version } = req.body
 		const controls = await getControlsRecloserNew(version)
 		return res.status(200).json(controls)
 	} catch (e) {
