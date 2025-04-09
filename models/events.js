@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
 			type_device: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
 			type_var: DataTypes.ENUM('Event', 'Output', 'Log'),
 			description: DataTypes.STRING,
+			id_database: DataTypes.STRING,
 		},
 		{
 			sequelize,
