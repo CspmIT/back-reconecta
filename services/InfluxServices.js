@@ -146,8 +146,48 @@ const formaterDataAlarm = async (body, query) => {
 		throw error
 	}
 }
+
+async function crearTaskAlerta() {
+	const { INFLUX_URL, INFLUX_TOKEN, INFLUX_ORG, INFLUX_ORG_ID, INFLUX_BUCKET } = config_influx.morteros_energia
+
+	const headers = {
+		Authorization: `Token ${INFLUX_TOKEN}`,
+		'Content-Type': 'application/json',
+		Accept: 'application/json',
+	}
+
+	const fluxScript = `
+	  option task = {name: "testcreatetask", every: 1h}
+	  from(bucket: "${INFLUX_BUCKET}")
+		|> range(start: -1m)
+		|> filter(fn: (r) => r._measurement == "temperatura")
+		|> filter(fn: (r) => r._field == "value")
+		|> last()
+		|> map(fn: (r) => ({ _time: r._time, _value: r._value, alerta: if r._value > 40 then "⚠️ Temperatura alta!" else "OK" }))
+		|> set(key: "_measurement", value: "alertas")
+		|> to(bucket: "alertas")
+	`
+
+	const data = {
+		org: INFLUX_ORG,
+		orgID: INFLUX_ORG_ID,
+		flux: fluxScript,
+		status: 'active',
+	}
+	console.log(headers)
+	console.log(data)
+
+	try {
+		const response = await axios.post(`${INFLUX_URL}api/v2/tasks`, data, { headers })
+		console.log('✅ Task creada con éxito:', response.data)
+	} catch (error) {
+		console.error('❌ Error al crear la tarea:', error.response ? error.response.data : error.message)
+	}
+}
+
 module.exports = {
 	ConsultaInflux,
 	createTask,
 	formaterDataAlarm,
+	crearTaskAlerta,
 }

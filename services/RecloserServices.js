@@ -109,7 +109,7 @@ const getReclosersEnabled = async () => {
 	try {
 		const recloser = await getAllRecloser()
 		const result = recloser.filter((item) => {
-			if (item.history.every((rel) => rel.status == 0) || item.history.length == 0) {
+			if (item.history.every((rel) => rel.status == 1) || item.history.length == 1) {
 				return item
 			}
 		})
@@ -656,14 +656,22 @@ const consultEventRecloserInfluxOld = async (data, influxName) => {
 		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
 		const packsEvents = {}
 		for (const element of dataInflux) {
-			const [name, event] = element._field.split('_')
 			const timeGroup = (packsEvents[element._time] ||= {})
-			timeGroup[event] ||= []
-			timeGroup[event].push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
+			timeGroup.time = element._time
+			switch (element._field) {
+				case 'events_0':
+					timeGroup.id = element._value
+					break
+				case 'events_1':
+					timeGroup.unixtime = element._value
+					break
+				case 'info':
+					timeGroup.info = element._value
+					break
+				default:
+					timeGroup.status = 0
+					break
+			}
 		}
 
 		return packsEvents
@@ -694,30 +702,30 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 	try {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
-
 		for (const reg of Object.values(packsEvents)) {
-			for (const item of Object.values(reg)) {
-				const eventData = data.event.find((even) => even.id == item[0].value)
-				if (eventData) {
-					const dataPack =
-						item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
-							? new Date(item[2].value)
-							: item[0].time
-					const value = item[1]?.value >= 0 ? (item[1].value ? 'ON' : 'OFF') : ''
+			const eventData = data.event.find((even) => even.id == reg?.id)
+			if (eventData) {
+				const dataPack =
+					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000 ? new Date(reg.unixtime) : reg?.time
 
-					packsReturn.push({
-						event: `${eventData.name} - ${value}`,
-						priority: eventData.priority,
-						name: data.name,
-						nro_recloser: data.number,
-						typeDevice: data.typeDevice,
-						id_device: data.id_device,
-						id: item[0].value,
-						dateAlert: dataPack,
-						statusAlert: data.dateCheck >= dataPack ? 0 : 1,
-						infoAdd: '-',
-					})
-				}
+				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
+				const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
+
+				const statusAlarm = newdate >= dateEvent ? 0 : 1
+				packsReturn.push({
+					event: `${eventData.name}`,
+					priority: eventData.priority,
+					description: eventData.description,
+					name: data.name,
+					nro_recloser: data.number,
+					typeDevice: data.typeDevice,
+					id_device: data.id_device,
+					id: reg?.id,
+					dateAlert: dataPack,
+					dateEvent: data.dateCheck,
+					statusAlert: statusAlarm,
+					infoAdd: reg?.info,
+				})
 			}
 		}
 
@@ -746,22 +754,19 @@ const getEventRecloserOld = async (data, influxName) => {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
 		for (const reg of Object.values(packsEvents)) {
-			for (const item of Object.values(reg)) {
-				const matchingEvent = data.event.find((even) => even.id == item[0].value)
-				if (matchingEvent) {
-					const dataPack =
-						item[2]?.value > 1600000000000 && item[2]?.value < 1900000000000
-							? new Date(item[2].value)
-							: item[0].time
-					const value = item[1]?.value >= 0 ? (item[1].value ? 'ON' : 'OFF') : ''
+			const matchingEvent = data.event.find((even) => even.id == reg?.id)
+			if (matchingEvent) {
+				const dataPack =
+					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000 ? new Date(reg.unixtime) : reg?.time
 
-					packsReturn.push({
-						event: `${matchingEvent.name} - ${value}`,
-						id: item[0].value,
-						dateAlert: dataPack,
-						infoAdd: '-',
-					})
-				}
+				packsReturn.push({
+					event: `${matchingEvent.name}`,
+					id: reg?.id,
+					dateAlert: dataPack,
+					priority: matchingEvent.priority,
+					type_var: matchingEvent.type_var,
+					infoAdd: reg?.info,
+				})
 			}
 		}
 
@@ -789,11 +794,9 @@ const getStatusAlarm = async (data, influxName) => {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		let statusAlarm = false
 		for (const reg of Object.values(packsEvents)) {
-			for (const item of Object.values(reg)) {
-				if (data.event.some((even) => even.id == item[0].value)) {
-					statusAlarm = !data.event_date || new Date(item[0].time) > new Date(data.event_date)
-					if (statusAlarm) break
-				}
+			if (data.event.some((even) => even.id == reg?.id)) {
+				statusAlarm = !data.event_date || new Date(reg?.time) > new Date(data.event_date)
+				if (statusAlarm) break
 			}
 			if (statusAlarm) break
 		}
@@ -803,6 +806,26 @@ const getStatusAlarm = async (data, influxName) => {
 	}
 }
 
+const getReclosersxVersion = async (id_version) => {
+	try {
+		const recloser = await db.Recloser.findAll({
+			where: { id_version: id_version },
+			include: [
+				{
+					association: 'version',
+					include: [
+						{
+							association: 'brand',
+						},
+					],
+				},
+			],
+		})
+		return recloser
+	} catch (error) {
+		throw error
+	}
+}
 module.exports = {
 	getInterruption,
 	getCorriente,
@@ -826,4 +849,5 @@ module.exports = {
 	updateRecloser,
 	acRecloser,
 	getManauver,
+	getReclosersxVersion,
 }

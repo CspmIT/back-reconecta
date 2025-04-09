@@ -3,6 +3,7 @@ const { db } = require('../models')
 const { getAllRecloser, getEventCheckRecloserOld } = require('./RecloserServices')
 const { searchRelationActive } = require('./NodeService')
 const { getDateCheck } = require('./ChecksAlarmsService')
+const { getEquipment } = require('./ElementService')
 
 const typeDeviceInflux = {
 	Reconectadores: 'Reconectador',
@@ -228,30 +229,25 @@ const getEventsDevice = async (id_version, type_device) => {
  */
 const getEventsInflux = async (influx_name, Events) => {
 	try {
-		const reclosers = await getAllRecloser()
+		const reclosers = await getEquipment()
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
-				if (Events.some((item) => item.id_version === recloser.version.id)) {
-					let relation = []
-					if (recloser.id_node) {
-						const history = await searchRelationActive(recloser.id, 1)
-						relation = history?.nodes?.get() || []
-					}
-					const eventActiveReco = Events.filter((item) => item.id_version === recloser.version.id).map(
+				if (Events.some((item) => item.id_version === recloser.id_model)) {
+					const eventActiveReco = Events.filter((item) => item.id_version === recloser.id_model).map(
 						(item) => ({
 							id: item.id_event_influx,
 							name: item.name,
 							priority: item.priority,
+							description: item.description,
 						})
 					)
 					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
-
 					return await getEventCheckRecloserOld(
 						{
-							brand: recloser.version.brand.name,
+							brand: recloser.equipmentmodels.name,
 							serial: recloser.serial,
-							name: relation.name || '-',
-							number: relation.number || '-',
+							name: recloser.elements.name || '-',
+							number: recloser.serial || '-',
 							id_device: recloser.id,
 							typeDevice: 'Reconectador',
 							event: eventActiveReco,

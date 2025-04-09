@@ -6,6 +6,7 @@ const {
 	getControlsRecloser,
 	saveCrontrolsUser,
 	getControlsUserConfig,
+	getControlsRecloserNew,
 } = require('../services/ConfigUserService')
 const jwt = require('jsonwebtoken')
 require('dotenv')
@@ -50,6 +51,16 @@ const getColumnsUserTable = async (req, res) => {
 		} else {
 			res.status(400).json(error.message)
 		}
+	}
+}
+
+const getControlsRecloserNewData = async (req, res) => {
+	try {
+		const { version } = req.body
+		const controls = await getControlsRecloserNew(version)
+		return res.status(200).json(controls)
+	} catch (e) {
+		return res.status(500).json(e)
 	}
 }
 
@@ -100,4 +111,5 @@ module.exports = {
 	getColumnsUserTable,
 	getControlsRecloserUser,
 	saveControlsRecloser,
+	getControlsRecloserNewData,
 }
