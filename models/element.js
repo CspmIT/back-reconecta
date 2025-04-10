@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
 		static associate(models) {
 			this.belongsTo(models.MapLocation, { foreignKey: 'id_map', as: 'maps' })
 			this.hasMany(models.Equipment, { foreignKey: 'id_element', as: 'equipments' })
+			this.hasMany(models.Equipment, { foreignKey: 'id_element', as: 'binnacles' })
 		}
 	}
 	Element.init(
