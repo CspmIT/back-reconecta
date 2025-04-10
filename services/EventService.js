@@ -150,15 +150,14 @@ const getAllEvents = async () => {
 	try {
 		const [Events, versions] = await Promise.all([
 			db.Event.findAll({ where: { status: 1 } }),
-			db.Version.findAll({
+			db.EquipmentModel.findAll({
 				where: { status: 1 },
-				include: [{ association: 'brand' }],
 			}),
 		])
 
 		const dataResult = Events.reduce((acc, current) => {
 			const version = versions.find((item) => item.id === current.id_version)
-			const brandName = version?.brand?.name
+			const brandName = version?.brand
 			const versionName = version?.name
 			const eventType = current.type_device
 
