@@ -340,13 +340,13 @@ const interruptions = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getInterruption(
-			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			{ serial: recloser[0].serial, brand: recloser[0].equipmentmodels.name },
 			influxName
 		)
 		res.status(200).json(dataInflux)

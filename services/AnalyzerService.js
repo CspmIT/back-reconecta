@@ -38,18 +38,23 @@ const getDataAnalyzer = async (data, influxName) => {
 
 const getHistoryAnalyzer = async (data, influxName) => {
 	try {
-		const dateCurrent = new Date()
-		const dateStart = new Date(dateCurrent)
-		dateStart.setHours(dateCurrent.getHours() - 12)
+		let dateCurrent = data.dateEnd ? new Date(data.dateEnd) : new Date()
+		let dateStart
+		if (data.dateStart) {
+			dateStart = new Date(data.dateStart)
+		} else {
+			dateStart = new Date(dateCurrent)
+			dateStart.setHours(dateCurrent.getHours() - 12)
+		}
 		const elements = ['acc', 'accio', 'inst', 'onoff']
 		const dataReturn = new Map()
-
+		const desc = data?.desc ? data.desc : 'true'
 		await Promise.all(
 			elements.map(async (elem) => {
 				const query = `|> range(start: ${dateStart.toISOString()}, stop: ${dateCurrent.toISOString()})
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Analizador/${data.brand}/${data.version}/${data.serial}/${elem}")
-		|> aggregateWindow(every: 15m, fn: last, createEmpty: false)
-        |> sort(columns: ["_time"], desc: true)`
+		|> aggregateWindow(every: 5m, fn: last, createEmpty: false)
+        |> sort(columns: ["_time"], desc: ${desc})`
 
 				const dataInflux = await ConsultaInflux(query, influxName)
 				if (!dataInflux || dataInflux.length === 0) return null

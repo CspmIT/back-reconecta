@@ -1,4 +1,5 @@
 const { getDataAnalyzer, getHistoryAnalyzer } = require('../services/AnalyzerService')
+const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 const getMetrology = async (req, res) => {
 	try {
@@ -131,7 +132,55 @@ const getHistory = async (req, res) => {
 	}
 }
 
+const getGraphics = async (req, res) => {
+	try {
+		const { influx_name } = req.user
+		const analyzer = await getHistoryAnalyzer(req.body, influx_name)
+		const tension = await formatData(analyzer, 'v')
+		const corriente = await formatData(analyzer, 'i')
+		const activa = await formatData(analyzer, 'p')
+		const reactiva = await formatData(analyzer, 'q')
+		const graphicData = [
+			{
+				tension,
+				corriente,
+				activa,
+				reactiva,
+			},
+		]
+		return res.status(200).json(graphicData)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const formatData = async (data, field) => {
+	const dataReturn = {
+		R: { name: 'Fase R', values: [] },
+		S: { name: 'Fase S', values: [] },
+		T: { name: 'Fase T', values: [] },
+		time: [],
+	}
+	data.forEach(async (value) => {
+		value.map(async (item) => {
+			if (item.field === `f_0_${field}`) {
+				dataReturn.R.values.push(item.value)
+				const time = await convertIsoToDate(item.time)
+				dataReturn.time.push(time)
+			}
+			if (item.field === `f_1_${field}`) {
+				dataReturn.S.values.push(item.value)
+			}
+			if (item.field === `f_2_${field}`) {
+				dataReturn.T.values.push(item.value)
+			}
+		})
+	})
+	return dataReturn
+}
+
 module.exports = {
 	getMetrology,
 	getHistory,
+	getGraphics,
 }
