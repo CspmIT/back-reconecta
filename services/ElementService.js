@@ -71,14 +71,12 @@ const saveElement = async (element, equipment = []) => {
 	try {
 		const data = await db.Element.create(element, { transaction })
 		if (data.id && equipment.length > 0) {
-			console.log(data)
 			equipment.map((equip) => {
 				equip.id_element = data.id
 				equip.id_user = data.id_user
 				equip.observation = equip.observation || null
 				delete equip.id
 			})
-			console.log(equipment)
 			await db.Equipment.bulkCreate(equipment, { transaction })
 		}
 		await transaction.commit()

@@ -1,6 +1,7 @@
 const { Op } = require('sequelize')
 const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
+const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 /**
  * Guarda o actualiza un reconectador en la base de datos.
@@ -454,10 +455,12 @@ const getTensionABC = async (data, influxName) => {
 		let dataReturn = {}
 		for (const element of dataInflux) {
 			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+				dataReturn[element._field] = { name: element._field, values: [], time: [] }
 			}
 
-			dataReturn[element._field].push([element._time, element._value])
+			dataReturn[element._field].values.push(element._value)
+			const timeConvert = await convertIsoToDate(element._time)
+			dataReturn[element._field].time.push(timeConvert)
 		}
 		return dataReturn
 	} catch (error) {
@@ -486,10 +489,12 @@ const getCorriente = async (data, influxName) => {
 		let dataReturn = {}
 		for (const element of dataInflux) {
 			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+				dataReturn[element._field] = { name: element._field, values: [], time: [] }
 			}
 
-			dataReturn[element._field].push([element._time, element._value])
+			dataReturn[element._field].values.push(element._value)
+			const timeConvert = await convertIsoToDate(element._time)
+			dataReturn[element._field].time.push(timeConvert)
 		}
 		return dataReturn
 	} catch (error) {
