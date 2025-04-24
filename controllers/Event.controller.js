@@ -1,10 +1,10 @@
 const mqtt = require('mqtt')
 const {
 	getAllEvents,
-	saveNotify,
 	getEventsActive,
 	getEventsInflux,
 	getEventsDevice,
+	saveEvent,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
@@ -24,7 +24,7 @@ const getConfigNotify = async (req, res) => {
 }
 const saveConfigNotify = async (req, res) => {
 	try {
-		const Events = await saveNotify(req.body)
+		const Events = await saveEvent(req.body)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {

@@ -283,6 +283,21 @@ const saveNotify = async (data) => {
 	}
 }
 
+const saveEvent = async (data) => {
+	try {
+		if (data.id) {
+			const event = await db.Event.findByPk(data.id)
+			if (event) {
+				await event.update(data)
+				return await event
+			}
+		}
+		return await db.Event.create(data)
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
@@ -293,4 +308,5 @@ module.exports = {
 	saveNotify,
 	getEventsActive,
 	getEventsInflux,
+	saveEvent,
 }
