@@ -13,6 +13,9 @@ module.exports = {
 				type: Sequelize.INTEGER,
 				allowNull: false,
 			},
+			id_database: {
+				type: Sequelize.STRING,
+			},
 			name: {
 				type: Sequelize.STRING,
 				allowNull: false,
