@@ -96,16 +96,6 @@ const getColumnsUser = async (id_table, id_user) => {
 	}
 }
 
-/**
- * Migra las tablas proporcionadas a la base de datos, creando nuevas entradas si no existen
- * o actualizando las existentes.
- *
- * @param {Array<Object>} Tables - Un arreglo de objetos que representan las tablas a migrar.
- * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan las tablas migradas.
- * @throws {Error} Lanza un error si ocurre un problema durante la transacción.
- * @author Jose Romani <jose.romani@hotmail.com>
- *
- */
 const getControlsRecloser = async (version) => {
 	try {
 		const idVersion = await db.Version.findOne({
@@ -122,16 +112,29 @@ const getControlsRecloser = async (version) => {
 		throw error
 	}
 }
-/**
- * Migra las tablas proporcionadas a la base de datos, creando nuevas entradas si no existen
- * o actualizando las existentes.
- *
- * @param {Array<Object>} Tables - Un arreglo de objetos que representan las tablas a migrar.
- * @returns {Promise<Array<Object>>} Un arreglo de objetos que representan las tablas migradas.
- * @throws {Error} Lanza un error si ocurre un problema durante la transacción.
- * @author Jose Romani <jose.romani@hotmail.com>
- *
- */
+
+const getControlsRecloserNew = async (version) => {
+	try {
+		const controls = await db.ControlsModel.findAll({
+			attributes: ['id', 'status'],
+			where: { id_model: version },
+			include: [
+				{
+					association: 'model',
+					attributes: ['id', 'name', 'brand'],
+				},
+				{
+					association: 'control',
+					attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
+				},
+			],
+		})
+		return controls
+	} catch (e) {
+		throw e
+	}
+}
+
 const getControlsUserConfig = async (user, version) => {
 	try {
 		const idVersion = await db.Version.findOne({
@@ -194,4 +197,5 @@ module.exports = {
 	getControlsRecloser,
 	getControlsUserConfig,
 	saveCrontrolsUser,
+	getControlsRecloserNew,
 }

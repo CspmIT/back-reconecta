@@ -1,5 +1,6 @@
 const { db } = require('../models')
 const { getDateCheck } = require('../services/ChecksAlarmsService')
+const { getEquipment } = require('../services/ElementService')
 const { getEventsDevice, getEventsActive, getEventsInflux } = require('../services/EventService')
 const { saveRelation, searchRelationActive } = require('../services/NodeService')
 const {
@@ -20,6 +21,7 @@ const {
 	getStatusAlarm,
 	acRecloser,
 	getManauver,
+	getReclosersxVersion,
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
@@ -120,45 +122,48 @@ const getDataInfluxRecloser = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const filter = { id }
+		const recloserFilter = await getEquipment(filter)
+		const recloser = recloserFilter[0]
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const relation = await searchRelationActive(recloser.id, 1)
-		recloser.setDataValue('relation', relation)
+		/* const relation = await searchRelationActive(recloser.id, 1)
+		recloser.setDataValue('relation', relation) */
+		console.log(recloser)
 		const dataRecloser = {
-			...recloser.get(),
-			name: recloser.relation?.[0]?.name || null,
-			number: recloser.relation?.[0]?.number || null,
-			version: recloser.version.name,
-			id_version: recloser.version.id,
-			brand: recloser.version.brand.name,
+			id,
+			name: recloser.observation,
+			number: recloser.serial,
+			version: recloser.equipmentmodels.brand,
+			id_version: recloser.equipmentmodels.id,
+			brand: recloser.equipmentmodels.name,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await dataRecloseInflux(
-			{ serial: dataRecloser.serial, brand: dataRecloser.brand },
+			{ serial: dataRecloser.number, brand: dataRecloser.brand },
 			influxName
 		)
-		const Events = await getEventsDevice(recloser.version.id, 'Reconectador')
+		/* const Events = await getEventsDevice(dataRecloser.id, 'Reconectador')
 		const eventActiveReco = Events.filter((item) => item.priority == 1 && item.flash_screen == 1).map((item) => {
 			return { id: item.id_event_influx, name: item.name }
 		})
 		const event_date = await getDateCheck(recloser.id, 'Reconectador')
-
+ 
 		const statusAlarm = await getStatusAlarm(
 			{
-				brand: recloser?.version?.brand?.name,
+				brand: recloser.equipmentmodels.name,
 				serial: recloser?.serial,
 				event: eventActiveReco,
 				event_date: event_date?.date_check,
 			},
 			req.user.influx_name
-		)
+		)*/
 
 		const dataReturn = {
 			recloser: dataRecloser,
 			instantaneo: dataInflux,
-			alarm: statusAlarm,
+			/* alarm: statusAlarm, */
 		}
 		res.status(200).json(dataReturn)
 	} catch (error) {
@@ -175,15 +180,15 @@ const metrologiaIntantanea = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getMetrologiaIntantanea(
 			{
-				serial: recloser.serial,
-				brand: recloser.version.brand.name,
+				serial: recloser[0].serial,
+				brand: recloser[0].equipmentmodels.name,
 			},
 			influxName
 		)
@@ -276,16 +281,22 @@ const listEvents = async (req, res) => {
 const tensionABCGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getTensionABC(
-			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			{
+				serial: recloser[0].serial,
+				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
+			},
 			influxName
 		)
 		res.status(200).json(dataInflux)
@@ -301,16 +312,22 @@ const tensionABCGraf = async (req, res) => {
 const corrientesGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getCorriente(
-			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			{
+				serial: recloser[0].serial,
+				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
+			},
 			influxName
 		)
 		res.status(200).json(dataInflux)
@@ -329,13 +346,13 @@ const interruptions = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getInterruption(
-			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			{ serial: recloser[0].serial, brand: recloser[0].equipmentmodels.name },
 			influxName
 		)
 		res.status(200).json(dataInflux)
@@ -354,11 +371,11 @@ const manauvers = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getManauver(recloser.serial)
+		const dataInflux = await getManauver(recloser[0].serial)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
@@ -562,6 +579,23 @@ const changeStatusAlarm = async (req, res) => {
 		}
 	}
 }
+
+const reclosersxVersion = async (req, res) => {
+	try {
+		if (!req.query.id_version) {
+			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
+		}
+		const listReclosers = await getReclosersxVersion(req.query.id_version)
+		return res.status(200).json(listReclosers)
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	interruptions,
 	corrientesGraf,
@@ -582,4 +616,5 @@ module.exports = {
 	recloserAlarm,
 	getAcRecloser,
 	manauvers,
+	reclosersxVersion,
 }

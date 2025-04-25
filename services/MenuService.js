@@ -13,6 +13,7 @@ const getMenus = async () => {
 	try {
 		const Menus = await db.Menu.findAll({
 			order: [['order']],
+			where: { status: 1 },
 		})
 		if (!Menus) throw new Error('No existe ningun reconectador')
 		return Menus.map((menu) => menu.get({ plain: true }))

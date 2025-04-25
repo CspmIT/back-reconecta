@@ -15,6 +15,8 @@ const NodeRoutes = require('./routes/Node.routes')
 const AlarmRoutes = require('./routes/Alarm.routes')
 const AlarmEvent = require('./routes/Event.routes')
 const Meter = require('./routes/Meter.routes')
+const ElementRoutes = require('./routes/Element.routes')
+const analyzerRoutes = require('./routes/Analyzer.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -33,6 +35,8 @@ app.use('/api', NodeRoutes)
 app.use('/api', AlarmRoutes)
 app.use('/api', AlarmEvent)
 app.use('/api', Meter)
+app.use('/api', ElementRoutes)
+app.use('/api', analyzerRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

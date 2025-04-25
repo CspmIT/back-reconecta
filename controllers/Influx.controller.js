@@ -1,4 +1,4 @@
-const { consultaprueba } = require('../services/InfluxServices')
+const { consultaprueba, crearTaskAlerta } = require('../services/InfluxServices')
 async function InfluxConection(req, res) {
 	try {
 		const influx = await consultaprueba()
@@ -11,6 +11,20 @@ async function InfluxConection(req, res) {
 		}
 	}
 }
+
+async function influxTask(req, res) {
+	try {
+		const influx = await crearTaskAlerta()
+		return res.status(200).json(influx)
+	} catch (e) {
+		if (e.errors) {
+			res.status(500).json(e.errors)
+		} else {
+			res.status(400).json(e.message)
+		}
+	}
+}
 module.exports = {
 	InfluxConection,
+	influxTask,
 }

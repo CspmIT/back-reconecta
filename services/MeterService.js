@@ -489,10 +489,10 @@ const getInfoGraf = async (data, influxName) => {
 			every: '1m',
 		}
 		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+			attrQuery.dateStart = `${data.dateStart}`
+			attrQuery.dateFinished = `${data.dateFinished}`
 			attrQuery.limit = ''
-			attrQuery.every = '15m'
+			attrQuery.every = '5m'
 		}
 		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" 
