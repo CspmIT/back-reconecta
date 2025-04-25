@@ -281,6 +281,7 @@ const listEvents = async (req, res) => {
 const tensionABCGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
@@ -293,6 +294,8 @@ const tensionABCGraf = async (req, res) => {
 			{
 				serial: recloser[0].serial,
 				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
 			},
 			influxName
 		)
@@ -309,6 +312,7 @@ const tensionABCGraf = async (req, res) => {
 const corrientesGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
@@ -321,6 +325,8 @@ const corrientesGraf = async (req, res) => {
 			{
 				serial: recloser[0].serial,
 				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
 			},
 			influxName
 		)

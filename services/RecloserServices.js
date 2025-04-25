@@ -445,10 +445,10 @@ const getListEvents = async (data, influxName) => {
 const getTensionABC = async (data, influxName) => {
 	try {
 		const query = `
-			|> range(start: -2h)
+			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
-			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
 		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
@@ -479,10 +479,10 @@ const getTensionABC = async (data, influxName) => {
 const getCorriente = async (data, influxName) => {
 	try {
 		const query = `
-			|> range(start: -2h)
+			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
-			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
 		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
