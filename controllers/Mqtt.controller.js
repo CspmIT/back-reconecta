@@ -34,7 +34,7 @@ const testMQTT = async () => {
 
 const sendMQTT = async (req, res) => {
 	try {
-		if (!req.body.action || !req.body.brand || !req.body.serial || !req.body.id_recloser) {
+		if (!req.body.action || !req.body.brand || !req.body.serial) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
 		const configMqtt = await getConectionMqtt()

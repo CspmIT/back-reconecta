@@ -1,9 +1,30 @@
 const { getElements, getEquipment, getModels, saveElement, saveEquipment } = require('../services/ElementService')
+const { getStatus } = require('../services/MeterService')
+const { dataRecloseInflux } = require('../services/RecloserServices')
 
 const listElements = async (req, res) => {
 	try {
 		const elements = await getElements()
-		return res.status(200).json(elements)
+		const influxName = req.user.influx_name
+		const elementsWithInflux = await Promise.all(
+			elements.map(async (element) => {
+				const jsonElement = element.toJSON ? element.toJSON() : element
+				jsonElement.equipments = await Promise.all(
+					jsonElement.equipments.map(async (equipment) => {
+						const jsonEquipment = equipment.toJSON ? equipment.toJSON() : equipment
+						if (jsonEquipment.equipmentmodels.type === 1) {
+							const data = { serial: jsonEquipment.serial, brand: jsonEquipment.equipmentmodels.name }
+							jsonEquipment.influxData = await dataRecloseInflux(data, influxName)
+						} else {
+							jsonEquipment.influxData = { 'd/c': true }
+						}
+						return jsonEquipment
+					})
+				)
+				return jsonElement
+			})
+		)
+		return res.status(200).json(elementsWithInflux)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
 	}
@@ -13,6 +34,7 @@ const listEquipments = async (req, res) => {
 	try {
 		const filters = req.params
 		const equipments = await getEquipment(filters)
+
 		return res.status(200).json(equipments)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
