@@ -130,7 +130,6 @@ const getDataInfluxRecloser = async (req, res) => {
 		}
 		/* const relation = await searchRelationActive(recloser.id, 1)
 		recloser.setDataValue('relation', relation) */
-		console.log(recloser)
 		const dataRecloser = {
 			id,
 			name: recloser.observation,
@@ -138,6 +137,7 @@ const getDataInfluxRecloser = async (req, res) => {
 			version: recloser.equipmentmodels.brand,
 			id_version: recloser.equipmentmodels.id,
 			brand: recloser.equipmentmodels.name,
+			element: recloser.elements.name,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await dataRecloseInflux(
