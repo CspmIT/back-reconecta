@@ -18,6 +18,8 @@ const {
 	getPermission,
 	savePermission,
 	getProfiles,
+	getChecksHome,
+	updateChecksHome,
 } = require('../controllers/User.controller')
 const router = express.Router()
 
@@ -39,5 +41,8 @@ router.post('/deleteMenu', verifyToken, deleteMenu)
 
 router.get('/getPermission', verifyToken, getPermission)
 router.post('/savePermission', verifyToken, savePermission)
+
+router.get('/UserChecksHome', verifyToken, getChecksHome)
+router.post('/UserChecksHome', verifyToken, updateChecksHome)
 
 module.exports = router

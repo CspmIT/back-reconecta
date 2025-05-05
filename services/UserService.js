@@ -100,10 +100,38 @@ const getAllProfile = async () => {
 	}
 }
 
+const getChecksxUser = async (user) => {
+	try {
+		const listChecks = await db.UserChecksHome.findAll({
+			where: { id_user: user, status: 0 },
+		})
+		return listChecks
+	} catch (error) {
+		throw error
+	}
+}
+
+const saveChecksxUser = async (data) => {
+	try {
+		const [check, created] = await db.UserChecksHome.findOrCreate({
+			where: { id_user: data.id_user, check: data.check, type: data.type },
+			defaults: { ...data },
+		})
+		if (!created) {
+			await check.update(data)
+		}
+		return check
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	getAllUser,
 	getAllUserPass,
 	getPassxID,
 	savePassRecloser,
 	getAllProfile,
+	getChecksxUser,
+	saveChecksxUser,
 }

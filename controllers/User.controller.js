@@ -1,6 +1,14 @@
 const { db } = require('../models')
 const { getMenus, saveMenu, listPermissionUser, saveMenu_Selected } = require('../services/MenuService')
-const { getAllUser, getAllUserPass, savePassRecloser, getPassxID, getAllProfile } = require('../services/UserService')
+const {
+	getAllUser,
+	getAllUserPass,
+	savePassRecloser,
+	getPassxID,
+	getAllProfile,
+	getChecksxUser,
+	saveChecksxUser,
+} = require('../services/UserService')
 
 async function getListUser(req, res) {
 	try {
@@ -213,6 +221,30 @@ async function savePermission(req, res) {
 	}
 }
 
+const getChecksHome = async (req, res) => {
+	try {
+		const id_user = req.user.id
+		console.log(id_user)
+		const data = await getChecksxUser(id_user)
+		return res.status(200).json(data)
+	} catch (error) {
+		if (error.errors) {
+			res.status(500).json(error.errors)
+		} else {
+			res.status(400).json(error.message)
+		}
+	}
+}
+
+const updateChecksHome = async (req, res) => {
+	try {
+		const dataBody = req.body
+		dataBody.id_user = req.user.id
+		await saveChecksxUser(dataBody)
+		return res.status(200).json({ message: 'Se guardaron los cambios correctamente.' })
+	} catch (e) {}
+}
+
 module.exports = {
 	getListUser,
 	getListUserPass,
@@ -224,4 +256,6 @@ module.exports = {
 	deleteMenu,
 	getPermission,
 	savePermission,
+	getChecksHome,
+	updateChecksHome,
 }
