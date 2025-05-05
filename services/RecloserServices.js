@@ -717,7 +717,12 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 				if (!dataPack) continue
 				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
 				const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
-
+				if (reg?.id === 257 && reg?.info) {
+					//extrar la hora que me trae en unix y convertirla
+					const unixValue = Number(reg.info.replace(' ms', ''))
+					const dateConverted = new Date(unixValue)
+					reg.info = await convertIsoToDate(dateConverted.toISOString())
+				}
 				const statusAlarm = newdate >= dateEvent ? 0 : 1
 				packsReturn.push({
 					event: `${eventData.name}`,
@@ -771,7 +776,7 @@ const getEventRecloserOld = async (data, influxName) => {
 				if (reg?.id === 257 && reg?.info) {
 					//extrar la hora que me trae en unix y convertirla
 					const unixValue = Number(reg.info.replace(' ms', ''))
-					const dateConverted = new Date(unixValue + 3 * 60 * 60 * 1000)
+					const dateConverted = new Date(unixValue)
 					reg.info = await convertIsoToDate(dateConverted.toISOString())
 				}
 				packsReturn.push({
