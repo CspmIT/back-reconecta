@@ -573,7 +573,7 @@ const controlChange = async (data, influxName) => {
                         |> filter(fn: (r) => r["_field"] == "${data.field}")
                         |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
 		let status = false
-		for (let attempt = 0; attempt < 11; attempt++) {
+		for (let attempt = 0; attempt < 20; attempt++) {
 			const dataInflux = await ConsultaInflux(baseQuery, influxName)
 
 			if (!dataInflux || dataInflux.length === 0) {
@@ -586,7 +586,7 @@ const controlChange = async (data, influxName) => {
 					break
 				}
 			}
-			if (attempt === 10) {
+			if (attempt === 20) {
 				if (data.field === 'd/c') {
 					const queryDC = `|> range(start: -1m, stop: now())
                         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
