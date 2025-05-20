@@ -10,6 +10,7 @@ const {
 const router = express.Router()
 
 router.get('/Elements', verifyToken, listElements)
+router.get('/Elements/:id', verifyToken, listElements)
 router.post('/Elements', verifyToken, addElement)
 router.get('/ElementsModel', verifyToken, listModels)
 router.get('/Equipment/:id', verifyToken, listEquipments)

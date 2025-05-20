@@ -1,10 +1,10 @@
 const { getElements, getEquipment, getModels, saveElement, saveEquipment } = require('../services/ElementService')
-const { getStatus } = require('../services/MeterService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
 const listElements = async (req, res) => {
 	try {
-		const elements = await getElements()
+		const filters = req.params
+		const elements = await getElements(filters)
 		const influxName = req.user.influx_name
 		const elementsWithInflux = await Promise.all(
 			elements.map(async (element) => {
@@ -52,9 +52,9 @@ const listModels = async (req, res) => {
 
 const addElement = async (req, res) => {
 	try {
-		const { element, equipment } = req.body
+		const { element, equipment, client } = req.body
 		element.id_user = req.user.id
-		const data = await saveElement(element, equipment)
+		const data = await saveElement(element, equipment, client)
 		return res.status(200).json({ message: 'Elemento creado correctamente', data })
 	} catch (e) {
 		return res.status(500).json({ message: e.message })

@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
 		static associate(models) {
 			this.belongsTo(models.MapLocation, { foreignKey: 'id_map', as: 'maps' })
 			this.hasMany(models.Equipment, { foreignKey: 'id_element', as: 'equipments' })
+			this.hasMany(models.SubstationRuralClient, { foreignKey: 'id_element', as: 'clients' })
 		}
 	}
 	Element.init(
@@ -21,6 +22,8 @@ module.exports = (sequelize, DataTypes) => {
 			id_map: DataTypes.INTEGER,
 			lat: DataTypes.DECIMAL,
 			lon: DataTypes.DECIMAL,
+			serial: DataTypes.STRING,
+			image: DataTypes.STRING,
 			status: DataTypes.BOOLEAN,
 			id_user: DataTypes.INTEGER,
 		},

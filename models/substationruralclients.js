@@ -1,0 +1,29 @@
+'use strict'
+const { Model } = require('sequelize')
+module.exports = (sequelize, DataTypes) => {
+	class SubstationRuralClient extends Model {
+		/**
+		 * Helper method for defining associations.
+		 * This method is not a part of Sequelize lifecycle.
+		 * The `models/index` file will call this method automatically.
+		 */
+		static associate(models) {
+			this.belongsTo(models.Element, { foreignKey: 'id_element', as: 'elements' })
+		}
+	}
+	SubstationRuralClient.init(
+		{
+			name: DataTypes.STRING,
+			feed: DataTypes.INTEGER,
+			power: DataTypes.INTEGER,
+			pat: DataTypes.DECIMAL,
+			id_element: DataTypes.INTEGER,
+			status: DataTypes.BOOLEAN,
+		},
+		{
+			sequelize,
+			modelName: 'SubstationRuralClient',
+		}
+	)
+	return SubstationRuralClient
+}
