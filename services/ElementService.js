@@ -18,6 +18,10 @@ const getElements = async (filter = null) => {
 						},
 					],
 				},
+				{
+					model: db.SubstationRuralClient,
+					as: 'clients',
+				},
 			],
 		}
 		if (filter?.id) {
@@ -43,6 +47,7 @@ const getEquipment = async (filter = null) => {
 				{
 					model: db.EquipmentModel,
 					as: 'equipmentmodels',
+					where: {},
 				},
 			],
 		}
@@ -51,6 +56,10 @@ const getEquipment = async (filter = null) => {
 		}
 		if (filter?.element) {
 			query.where = { id_element: filter.element }
+		}
+		if (filter?.type) {
+			const equipmentModelsInclude = query.include.find((model) => model.as === 'equipmentmodels')
+			equipmentModelsInclude.where.type = filter.type
 		}
 		return await db.Equipment.findAll(query)
 	} catch (e) {
@@ -66,18 +75,30 @@ const getModels = async () => {
 	}
 }
 
-const saveElement = async (element, equipment = []) => {
+const saveElement = async (element, equipment = [], client = []) => {
 	const transaction = await db.sequelize.transaction()
 	try {
 		const data = await db.Element.create(element, { transaction })
-		if (data.id && equipment.length > 0) {
-			equipment.map((equip) => {
-				equip.id_element = data.id
-				equip.id_user = data.id_user
-				equip.observation = equip.observation || null
-				delete equip.id
-			})
-			await db.Equipment.bulkCreate(equipment, { transaction })
+		if (data.id) {
+			if (equipment.length > 0 && data.type !== 3) {
+				equipment.map((equip) => {
+					equip.id_element = data.id
+					equip.id_user = data.id_user
+					equip.observation = equip.observation || null
+					delete equip.id
+				})
+				await db.Equipment.bulkCreate(equipment, { transaction })
+			}
+			if (data.type === 3 && client.length > 0) {
+				client.map((cli) => {
+					cli.id_element = data.id
+					cli.pat = cli.pat || null
+					cli.power = cli.power || null
+					cli.status = 1
+					delete cli.id
+				})
+				await db.SubstationRuralClient.bulkCreate(client, { transaction })
+			}
 		}
 		await transaction.commit()
 		return data

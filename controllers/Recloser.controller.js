@@ -29,17 +29,18 @@ const { getListVersions } = require('../services/VersionService')
 
 const listAllRecloser = async (req, res) => {
 	try {
-		const reclosers = await getAllRecloser()
+		const filter = { type: 1 }
+		const reclosers = await getEquipment(filter)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				let relation = []
-				if (recloser.id_node) {
+				/* if (recloser.id_node) {
 					const history = await searchRelationActive(recloser.id, 1)
 					relation = history?.nodes?.get() || []
-				}
+				} */
 				const statusRecloser = await getStatusRecloser(
 					{
-						brand: recloser.version.brand.name,
+						brand: recloser.equipmentmodels.name,
 						serial: recloser.serial,
 					},
 					req.user.influx_name
@@ -49,17 +50,17 @@ const listAllRecloser = async (req, res) => {
 				return {
 					id: recloser.id,
 					serial: recloser.serial,
-					status: recloser.status,
-					status_alarm: recloser.status_alarm,
+					status: recloser.status || null,
+					status_alarm: recloser.status_alarm || null,
 					status_recloser: finalStatusRecloser,
-					config: recloser.config,
+					config: recloser.config || null,
 					id_node: recloser.id_node || null,
 					id_relation: relation?.id || null,
 					name: relation?.name || null,
 					number: relation?.number || null,
-					version: `${recloser.version.name} ${recloser.version.brand.name}`,
-					id_version: recloser.version.id,
-					brand: recloser.version.brand.name,
+					version: `${recloser.equipmentmodels.name} ${recloser.equipmentmodels.brand}`,
+					id_version: recloser.equipmentmodels.id,
+					brand: recloser.equipmentmodels.name,
 				}
 			})
 		)
@@ -207,7 +208,8 @@ const getAcRecloser = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloserFilter = await getEquipment(req.query)
+		const recloser = recloserFilter[0]
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -215,7 +217,7 @@ const getAcRecloser = async (req, res) => {
 		const dataInflux = await acRecloser(
 			{
 				serial: recloser.serial,
-				brand: recloser.version.brand.name,
+				brand: recloser.equipmentmodels.name,
 			},
 			influxName
 		)
