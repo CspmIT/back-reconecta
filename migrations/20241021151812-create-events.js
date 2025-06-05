@@ -36,6 +36,10 @@ module.exports = {
 				type: Sequelize.BOOLEAN,
 				allowNull: false,
 			},
+			customizable: {
+				type: Sequelize.BOOLEAN,
+				allowNull: false,
+			},
 			id_version: {
 				type: Sequelize.INTEGER,
 				allowNull: false,

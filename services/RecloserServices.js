@@ -766,7 +766,7 @@ const getEventRecloserOld = async (data, influxName) => {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
 		for (const reg of Object.values(packsEvents)) {
-			const matchingEvent = data.event.find((even) => even.id == reg?.id)
+			const matchingEvent = data.event.find((even) => even.id_influx == reg?.id)
 			if (matchingEvent) {
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
@@ -781,11 +781,13 @@ const getEventRecloserOld = async (data, influxName) => {
 				}
 				packsReturn.push({
 					event: `${matchingEvent.name}`,
+					eventId: matchingEvent.id,
 					id: reg?.id,
 					dateAlert: dataPack,
 					priority: matchingEvent.priority,
 					type_var: matchingEvent.type_var,
 					infoAdd: reg?.info,
+					custom: matchingEvent.custom,
 				})
 			}
 		}
