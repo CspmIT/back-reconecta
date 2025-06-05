@@ -108,7 +108,14 @@ const eventsDevices = async (req, res) => {
 		const recloser = await getEquipment({ id })
 		const Events = await getEventsDevice(recloser[0].equipmentmodels.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
-			return { id: item.id_event_influx, name: item.name, priority: item.priority, type_var: item.type_var }
+			return {
+				id: item.id,
+				id_influx: item.id_event_influx,
+				name: item.name,
+				priority: item.priority,
+				type_var: item.type_var,
+				custom: item.customizable,
+			}
 		})
 		const eventsInflux = await getEventRecloserOld(
 			{
