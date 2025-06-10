@@ -537,11 +537,11 @@ const recloserAlarm = async (req, res) => {
 			.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
 			.reduce((acc, value) => {
 				if (value.statusAlert == 1 && value.priority == 1) {
-					acc[value.id_device] = 1
+					acc[value.id_device] = value
 				}
 				return acc
 			}, {})
-		return res.status(200).json(Object.keys(returnData).length)
+		return res.status(200).json(returnData)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })

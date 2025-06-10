@@ -1,4 +1,11 @@
-const { getElements, getEquipment, getModels, saveElement, saveEquipment } = require('../services/ElementService')
+const {
+	getElements,
+	getEquipment,
+	getModels,
+	saveElement,
+	saveEquipment,
+	updateElement,
+} = require('../services/ElementService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
 const listElements = async (req, res) => {
@@ -61,6 +68,17 @@ const addElement = async (req, res) => {
 	}
 }
 
+const editElement = async (req, res) => {
+	try {
+		const { element, equipment, client } = req.body
+		element.id_user = req.user.id
+		const data = await updateElement(element, equipment, client)
+		return res.status(200).json({ message: 'Elemento modificado correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 const addEquipment = async (req, res) => {
 	try {
 		const equipment = req.body
@@ -77,5 +95,6 @@ module.exports = {
 	listEquipments,
 	listModels,
 	addElement,
+	editElement,
 	addEquipment,
 }

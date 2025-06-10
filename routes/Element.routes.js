@@ -6,12 +6,14 @@ const {
 	listModels,
 	listEquipments,
 	addEquipment,
+	editElement,
 } = require('../controllers/Element.controller')
 const router = express.Router()
 
 router.get('/Elements', verifyToken, listElements)
 router.get('/Elements/:id', verifyToken, listElements)
 router.post('/Elements', verifyToken, addElement)
+router.patch('/Elements', verifyToken, editElement)
 router.get('/ElementsModel', verifyToken, listModels)
 router.get('/Equipment/:id', verifyToken, listEquipments)
 router.post('/Equipment', verifyToken, addEquipment)
