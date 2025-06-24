@@ -44,5 +44,7 @@ router.post('/savePermission', verifyToken, savePermission)
 
 router.get('/UserChecksHome', verifyToken, getChecksHome)
 router.post('/UserChecksHome', verifyToken, updateChecksHome)
+router.get('/UserChecksMap', verifyToken, getChecksHome)
+router.post('/UserChecksMap', verifyToken, updateChecksHome)
 
 module.exports = router
