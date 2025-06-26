@@ -224,7 +224,6 @@ async function savePermission(req, res) {
 const getChecksHome = async (req, res) => {
 	try {
 		const id_user = req.user.id
-		console.log(id_user)
 		const data = await getChecksxUser(id_user)
 		return res.status(200).json(data)
 	} catch (error) {
