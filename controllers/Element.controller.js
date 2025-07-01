@@ -1,3 +1,4 @@
+const { getDataAnalyzer } = require('../services/AnalyzerService')
 const {
 	getElements,
 	getEquipment,
@@ -6,6 +7,7 @@ const {
 	saveEquipment,
 	updateElement,
 } = require('../services/ElementService')
+const { getStatus } = require('../services/MeterService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
 const listElements = async (req, res) => {
@@ -18,12 +20,34 @@ const listElements = async (req, res) => {
 				const jsonElement = element.toJSON ? element.toJSON() : element
 				jsonElement.equipments = await Promise.all(
 					jsonElement.equipments.map(async (equipment) => {
+						let dc
 						const jsonEquipment = equipment.toJSON ? equipment.toJSON() : equipment
-						if (jsonEquipment.equipmentmodels.type === 1) {
-							const data = { serial: jsonEquipment.serial, brand: jsonEquipment.equipmentmodels.name }
-							jsonEquipment.influxData = await dataRecloseInflux(data, influxName)
-						} else {
-							jsonEquipment.influxData = { 'd/c': true }
+						const data = {
+							serial: jsonEquipment.serial,
+							brand: jsonEquipment.equipmentmodels.name,
+							version: jsonEquipment.equipmentmodels.name,
+						}
+						switch (jsonEquipment.equipmentmodels.type) {
+							case 1:
+								jsonEquipment.influxData = await dataRecloseInflux(data, influxName)
+								break
+							case 2:
+								dc = await getStatus(data, influxName)
+								jsonEquipment.influxData = { 'd/c': dc === 2 }
+								break
+							case 3:
+								const dataAnalyzer = {
+									serial: jsonEquipment.serial,
+									brand: jsonEquipment.equipmentmodels.name.toLowerCase(),
+									version: jsonEquipment.equipmentmodels.brand.toLowerCase(),
+								}
+								dc = await getDataAnalyzer(dataAnalyzer, influxName)
+								console.log(dc)
+								jsonEquipment.influxData = { 'd/c': dc instanceof Map && dc.size > 0 }
+								break
+							default:
+								jsonEquipment.influxData = { 'd/c': true }
+								break
 						}
 						return jsonEquipment
 					})
