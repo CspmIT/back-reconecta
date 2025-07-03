@@ -78,7 +78,41 @@ const getHistoryAnalyzer = async (data, influxName) => {
 	}
 }
 
+const getYearAnalyzer = async (data, influxName) => {
+	try {
+		const dataReturn = new Map()
+		const elements = ['acc', 'accio', 'inst', 'onoff']
+		await Promise.all(
+			elements.map(async (elem) => {
+				const query = `|> range(start: -12mo, stop: now())
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Analizador/${data.brand}/${data.version}/${data.serial}/${elem}")
+		|> filter(fn: (r) => r["_field"] == "ae_imp" or r["_field"] == "ae_exp")
+        |> aggregateWindow(every: 1mo, fn: last, createEmpty: false)`
+
+				const dataInflux = await ConsultaInflux(query, influxName)
+				if (!dataInflux || dataInflux.length === 0) return null
+
+				dataInflux.forEach((element) => {
+					if (!dataReturn.has(element._time)) {
+						dataReturn.set(element._time, [])
+					}
+					dataReturn.get(element._time).push({
+						field: element._field,
+						value: element._value,
+						time: element._time,
+					})
+				})
+			})
+		)
+
+		return dataReturn
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	getDataAnalyzer,
 	getHistoryAnalyzer,
+	getYearAnalyzer,
 }
