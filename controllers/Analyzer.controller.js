@@ -1,4 +1,4 @@
-const { getDataAnalyzer, getHistoryAnalyzer } = require('../services/AnalyzerService')
+const { getDataAnalyzer, getHistoryAnalyzer, getYearAnalyzer } = require('../services/AnalyzerService')
 const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 const getMetrology = async (req, res) => {
@@ -179,8 +179,48 @@ const formatData = async (data, field) => {
 	return dataReturn
 }
 
+const getMonthData = async (req, res) => {
+	try {
+		const { influx_name } = req.user
+		const data = await getYearAnalyzer(req.body, influx_name)
+		const months = [
+			'Enero',
+			'Febrero',
+			'Marzo',
+			'Abril',
+			'Mayo',
+			'Junio',
+			'Julio',
+			'Agosto',
+			'Septiembre',
+			'Octubre',
+			'Noviembre',
+			'Diciembre',
+		]
+		const dataReturn = new Map()
+		let i = 0
+		data.forEach((value, key) => {
+			const month = new Date(key).getMonth()
+			const expValue = value.find((item) => item.field === 'ae_exp')
+			const impValue = value.find((item) => item.field === 'ae_imp')
+			const total = expValue.value < 0 ? impValue.value - 0 : impValue.value - expValue.value
+			const neta = i === 0 ? total : total - dataReturn.get(i - 1).total
+			if (!dataReturn.has(i)) {
+				dataReturn.set(i, { name: months[month], total: total.toFixed(2), value: neta.toFixed(2) })
+			}
+			i++
+		})
+		dataReturn.get(0).name = dataReturn.get(0).name + ' (acumulado)'
+		dataReturn.get(i - 1).name = dataReturn.get(i - 1).name + ' (en curso)'
+		return res.status(200).json(Object.fromEntries(dataReturn))
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	getMetrology,
 	getHistory,
 	getGraphics,
+	getMonthData,
 }
