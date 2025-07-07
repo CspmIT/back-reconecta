@@ -100,10 +100,14 @@ const getAllProfile = async () => {
 	}
 }
 
-const getChecksxUser = async (user) => {
+const getChecksxUser = async (data) => {
 	try {
+		const whereCondition = { id_user: data.user, status: 0 }
+		if (data.type) {
+			whereCondition.type = data.type
+		}
 		const listChecks = await db.UserChecksHome.findAll({
-			where: { id_user: user, status: 0 },
+			where: whereCondition,
 		})
 		return listChecks
 	} catch (error) {
@@ -113,8 +117,12 @@ const getChecksxUser = async (user) => {
 
 const saveChecksxUser = async (data) => {
 	try {
+		const whereCondition = { id_user: data.id_user, check: data.check, type: data.type }
+		if (data.id_map) {
+			whereCondition.id_map = data.id_map
+		}
 		const [check, created] = await db.UserChecksHome.findOrCreate({
-			where: { id_user: data.id_user, check: data.check, type: data.type },
+			where: whereCondition,
 			defaults: { ...data },
 		})
 		if (!created) {

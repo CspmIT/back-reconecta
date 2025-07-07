@@ -15,6 +15,7 @@ module.exports = (sequelize, DataTypes) => {
 		{
 			check: DataTypes.INTEGER,
 			type: DataTypes.INTEGER,
+			id_map: DataTypes.INTEGER,
 			id_user: DataTypes.INTEGER,
 			status: DataTypes.INTEGER,
 		},
