@@ -43,6 +43,7 @@ router.get('/getPermission', verifyToken, getPermission)
 router.post('/savePermission', verifyToken, savePermission)
 
 router.get('/UserChecksHome', verifyToken, getChecksHome)
+router.get('/UserChecksHome/:type', verifyToken, getChecksHome)
 router.post('/UserChecksHome', verifyToken, updateChecksHome)
 router.get('/UserChecksMap', verifyToken, getChecksHome)
 router.post('/UserChecksMap', verifyToken, updateChecksHome)
