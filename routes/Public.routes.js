@@ -14,5 +14,5 @@ router.get('/test', async (req, res) => {
 			return res.status(401).json({ err: err.stack })
 		})
 })
-router.get('/testInflux', influxTask)
+/* router.get('/testInflux', influxTask) */
 module.exports = router
