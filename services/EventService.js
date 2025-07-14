@@ -298,6 +298,25 @@ const saveEvent = async (data) => {
 	}
 }
 
+const updateEventIndex = async (data) => {
+	try {
+		const updatePromises = data.map((entry) => {
+			return db.Event.update(
+				{ index_file: entry.index },
+				{
+					where: {
+						id_event_influx: entry.in,
+						id_version: 2,
+					},
+				}
+			)
+		})
+		await Promise.all(updatePromises)
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
@@ -309,4 +328,5 @@ module.exports = {
 	getEventsActive,
 	getEventsInflux,
 	saveEvent,
+	updateEventIndex,
 }

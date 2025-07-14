@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
 			type_var: DataTypes.ENUM('Event', 'Output', 'Log'),
 			description: DataTypes.STRING,
 			id_database: DataTypes.STRING,
+			index_file: DataTypes.INTEGER,
 		},
 		{
 			sequelize,

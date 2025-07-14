@@ -5,11 +5,13 @@ const {
 	getEventsInflux,
 	getEventsDevice,
 	saveEvent,
+	updateEventIndex,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
 const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
 const { getEquipment } = require('../services/ElementService')
+const { initialConfig } = require('../utils/js/initialData')
 const getConfigNotify = async (req, res) => {
 	try {
 		const Events = await getAllEvents()
@@ -152,6 +154,23 @@ const saveLogsChecks = async (req, res) => {
 		}
 	}
 }
+const importConfigInitial = async (req, res) => {
+	try {
+		let dataDb = []
+		initialConfig.forEach((item) => {
+			const double = item[1] * 2
+			const data = {
+				index: item[0],
+				in: [double, double + 1],
+			}
+			dataDb.push(data)
+		})
+		const processData = await Promise.all(await updateEventIndex(dataDb))
+		return res.status(200).json(processData)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+}
 module.exports = {
 	getConfigNotify,
 	saveConfigNotify,
@@ -159,4 +178,5 @@ module.exports = {
 	AllEvents,
 	eventsDevices,
 	saveLogsChecks,
+	importConfigInitial,
 }
