@@ -5,6 +5,7 @@ const {
 	getEventsInflux,
 	getEventsDevice,
 	saveEvent,
+	updateEventIndex,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
@@ -152,6 +153,36 @@ const saveLogsChecks = async (req, res) => {
 		}
 	}
 }
+
+const updateConfigNotify = async (req, res) => {
+	try {
+		const data = req.body
+		const response = await updateEventIndex(data)
+		return res.status(200).json(response)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+}
+
+/* 
+FUNCION PARA CARGAR LAS CONFIGURACIONES MEDIANTE EL JSON DE INICIO
+const importConfigInitial = async (req, res) => {
+	try {
+		let dataDb = []
+		initialConfig.forEach((item) => {
+			const double = item[1] * 2
+			const data = {
+				index: item[0],
+				in: [double, double + 1],
+			}
+			dataDb.push(data)
+		})
+		const processData = await Promise.all(await updateEventIndex(dataDb))
+		return res.status(200).json(processData)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+} */
 module.exports = {
 	getConfigNotify,
 	saveConfigNotify,
@@ -159,4 +190,5 @@ module.exports = {
 	AllEvents,
 	eventsDevices,
 	saveLogsChecks,
+	updateConfigNotify,
 }
