@@ -1,6 +1,7 @@
 // const TelegramBot = require('node-telegram-bot-api')
 // const crypto = require('crypto')
 // const telegramConf = require('../config/telegram.conf')
+const { default: axios } = require('axios')
 const config_influx = require('../config/config_influx')
 const { searchEnableAlarm, saveAlertSend, saveLogAlert } = require('../services/EventService')
 const { createTask, saveTest, formaterDataAlarm } = require('../services/InfluxServices')
@@ -86,9 +87,37 @@ const alarmRecloser = async (req, res) => {
 		})
 	}
 }
+const discord = async (req, res) => {
+	const webhookURL =
+		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
+	try {
+		await axios.post(webhookURL, {
+			username: 'Reconecta_Morteros-BOT',
+			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
+			content: 'Para más información accede a la página',
+			embeds: [
+				{
+					title: ':warning: Alerta :warning:',
+					color: 16711680,
+					url: 'https://reconecta.cooptech.com.ar/',
+					image: {
+						url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoUy0Wg8ovbtNuEGUcOaj1qoYsKrHcm2pa4A&s',
+					},
+				},
+			],
+		})
+		console.log('Mensaje enviado')
+	} catch (error) {
+		console.error('Error al enviar mensaje:', error)
+	}
+}
+const pruebaConexion = async (req, res) => {
+	const ip = 192
+}
 
 module.exports = {
 	sendMsjTelegram,
 	contrlAlarm,
 	alarmRecloser,
+	discord,
 }
