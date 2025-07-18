@@ -6,6 +6,7 @@ const {
 	getEventsDevice,
 	saveEvent,
 	updateEventIndex,
+	updateEvents,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
@@ -154,10 +155,20 @@ const saveLogsChecks = async (req, res) => {
 	}
 }
 
-const updateConfigNotify = async (req, res) => {
+const updateConfigIndex = async (req, res) => {
 	try {
 		const data = req.body
 		const response = await updateEventIndex(data)
+		return res.status(200).json(response)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+}
+
+const updateConfigNotify = async (req, res) => {
+	try {
+		const data = req.body
+		const response = await updateEvents(data)
 		return res.status(200).json(response)
 	} catch (e) {
 		return res.status(500).json(e)
@@ -190,5 +201,6 @@ module.exports = {
 	AllEvents,
 	eventsDevices,
 	saveLogsChecks,
+	updateConfigIndex,
 	updateConfigNotify,
 }

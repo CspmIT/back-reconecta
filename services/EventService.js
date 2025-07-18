@@ -226,9 +226,9 @@ const getEventsDevice = async (id_version, type_device) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante las consultas.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsInflux = async (influx_name, Events) => {
+const getEventsInflux = async (influx_name, Events, id = false) => {
 	try {
-		const reclosers = await getEquipment()
+		const reclosers = await getEquipment(id)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				if (Events.some((item) => item.id_version === recloser.id_model)) {
@@ -283,6 +283,17 @@ const saveNotify = async (data) => {
 	}
 }
 
+const EventsCustom = async (filter) => {
+	try {
+		const query = {
+			where: filter,
+		}
+		return await db.Event.findAll(query)
+	} catch (e) {
+		throw e
+	}
+}
+
 const saveEvent = async (data) => {
 	try {
 		if (data.id) {
@@ -313,7 +324,25 @@ const updateEventIndex = async (data) => {
 				}
 			)
 		})
-		await Promise.all(updatePromises)
+		const promises = await Promise.all(updatePromises)
+		return promises
+	} catch (e) {
+		throw e
+	}
+}
+
+const updateEvents = async (events) => {
+	try {
+		if (!Array.isArray(events)) throw new Error('Invalid input')
+
+		const updatePromises = events
+			.filter((data) => data?.id != null)
+			.map((data) => db.Event.update(data, { where: { id: data.id } }))
+
+		const results = await Promise.all(updatePromises)
+		const updatedCount = results.reduce((acc, [count]) => acc + count, 0)
+
+		return updatedCount
 	} catch (e) {
 		throw e
 	}
@@ -331,4 +360,6 @@ module.exports = {
 	getEventsInflux,
 	saveEvent,
 	updateEventIndex,
+	updateEvents,
+	EventsCustom,
 }

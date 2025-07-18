@@ -7,6 +7,7 @@ const {
 	saveEquipment,
 	updateElement,
 } = require('../services/ElementService')
+const { EventsCustom, getEventsInflux } = require('../services/EventService')
 const { getStatus } = require('../services/MeterService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
@@ -14,6 +15,7 @@ const listElements = async (req, res) => {
 	try {
 		const filters = req.params
 		const elements = await getElements(filters)
+		const activeEvents = await EventsCustom({ flash_screen: 1 })
 		const influxName = req.user.influx_name
 		const elementsWithInflux = await Promise.all(
 			elements.map(async (element) => {
@@ -30,6 +32,10 @@ const listElements = async (req, res) => {
 						switch (jsonEquipment.equipmentmodels.type) {
 							case 1:
 								jsonEquipment.influxData = await dataRecloseInflux(data, influxName)
+								const flashAlarm = await getEventsInflux(influxName, activeEvents, {
+									id: jsonEquipment.id,
+								})
+								jsonEquipment.flashAlarm = flashAlarm.length !== 0 && flashAlarm[0].length !== 0
 								break
 							case 2:
 								dc = await getStatus(data, influxName)
@@ -42,7 +48,6 @@ const listElements = async (req, res) => {
 									version: jsonEquipment.equipmentmodels.brand.toLowerCase(),
 								}
 								dc = await getDataAnalyzer(dataAnalyzer, influxName)
-								console.log(dc)
 								jsonEquipment.influxData = { 'd/c': dc instanceof Map && dc.size > 0 }
 								break
 							default:
