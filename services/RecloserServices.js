@@ -712,7 +712,7 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 			if (eventData) {
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime + 3 * 60 * 60 * 1000) // Sumar 3 horas
+						? new Date(reg.unixtime) // Sumar 3 horas
 						: false
 				if (!dataPack) continue
 				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
@@ -770,7 +770,7 @@ const getEventRecloserOld = async (data, influxName) => {
 			if (matchingEvent) {
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime + 3 * 60 * 60 * 1000) // Sumar 3 horas
+						? new Date(reg.unixtime) // Sumar 3 horas
 						: false
 				if (!dataPack) continue
 				if (reg?.id === 257 && reg?.info) {
