@@ -35,7 +35,8 @@ const listElements = async (req, res) => {
 								const flashAlarm = await getEventsInflux(influxName, activeEvents, {
 									id: jsonEquipment.id,
 								})
-								jsonEquipment.flashAlarm = flashAlarm.length !== 0 && flashAlarm[0].length !== 0
+								jsonEquipment.flashAlarm =
+									flashAlarm.length > 0 && flashAlarm[0].some((a) => a.statusAlert === 1)
 								break
 							case 2:
 								dc = await getStatus(data, influxName)

@@ -57,6 +57,9 @@ const getEquipment = async (filter = null) => {
 		if (filter?.element) {
 			query.where = { id_element: filter.element }
 		}
+		if (filter?.model) {
+			query.where = { id_model: filter.model }
+		}
 		if (filter?.type) {
 			const equipmentModelsInclude = query.include.find((model) => model.as === 'equipmentmodels')
 			equipmentModelsInclude.where.type = filter.type
