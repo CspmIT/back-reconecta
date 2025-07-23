@@ -547,7 +547,14 @@ const getInterruption = async (data, influxName) => {
  */
 const getManauver = async (serial) => {
 	try {
-		let dataReturn = await db.RecloserSendMqtt.findAll({ where: { status: 1, serial: serial } })
+		let dataReturn = await db.RecloserSendMqtt.findAll({
+			include: [
+				{
+					association: 'user_create',
+				},
+			],
+			where: { status: 1, serial: serial },
+		})
 		return dataReturn
 	} catch (error) {
 		throw new Error(error)
@@ -710,9 +717,10 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 		for (const reg of Object.values(packsEvents)) {
 			const eventData = data.event.find((even) => even.id == reg?.id)
 			if (eventData) {
+				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0 // a los noja hay que sumarle 3 horas
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime) // Sumar 3 horas
+						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
 						: false
 				if (!dataPack) continue
 				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
@@ -768,9 +776,10 @@ const getEventRecloserOld = async (data, influxName) => {
 		for (const reg of Object.values(packsEvents)) {
 			const matchingEvent = data.event.find((even) => even.id_influx == reg?.id)
 			if (matchingEvent) {
+				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime) // Sumar 3 horas
+						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
 						: false
 				if (!dataPack) continue
 				if (reg?.id === 257 && reg?.info) {
