@@ -17,6 +17,9 @@ const getMetrology = async (req, res) => {
 				pot_reactiva += value[0].value
 			}
 			dataAnalyzer[key] = value[0].value
+			if (!dataAnalyzer.time) {
+				dataAnalyzer.time = value[0].time
+			}
 		})
 		dataAnalyzer.f_0_ain = dataAnalyzer.f_0_ain || dataAnalyzer.ae_imp
 		dataAnalyzer.f_1_ain = dataAnalyzer.f_1_ain || dataAnalyzer.re_imp
@@ -212,6 +215,8 @@ const getMonthData = async (req, res) => {
 		})
 		dataReturn.get(0).name = dataReturn.get(0).name + ' (acumulado)'
 		dataReturn.get(i - 1).name = dataReturn.get(i - 1).name + ' (en curso)'
+		dataReturn.delete(0)
+
 		return res.status(200).json(Object.fromEntries(dataReturn))
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
