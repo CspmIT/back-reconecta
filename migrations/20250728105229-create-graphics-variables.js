@@ -31,7 +31,7 @@ module.exports = {
 				},
 				allowNull: false,
 			},
-			order: {
+			id_parent: {
 				type: Sequelize.INTEGER,
 			},
 			color: {

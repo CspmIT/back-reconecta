@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
 		 */
 		static associate(models) {
 			this.belongsTo(models.Graphic, { foreignKey: 'id_graphic', as: 'graphics' })
-			this.belongsTo(models.Equipment, { foreignKey: 'id_equipment', as: 'equipment' })
+			this.belongsTo(models.Equipment, { foreignKey: 'id_equipment', as: 'equipments' })
 		}
 	}
 	GraphicsVariables.init(
@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
 			value: DataTypes.FLOAT,
 			id_equipment: DataTypes.INTEGER,
 			id_graphic: DataTypes.INTEGER,
-			order: DataTypes.INTEGER,
+			id_parent: DataTypes.INTEGER,
 			color: DataTypes.STRING,
 		},
 		{
