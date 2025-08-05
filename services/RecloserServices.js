@@ -355,10 +355,11 @@ const getMetrologiaIntantanea = async (data, influxName) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  *
  */
-const acRecloser = async (data, influxName) => {
+
+const acReclosers = async (filter, influxName) => {
 	try {
-		const query = `|> range(start: -30s, stop: now())
-		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+		const query = `|> range(start: -1m, stop: now())
+		|> filter(fn: (r) => r["topic"] == ${filter})
         |> filter(fn: (r) => r["_field"] == "ac" )
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
@@ -367,7 +368,7 @@ const acRecloser = async (data, influxName) => {
 
 		if (!dataInflux || !dataInflux.length) {
 			const fallbackQuery = `|> range(start: -1d, stop: now())
-			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+			|> filter(fn: (r) => r["topic"] == ${filter})
 			|> filter(fn: (r) => r["_field"] == "ac" )
 			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 			|> last()`
@@ -375,8 +376,7 @@ const acRecloser = async (data, influxName) => {
 			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 		}
 		if (!dataInflux || !dataInflux.length) return null
-		let dataReturn = dataInflux[0]._value
-		return dataReturn
+		return dataInflux
 	} catch (error) {
 		throw error
 	}
@@ -879,7 +879,7 @@ module.exports = {
 	getEventCheckRecloserOld,
 	getStatusAlarm,
 	updateRecloser,
-	acRecloser,
+	acReclosers,
 	getManauver,
 	getReclosersxVersion,
 }
