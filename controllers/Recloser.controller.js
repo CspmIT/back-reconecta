@@ -22,6 +22,7 @@ const {
 	acRecloser,
 	getManauver,
 	getReclosersxVersion,
+	acReclosers,
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
@@ -202,32 +203,17 @@ const metrologiaIntantanea = async (req, res) => {
 		}
 	}
 }
-const getAcRecloser = async (req, res) => {
+const getAcReclosers = async (req, res) => {
 	try {
-		const { id } = req.query
-		if (!id) {
-			return res.status(400).json({ message: 'El ID es requerido' })
-		}
-		const recloserFilter = await getEquipment(req.query)
-		const recloser = recloserFilter[0]
-		if (!recloser) {
-			return res.status(404).json({ message: 'Reconectador no encontrado' })
-		}
 		const influxName = req.user.influx_name
-		const dataInflux = await acRecloser(
-			{
-				serial: recloser.serial,
-				brand: recloser.equipmentmodels.name,
-			},
-			influxName
-		)
+		const reclosers = await getEquipment({ type: 1 })
+		const filterTopics = reclosers
+			.map((r) => `"coop/energia/Reconectadores/${r.equipmentmodels.name}/${r.serial}/status/channel_bin"`)
+			.join(' or r["topic"] == ')
+		const dataInflux = await acReclosers(filterTopics, influxName)
 		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
+	} catch (e) {
+		return res.status(400).json({ message: e.message })
 	}
 }
 
@@ -616,7 +602,7 @@ module.exports = {
 	controlAction,
 	changeStatusAlarm,
 	recloserAlarm,
-	getAcRecloser,
 	manauvers,
 	reclosersxVersion,
+	getAcReclosers,
 }
