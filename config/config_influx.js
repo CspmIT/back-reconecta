@@ -2,7 +2,7 @@ require('dotenv').config() // Para cargar las variables de entorno desde un arch
 
 module.exports = {
 	morteros_energia: {
-		INFLUX_URL: 'http://200.63.120.50:58086/',
+		INFLUX_URL: 'http://172.26.5.51:8086/',
 		INFLUXDB_TOKEN: '6aS0VvvVlCop1Ry_NCOH4xxqX5Xwun9xv8vVu8eg6ipZWt0Vh9FMMeWopRQeq-eMkbzc7_qq0nwnErort9XjRw==',
 		INFLUX_TOKEN: '6aS0VvvVlCop1Ry_NCOH4xxqX5Xwun9xv8vVu8eg6ipZWt0Vh9FMMeWopRQeq-eMkbzc7_qq0nwnErort9XjRw==',
 		INFLUX_ORG: 'CoopMorteros',
