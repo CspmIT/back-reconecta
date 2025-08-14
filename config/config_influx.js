@@ -10,7 +10,7 @@ module.exports = {
 		INFLUX_BUCKET: 'ENERGIA',
 	},
 	externos: {
-		INFLUX_URL: 'http://200.63.120.50:61086/',
+		INFLUX_URL: 'http://172.26.5.50:8086/',
 		INFLUXDB_TOKEN: 'y2quVyt0bou-eiGfu9U-q3dYCKbq6ESU-sWU_6BPGa3hgnPmxTHlPKX8vTfL0kALogJbmIYoO3u4C3p7XQdUIg==',
 		INFLUX_TOKEN: 'y2quVyt0bou-eiGfu9U-q3dYCKbq6ESU-sWU_6BPGa3hgnPmxTHlPKX8vTfL0kALogJbmIYoO3u4C3p7XQdUIg==',
 		INFLUX_ORG: 'CoopMorteros',
