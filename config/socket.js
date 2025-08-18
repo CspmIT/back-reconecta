@@ -16,7 +16,7 @@ module.exports = {
 			},
 		})
 
-		io.on('connect', (socket) => {
+		/* io.on('connect', (socket) => {
 			let previousAlertState = null
 			const checkAlerts = async () => {
 				try {
@@ -80,7 +80,7 @@ module.exports = {
 				}
 				console.log('Cliente desconectado:', socket.id)
 			})
-		})
+		}) */
 
 		return io
 	},

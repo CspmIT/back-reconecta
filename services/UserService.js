@@ -134,6 +134,15 @@ const saveChecksxUser = async (data) => {
 	}
 }
 
+const getUserxID = async (id) => {
+	try {
+		const user = await db.User.findOne({ where: { id, status: 1 } })
+		return user
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	getAllUser,
 	getAllUserPass,
@@ -142,4 +151,5 @@ module.exports = {
 	getAllProfile,
 	getChecksxUser,
 	saveChecksxUser,
+	getUserxID,
 }

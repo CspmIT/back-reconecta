@@ -19,12 +19,11 @@ const {
 	controlAction,
 	changeStatusAlarm,
 	recloserAlarm,
-	getAcRecloser,
 	manauvers,
 	reclosersxVersion,
 	getAcReclosers,
 } = require('../controllers/Recloser.controller')
-const { testMQTT, sendMQTT, sendMqttMessagge } = require('../controllers/Mqtt.controller')
+const { sendMQTT, sendMqttMessagge } = require('../controllers/Mqtt.controller')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
 router.post('/changeStatusAlarm', verifyToken, changeStatusAlarm)
@@ -50,7 +49,6 @@ router.get('/getAcReclosers', verifyToken, getAcReclosers)
 
 router.get('/getRecloserxVersion', verifyToken, reclosersxVersion)
 // Section MQTT
-router.get('/testMQTT', testMQTT)
 router.post('/sendMQTT', verifyToken, sendMQTT)
 router.post('/sendMqttMessagge', verifyToken, sendMqttMessagge)
 router.post('/controlAction', verifyToken, controlAction)
