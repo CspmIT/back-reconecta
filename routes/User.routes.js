@@ -20,6 +20,7 @@ const {
 	getProfiles,
 	getChecksHome,
 	updateChecksHome,
+	getUser,
 } = require('../controllers/User.controller')
 const router = express.Router()
 
@@ -34,6 +35,7 @@ router.get('/listUsersPass', verifyToken, getListUserPass)
 router.get('/listProfiles', verifyToken, getProfiles)
 router.get('/userPass', verifyToken, getUserPass)
 router.post('/savePass', verifyToken, addPassRecloser)
+router.get('/getUser/:id', verifyToken, getUser)
 
 router.get('/getAllMenu', verifyToken, getAllMenu)
 router.post('/saveMenu', verifyToken, abmMenu)

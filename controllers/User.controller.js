@@ -8,6 +8,7 @@ const {
 	getAllProfile,
 	getChecksxUser,
 	saveChecksxUser,
+	getUserxID,
 } = require('../services/UserService')
 
 async function getListUser(req, res) {
@@ -244,7 +245,19 @@ const updateChecksHome = async (req, res) => {
 		dataBody.id_user = req.user.id
 		await saveChecksxUser(dataBody)
 		return res.status(200).json({ message: 'Se guardaron los cambios correctamente.' })
-	} catch (e) {}
+	} catch (e) {
+		res.status(500).json(e.errors)
+	}
+}
+
+const getUser = async (req, res) => {
+	try {
+		const { id } = req.params
+		const user = await getUserxID(id)
+		return res.status(200).json(user)
+	} catch (e) {
+		res.status(500).json(e.errors)
+	}
 }
 
 module.exports = {
@@ -260,4 +273,5 @@ module.exports = {
 	savePermission,
 	getChecksHome,
 	updateChecksHome,
+	getUser,
 }
