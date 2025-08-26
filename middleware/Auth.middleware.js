@@ -25,4 +25,30 @@ const verifyToken = async (req, res, next) => {
 	}
 }
 
-module.exports = { verifyToken }
+const alarmToken = async (req, res, next) => {
+	try {
+		const authHeader = req.headers['authorization']
+
+		if (!authHeader) {
+			return res.status(401).json({ error: 'Falta el header Authorization' })
+		}
+
+		const parts = authHeader.split(' ')
+		if (parts.length !== 2 || parts[0] !== 'Bearer') {
+			return res.status(401).json({ error: 'Formato de Authorization inválido' })
+		}
+
+		const token = parts[1]
+
+		const TOKEN_ESPERADO = 'TOKEN123'
+		if (token !== TOKEN_ESPERADO) {
+			return res.status(403).json({ error: 'Token inválido' })
+		}
+
+		next()
+	} catch (e) {
+		res.status(400).json({ message: e.message })
+	}
+}
+
+module.exports = { verifyToken, alarmToken }
