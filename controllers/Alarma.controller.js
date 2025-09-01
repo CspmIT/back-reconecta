@@ -9,7 +9,7 @@ const influxAlarm = async (req, res) => {
 		const { topic, _value } = req.body
 		const { scheme } = req.params
 		const eventId = _value
-		if (topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
+		if (!topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
