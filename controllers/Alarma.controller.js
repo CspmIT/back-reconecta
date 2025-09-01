@@ -7,6 +7,7 @@ const { getCompleteRecords, cleanupOld, addToBuffer } = require('../utils/js/buf
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
+		await discord(JSON.stringify(values))
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
 		const eventId = values.find((v) => v.field === 'events_0')?.value
@@ -26,7 +27,7 @@ async function procesarRegistro(topic, values, scheme) {
 			eventDate: parseInt(eventDate || 0),
 		}
 		await saveAlarm(body)
-		discord(isAlarm.name)
+		await discord(isAlarm.name)
 	} catch (e) {
 		throw e
 	}
