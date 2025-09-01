@@ -3,9 +3,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.addIndex('Events', ['id_event_influx'], {
-			name: 'idx_id_event_influx',
-		})
 		await queryInterface.addColumn('Logs_Alarms', 'eventDate', {
 			type: Sequelize.INTEGER,
 			allowNull: false,
@@ -31,6 +28,5 @@ module.exports = {
 	async down(queryInterface, Sequelize) {
 		await queryInterface.removeColumn('Logs_Alarms', 'eventDate')
 		await queryInterface.removeColumn('Logs_Alarms', 'info')
-		await queryInterface.removeIndex('Events', 'idx_id_event_influx')
 	},
 }

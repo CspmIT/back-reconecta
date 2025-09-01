@@ -23,14 +23,14 @@ function saveBuffer(buffer) {
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
-		await discord()
+		const eventId = values.find((v) => v.field === 'events_0').value
+		const info = values.find((v) => v.field === 'info').value
+		const eventDate = values.find((v) => v.field === 'events_1').value
+		await discord(values, scheme)
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
 		if (scheme === 'morteros') {
 			await changeSchema('reconecta_morteros')
-			const eventId = values.find((v) => v.field === 'events_0').value
-			const info = values.find((v) => v.field === 'info').value
-			const eventDate = values.find((v) => v.field === 'events_1').value
 			const recloser = await getEquipment({ serial })
 			if (!recloser[0] || !eventId) return
 			const isAlarm = await checkIsAlarm()
@@ -40,10 +40,9 @@ async function procesarRegistro(topic, values, scheme) {
 				type: 'Reconectador',
 				id_event: isAlarm.id,
 				info,
-				eventDate,
+				eventDate: parseInt(eventDate),
 			}
 			await saveAlarm(body)
-			await discord()
 		}
 	} catch (e) {
 		throw e
@@ -52,7 +51,6 @@ async function procesarRegistro(topic, values, scheme) {
 
 const influxAlarm = async (req, res) => {
 	try {
-		await discord()
 		const post = req.body
 		const { scheme } = req.params
 		const fieldsAccepted = ['events_0', 'events_1', 'info']
@@ -100,17 +98,17 @@ const influxAlarm = async (req, res) => {
 	}
 }
 
-async function discord() {
+async function discord(data, scheme) {
 	const webhookURL =
 		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
 	try {
 		await axios.post(webhookURL, {
 			username: 'Reconecta_Morteros-BOT',
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
-			content: 'Para más información accede a la página',
+			content: JSON.stringify(data),
 			embeds: [
 				{
-					title: ':warning: Alerta :warning:',
+					title: `:warning: Alerta ${scheme} :warning:`,
 					color: 16711680,
 					url: 'https://reconecta.cooptech.com.ar/',
 					image: {
