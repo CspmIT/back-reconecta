@@ -3,9 +3,7 @@ const { changeSchema } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm } = require('../services/AlarmService')
-const { saveBuffer, loadBuffer } = require('../utils/js/buffer')
-
-const requiredFields = ['events_0', 'events_1', 'info']
+const { getCompleteRecords, cleanupOld, addToBuffer } = require('../utils/js/buffer')
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
@@ -37,53 +35,24 @@ const influxAlarm = async (req, res) => {
 	try {
 		const post = req.body
 		const { scheme } = req.params
-		const field = post._field ?? null
+		const field = post._field
+		if (!post.topic || !post._time || !field) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
-		if (!post.topic || !post._time || !requiredFields.includes(field)) {
-			return res.status(400).json({ error: 'Faltan campos obligatorios' })
-		}
+		const key = `${post.topic}-${post._time}`
+		addToBuffer(key, field, post._value ?? null)
 
-		const topic = post.topic
-		const time = post._time
-		const value = post._value ?? null
-		const key = `${topic}-${time}`
-
-		let buffer = loadBuffer()
-		if (!buffer[key]) {
-			buffer[key] = {
-				valuesMap: {},
-				created_at: Date.now() / 1000,
-			}
-		}
-
-		// agregar valor al buffer (reemplaza si ya existe el campo)
-		buffer[key].valuesMap[field] = value
-
-		// verificar si tenemos todos los campos
-		const fieldsInBuffer = Object.keys(buffer[key].valuesMap)
-		if (requiredFields.every((f) => fieldsInBuffer.includes(f))) {
-			const valuesArray = requiredFields.map((f) => ({ field: f, value: buffer[key].valuesMap[f] }))
-			await procesarRegistro(key, valuesArray, scheme)
-			delete buffer[key]
-		}
+		// procesar registros completos
+		const complete = getCompleteRecords()
+		for (const rec of complete) await procesarRegistro(rec.key, rec.values, scheme)
 
 		// limpiar registros viejos
-		const now = Date.now() / 1000
-		for (const k in buffer) {
-			if (now - buffer[k].created_at > 5) {
-				const valuesArray = Object.keys(buffer[k].valuesMap).map((f) => ({
-					field: f,
-					value: buffer[k].valuesMap[f],
-				}))
-				await procesarRegistro(k, valuesArray, scheme)
-				delete buffer[k]
-			}
-		}
+		const old = cleanupOld(5)
+		for (const rec of old) await procesarRegistro(rec.key, rec.values, scheme)
 
-		saveBuffer(buffer)
-		return res.status(200).json({ message: 'OK' })
+		return res.json({ message: 'OK' })
 	} catch (e) {
-		return res.status(500).json({ message: 'Error procesando la alarma ' + e.message })
+		console.error(e)
+		return res.status(500).json({ message: e.message })
 	}
 }
 
