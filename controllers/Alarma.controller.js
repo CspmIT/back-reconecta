@@ -5,29 +5,29 @@ const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm } = require('../services/AlarmService')
 const { saveBuffer, loadBuffer } = require('../utils/js/buffer')
 
+const requiredFields = ['events_0', 'events_1', 'info']
+
 async function procesarRegistro(topic, values, scheme) {
 	try {
 		await discord(values, scheme)
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
-		const eventId = values.find((v) => v.field === 'events_0').value
-		const info = values.find((v) => v.field === 'info').value
-		const eventDate = values.find((v) => v.field === 'events_1').value
-		if (scheme === 'morteros') {
-			await changeSchema('reconecta_morteros')
-			const recloser = await getEquipment({ serial })
-			if (!recloser[0] || !eventId) return
-			const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
-			if (!isAlarm) return
-			const body = {
-				id_device: recloser[0].id,
-				type: 'Reconectador',
-				id_event: isAlarm.id,
-				info,
-				eventDate: parseInt(eventDate),
-			}
-			await saveAlarm(body)
+		const eventId = values.find((v) => v.field === 'events_0')?.value
+		const info = values.find((v) => v.field === 'info')?.value
+		const eventDate = values.find((v) => v.field === 'events_1')?.value
+		await changeSchema(`reconecta_${scheme}`)
+		const recloser = await getEquipment({ serial })
+		if (!recloser[0] || !eventId) return
+		const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
+		if (!isAlarm) return
+		const body = {
+			id_device: recloser[0].id,
+			type: 'Reconectador',
+			id_event: isAlarm.id,
+			info: info || null,
+			eventDate: parseInt(eventDate || 0),
 		}
+		await saveAlarm(body)
 	} catch (e) {
 		throw e
 	}
@@ -37,10 +37,9 @@ const influxAlarm = async (req, res) => {
 	try {
 		const post = req.body
 		const { scheme } = req.params
-		const fieldsAccepted = ['events_0', 'events_1', 'info']
 		const field = post._field ?? null
 
-		if (!post.topic || !post._time || !fieldsAccepted.includes(field)) {
+		if (!post.topic || !post._time || !requiredFields.includes(field)) {
 			return res.status(400).json({ error: 'Faltan campos obligatorios' })
 		}
 
@@ -58,17 +57,21 @@ const influxAlarm = async (req, res) => {
 			}
 		}
 
+		// agregar valor al buffer
 		buffer[key].values.push({ field, value })
 
-		// Si ya tengo 3 values → proceso de inmediato
-		if (buffer[key].values.length === 3) {
+		const fieldsInBuffer = buffer[key].values.map((v) => v.field)
+
+		// procesar si tenemos todos los campos requeridos
+		if (requiredFields.every((f) => fieldsInBuffer.includes(f))) {
 			await procesarRegistro(key, buffer[key].values, scheme)
 			delete buffer[key]
 		}
 
-		// limpiar entradas viejas (timeout 5s)
+		// limpiar entradas viejas (>5s) aunque estén incompletas
+		const now = Date.now() / 1000
 		for (const k in buffer) {
-			if (Date.now() / 1000 - buffer[k].created_at > 5) {
+			if (now - buffer[k].created_at > 5) {
 				await procesarRegistro(k, buffer[k].values, scheme)
 				delete buffer[k]
 			}
