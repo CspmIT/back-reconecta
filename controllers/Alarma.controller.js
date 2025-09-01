@@ -7,17 +7,17 @@ const { saveBuffer, loadBuffer } = require('../utils/js/buffer')
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
-		const eventId = values.find((v) => v.field === 'events_0').value
-		const info = values.find((v) => v.field === 'info').value
-		const eventDate = values.find((v) => v.field === 'events_1').value
 		await discord(values, scheme)
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
+		const eventId = values.find((v) => v.field === 'events_0').value
+		const info = values.find((v) => v.field === 'info').value
+		const eventDate = values.find((v) => v.field === 'events_1').value
 		if (scheme === 'morteros') {
 			await changeSchema('reconecta_morteros')
 			const recloser = await getEquipment({ serial })
 			if (!recloser[0] || !eventId) return
-			const isAlarm = await checkIsAlarm()
+			const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
 			if (!isAlarm) return
 			const body = {
 				id_device: recloser[0].id,
@@ -94,9 +94,9 @@ async function discord(data, scheme) {
 					title: `:warning: Alerta ${scheme} :warning:`,
 					color: 16711680,
 					url: 'https://reconecta.cooptech.com.ar/',
-					image: {
+					/* image: {
 						url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoUy0Wg8ovbtNuEGUcOaj1qoYsKrHcm2pa4A&s',
-					},
+					}, */
 				},
 			],
 		})
