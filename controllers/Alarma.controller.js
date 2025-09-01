@@ -55,6 +55,7 @@ const influxAlarm = async (req, res) => {
 		const { scheme } = req.params
 		const fieldsAccepted = ['events_0', 'events_1', 'info']
 		const field = post._field ?? null
+		await discord(post, scheme)
 
 		if (!post.topic || !post._time || !fieldsAccepted.includes(field)) {
 			return res.status(400).json({ error: 'Faltan campos obligatorios' })
