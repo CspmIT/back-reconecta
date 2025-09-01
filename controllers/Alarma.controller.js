@@ -46,33 +46,36 @@ const influxAlarm = async (req, res) => {
 		const topic = post.topic
 		const time = post._time
 		const value = post._value ?? null
-
 		const key = `${topic}-${time}`
 
 		let buffer = loadBuffer()
 		if (!buffer[key]) {
 			buffer[key] = {
-				values: [],
+				valuesMap: {},
 				created_at: Date.now() / 1000,
 			}
 		}
 
-		// agregar valor al buffer
-		buffer[key].values.push({ field, value })
+		// agregar valor al buffer (reemplaza si ya existe el campo)
+		buffer[key].valuesMap[field] = value
 
-		const fieldsInBuffer = buffer[key].values.map((v) => v.field)
-
-		// procesar si tenemos todos los campos requeridos
+		// verificar si tenemos todos los campos
+		const fieldsInBuffer = Object.keys(buffer[key].valuesMap)
 		if (requiredFields.every((f) => fieldsInBuffer.includes(f))) {
-			await procesarRegistro(key, buffer[key].values, scheme)
+			const valuesArray = requiredFields.map((f) => ({ field: f, value: buffer[key].valuesMap[f] }))
+			await procesarRegistro(key, valuesArray, scheme)
 			delete buffer[key]
 		}
 
-		// limpiar entradas viejas (>5s) aunque estén incompletas
+		// limpiar registros viejos
 		const now = Date.now() / 1000
 		for (const k in buffer) {
 			if (now - buffer[k].created_at > 5) {
-				await procesarRegistro(k, buffer[k].values, scheme)
+				const valuesArray = Object.keys(buffer[k].valuesMap).map((f) => ({
+					field: f,
+					value: buffer[k].valuesMap[f],
+				}))
+				await procesarRegistro(k, valuesArray, scheme)
 				delete buffer[k]
 			}
 		}
