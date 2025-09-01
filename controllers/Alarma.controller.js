@@ -2,6 +2,9 @@ const { default: axios } = require('axios')
 const fs = require('fs')
 const path = require('path')
 const { changeSchema } = require('../models')
+const { getEquipment } = require('../services/ElementService')
+const { checkIsAlarm } = require('../services/EventService')
+const { saveAlarm } = require('../services/AlarmService')
 const bufferFile = path.join(__dirname, 'cache', 'influx_buffer.json')
 
 // Buffer para no guardar todos las peticiones POST a la vez
@@ -18,12 +21,29 @@ function saveBuffer(buffer) {
 	fs.writeFileSync(bufferFile, JSON.stringify(buffer))
 }
 
-function procesarRegistro(topic, values, scheme) {
+async function procesarRegistro(topic, values, scheme) {
 	try {
+		await discord()
 		const topicSplit = topic.split('/')
-		const brand = topicSplit[3]
 		const serial = topicSplit[4]
 		if (scheme === 'morteros') {
+			await changeSchema('reconecta_morteros')
+			const eventId = values.find((v) => v.field === 'events_0').value
+			const info = values.find((v) => v.field === 'info').value
+			const eventDate = values.find((v) => v.field === 'events_1').value
+			const recloser = await getEquipment({ serial })
+			if (!recloser[0] || !eventId) return
+			const isAlarm = await checkIsAlarm()
+			if (!isAlarm) return
+			const body = {
+				id_device: recloser[0].id,
+				type: 'Reconectador',
+				id_event: isAlarm.id,
+				info,
+				eventDate,
+			}
+			await saveAlarm(body)
+			await discord()
 		}
 	} catch (e) {
 		throw e
@@ -32,6 +52,7 @@ function procesarRegistro(topic, values, scheme) {
 
 const influxAlarm = async (req, res) => {
 	try {
+		await discord()
 		const post = req.body
 		const { scheme } = req.params
 		const fieldsAccepted = ['events_0', 'events_1', 'info']
@@ -79,7 +100,7 @@ const influxAlarm = async (req, res) => {
 	}
 }
 
-const discord = async (req, res) => {
+async function discord() {
 	const webhookURL =
 		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
 	try {
@@ -106,5 +127,4 @@ const discord = async (req, res) => {
 
 module.exports = {
 	influxAlarm,
-	discord,
 }

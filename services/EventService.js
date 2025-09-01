@@ -348,6 +348,21 @@ const updateEvents = async (events) => {
 	}
 }
 
+const checkIsAlarm = async (data) => {
+	try {
+		const alarm = await db.Event.findOne({
+			where: {
+				alarm: 1,
+				id_version: data.version,
+				id_event_influx: data.eventId,
+			},
+		})
+		return alarm
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
@@ -362,4 +377,5 @@ module.exports = {
 	updateEventIndex,
 	updateEvents,
 	EventsCustom,
+	checkIsAlarm,
 }
