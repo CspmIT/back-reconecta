@@ -3,17 +3,16 @@ const { changeSchema } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm } = require('../services/AlarmService')
-const { getCompleteRecords, cleanupOld, addToBuffer } = require('../utils/js/buffer')
 
-async function procesarRegistro(topic, values, scheme) {
+const influxAlarm = async (req, res) => {
 	try {
-		await discord(JSON.stringify(values))
+		const { topic, _value } = req.body
+		const { scheme } = req.params
+		const eventId = _value
+		if (topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
+
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
-		const eventId = values.find((v) => v.field === 'events_0')?.value
-		const info = values.find((v) => v.field === 'info')?.value
-		const eventDate = values.find((v) => v.field === 'events_1')?.value
-		if (!eventId || !info || !eventDate) return
 		await changeSchema(`reconecta_${scheme}`)
 		const recloser = await getEquipment({ serial })
 		if (!recloser[0]) return
@@ -23,33 +22,9 @@ async function procesarRegistro(topic, values, scheme) {
 			id_device: recloser[0].id,
 			type: 'Reconectador',
 			id_event: isAlarm.id,
-			info: info || null,
-			eventDate: parseInt(eventDate || 0),
 		}
 		await saveAlarm(body)
 		await discord(isAlarm.name)
-	} catch (e) {
-		throw e
-	}
-}
-
-const influxAlarm = async (req, res) => {
-	try {
-		const post = req.body
-		const { scheme } = req.params
-		const field = post._field
-		if (!post.topic || !post._time || !field) return res.status(400).json({ error: 'Faltan campos obligatorios' })
-
-		const key = `${post.topic}-${post._time}`
-		addToBuffer(key, field, post._value ?? null)
-
-		// procesar registros completos
-		const complete = getCompleteRecords()
-		for (const rec of complete) await procesarRegistro(rec.key, rec.values, scheme)
-
-		// limpiar registros viejos
-		const old = cleanupOld(5)
-		for (const rec of old) await procesarRegistro(rec.key, rec.values, scheme)
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
