@@ -1,25 +1,9 @@
 const { default: axios } = require('axios')
-const fs = require('fs')
-const path = require('path')
 const { changeSchema } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm } = require('../services/AlarmService')
-const bufferFile = path.join(__dirname, 'cache', 'influx_buffer.json')
-
-// Buffer para no guardar todos las peticiones POST a la vez
-function loadBuffer() {
-	if (!fs.existsSync(bufferFile)) return {}
-	try {
-		return JSON.parse(fs.readFileSync(bufferFile, 'utf8'))
-	} catch (e) {
-		return {}
-	}
-}
-
-function saveBuffer(buffer) {
-	fs.writeFileSync(bufferFile, JSON.stringify(buffer))
-}
+const { saveBuffer, loadBuffer } = require('../utils/js/buffer')
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
@@ -55,7 +39,6 @@ const influxAlarm = async (req, res) => {
 		const { scheme } = req.params
 		const fieldsAccepted = ['events_0', 'events_1', 'info']
 		const field = post._field ?? null
-		await discord(post, scheme)
 
 		if (!post.topic || !post._time || !fieldsAccepted.includes(field)) {
 			return res.status(400).json({ error: 'Faltan campos obligatorios' })
@@ -68,7 +51,6 @@ const influxAlarm = async (req, res) => {
 		const key = `${topic}-${time}`
 
 		let buffer = loadBuffer()
-		await discord(buffer, scheme)
 		if (!buffer[key]) {
 			buffer[key] = {
 				values: [],
@@ -95,7 +77,7 @@ const influxAlarm = async (req, res) => {
 		saveBuffer(buffer)
 		return res.status(200).json({ message: 'OK' })
 	} catch (e) {
-		return res.status(500).json({ message: 'Error procesando la alarma' })
+		return res.status(500).json({ message: 'Error procesando la alarma ' + e.message })
 	}
 }
 
@@ -118,7 +100,6 @@ async function discord(data, scheme) {
 				},
 			],
 		})
-		console.log('Mensaje enviado')
 	} catch (error) {
 		console.error('Error al enviar mensaje:', error)
 	}
