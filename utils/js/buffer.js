@@ -1,30 +1,39 @@
-const fs = require('fs')
-const path = require('path')
+// utils/js/influxBuffer.js
+const buffer = {} // buffer en memoria
+const requiredFields = ['events_0', 'events_1', 'info']
 
-const cacheDir = path.join(__dirname, '..', 'cache')
-const bufferFile = path.join(cacheDir, 'influx_buffer.json')
-
-// Asegurar que exista carpeta y archivo
-if (!fs.existsSync(cacheDir)) {
-	fs.mkdirSync(cacheDir, { recursive: true })
-}
-if (!fs.existsSync(bufferFile)) {
-	fs.writeFileSync(bufferFile, '{}')
+function addToBuffer(key, field, value) {
+	if (!buffer[key]) buffer[key] = { valuesMap: {}, created_at: Date.now() / 1000 }
+	buffer[key].valuesMap[field] = value
 }
 
-function loadBuffer() {
-	try {
-		return JSON.parse(fs.readFileSync(bufferFile, 'utf8'))
-	} catch (e) {
-		return {}
+function getCompleteRecords() {
+	const ready = []
+	for (const key in buffer) {
+		const fields = Object.keys(buffer[key].valuesMap)
+		if (requiredFields.every((f) => fields.includes(f))) {
+			const valuesArray = requiredFields.map((f) => ({ field: f, value: buffer[key].valuesMap[f] }))
+			ready.push({ key, values: valuesArray })
+			delete buffer[key]
+		}
 	}
+	return ready
 }
 
-function saveBuffer(buffer) {
-	fs.writeFileSync(bufferFile, JSON.stringify(buffer))
+function cleanupOld(timeout = 5) {
+	const now = Date.now() / 1000
+	const old = []
+	for (const key in buffer) {
+		if (now - buffer[key].created_at > timeout) {
+			const valuesArray = Object.keys(buffer[key].valuesMap).map((f) => ({
+				field: f,
+				value: buffer[key].valuesMap[f],
+			}))
+			old.push({ key, values: valuesArray })
+			delete buffer[key]
+		}
+	}
+	return old
 }
 
-module.exports = {
-	loadBuffer,
-	saveBuffer,
-}
+module.exports = { addToBuffer, getCompleteRecords, cleanupOld }
