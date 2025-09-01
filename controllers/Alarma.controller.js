@@ -67,7 +67,7 @@ const influxAlarm = async (req, res) => {
 		const key = `${topic}-${time}`
 
 		let buffer = loadBuffer()
-
+		await discord(buffer, scheme)
 		if (!buffer[key]) {
 			buffer[key] = {
 				values: [],
@@ -79,14 +79,14 @@ const influxAlarm = async (req, res) => {
 
 		// Si ya tengo 3 values → proceso de inmediato
 		if (buffer[key].values.length === 3) {
-			procesarRegistro(key, buffer[key].values, scheme)
+			await procesarRegistro(key, buffer[key].values, scheme)
 			delete buffer[key]
 		}
 
 		// limpiar entradas viejas (timeout 5s)
 		for (const k in buffer) {
 			if (Date.now() / 1000 - buffer[k].created_at > 5) {
-				procesarRegistro(k, buffer[k].values, scheme)
+				await procesarRegistro(k, buffer[k].values, scheme)
 				delete buffer[k]
 			}
 		}
