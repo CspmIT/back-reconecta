@@ -13,9 +13,10 @@ async function procesarRegistro(topic, values, scheme) {
 		const eventId = values.find((v) => v.field === 'events_0')?.value
 		const info = values.find((v) => v.field === 'info')?.value
 		const eventDate = values.find((v) => v.field === 'events_1')?.value
+		if (!eventId || !info || !eventDate) return
 		await changeSchema(`reconecta_${scheme}`)
 		const recloser = await getEquipment({ serial })
-		if (!recloser[0] || !eventId) return
+		if (!recloser[0]) return
 		const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
 		if (!isAlarm) return
 		const body = {
@@ -26,6 +27,7 @@ async function procesarRegistro(topic, values, scheme) {
 			eventDate: parseInt(eventDate || 0),
 		}
 		await saveAlarm(body)
+		discord(isAlarm.name)
 	} catch (e) {
 		throw e
 	}
@@ -56,17 +58,17 @@ const influxAlarm = async (req, res) => {
 	}
 }
 
-async function discord(data, scheme) {
+async function discord(content) {
 	const webhookURL =
 		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
 	try {
 		await axios.post(webhookURL, {
 			username: 'Reconecta_Morteros-BOT',
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
-			content: JSON.stringify(data),
+			content,
 			embeds: [
 				{
-					title: `:warning: Alerta ${scheme} :warning:`,
+					title: `:warning: Alerta :warning:`,
 					color: 16711680,
 					url: 'https://reconecta.cooptech.com.ar/',
 					/* image: {
