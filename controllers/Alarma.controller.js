@@ -7,7 +7,6 @@ const { getCompleteRecords, cleanupOld, addToBuffer } = require('../utils/js/buf
 
 async function procesarRegistro(topic, values, scheme) {
 	try {
-		await discord(values, scheme)
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
 		const eventId = values.find((v) => v.field === 'events_0')?.value
