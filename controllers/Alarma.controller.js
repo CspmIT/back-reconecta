@@ -23,17 +23,18 @@ const influxAlarm = async (req, res) => {
 			type: 'Reconectador',
 			id_event: isAlarm.id,
 		}
+		const title = `Alerta reconectador ${recloser[0].observation}`
+		const content = isAlarm.name
 		await saveAlarm(body)
-		await discord(isAlarm.name)
+		await discord(title, content)
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
-		console.error(e)
 		return res.status(500).json({ message: e.message })
 	}
 }
 
-async function discord(content) {
+async function discord(title, content) {
 	const webhookURL =
 		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
 	try {
@@ -43,12 +44,13 @@ async function discord(content) {
 			content,
 			embeds: [
 				{
-					title: `:warning: Alerta :warning:`,
-					color: 16711680,
+					title: `:warning: ${title} :warning:`,
+					description: `**Ingresa a Reconecta para ver todos los detalles**`,
+					color: 15007526,
 					url: 'https://reconecta.cooptech.com.ar/',
-					/* image: {
-						url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoUy0Wg8ovbtNuEGUcOaj1qoYsKrHcm2pa4A&s',
-					}, */
+					image: {
+						url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
+					},
 				},
 			],
 		})
