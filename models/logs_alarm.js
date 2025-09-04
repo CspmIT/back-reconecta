@@ -17,8 +17,6 @@ module.exports = (sequelize, DataTypes) => {
 			id_device: DataTypes.INTEGER,
 			type: DataTypes.ENUM('Reconectador', 'Medidor', 'Analizador'),
 			id_event: DataTypes.INTEGER,
-			eventDate: DataTypes.INTEGER,
-			info: DataTypes.STRING,
 			errors: DataTypes.STRING,
 		},
 		{

@@ -2,7 +2,8 @@ const { default: axios } = require('axios')
 const { changeSchema } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
-const { saveAlarm } = require('../services/AlarmService')
+const { saveAlarm, discordCredentials } = require('../services/AlarmService')
+const { listClients } = require('../utils/js/clients')
 
 const influxAlarm = async (req, res) => {
 	try {
@@ -13,11 +14,22 @@ const influxAlarm = async (req, res) => {
 
 		const topicSplit = topic.split('/')
 		const serial = topicSplit[4]
-		await changeSchema(`reconecta_${scheme}`)
-		const recloser = await getEquipment({ serial })
-		if (!recloser[0]) return
+		let recloser = []
+		if (scheme !== 'externo') {
+			await changeSchema(`reconecta_${scheme}`)
+			recloser = await getEquipment({ serial })
+		} else {
+			for (const client of listClients) {
+				await changeSchema(`reconecta_${client}`)
+				recloser = await getEquipment({ serial })
+				if (recloser && recloser[0]) break
+			}
+		}
+		if (!recloser || !recloser[0]) {
+			return res.json({ message: 'Equipo no encontrado' })
+		}
 		const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
-		if (!isAlarm) return
+		if (!isAlarm) return res.json({ message: 'No es alarma' })
 		const body = {
 			id_device: recloser[0].id,
 			type: 'Reconectador',
@@ -35,16 +47,16 @@ const influxAlarm = async (req, res) => {
 }
 
 async function discord(title, content) {
-	const webhookURL =
-		'https://discord.com/api/webhooks/1395418860517200034/kqH7h5DDEm-xkvEoelJ0Pq3NdeUURXGAETrXb56XXU-78i3IYjiJ7R6DyJRuBUh3hpqD'
 	try {
+		const credentials = await discordCredentials()
+		const webhookURL = `https://discord.com/api/webhooks/${credentials.webhook}`
 		await axios.post(webhookURL, {
-			username: 'Reconecta_Morteros-BOT',
+			username: credentials.username,
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
 			content,
 			embeds: [
 				{
-					title: `:warning: ${title} :warning:`,
+					title: `:warning: ${title}`,
 					description: `**Ingresa a Reconecta para ver todos los detalles**`,
 					color: 15007526,
 					url: 'https://reconecta.cooptech.com.ar/',
