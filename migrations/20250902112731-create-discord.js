@@ -2,33 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('Alarms_sents', {
+		await queryInterface.createTable('Discords', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			id_device: {
+			webhook: {
+				type: Sequelize.STRING,
+			},
+			username: {
+				type: Sequelize.STRING,
+			},
+			avatar: {
+				type: Sequelize.STRING,
+			},
+			description: {
+				type: Sequelize.STRING,
+			},
+			color: {
 				type: Sequelize.INTEGER,
-				allowNull: false,
 			},
-			type: {
-				type: Sequelize.ENUM,
-				values: ['Recloser', 'Medidor', 'Analizador'],
-			},
-			id_event: {
-				type: Sequelize.INTEGER,
-				references: {
-					model: 'Events',
-					key: 'id',
-				},
-				allowNull: false,
-				onUpdate: 'CASCADE',
-				onDelete: 'CASCADE',
-			},
-			status: {
-				type: Sequelize.BOOLEAN,
+			image: {
+				type: Sequelize.STRING,
 			},
 			createdAt: {
 				allowNull: false,
@@ -41,6 +38,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('Alarms_sents')
+		await queryInterface.dropTable('Discords')
 	},
 }

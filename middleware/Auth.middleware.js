@@ -40,7 +40,7 @@ const alarmToken = async (req, res, next) => {
 
 		const token = parts[1]
 
-		const TOKEN_ESPERADO = 'TOKEN123'
+		const TOKEN_ESPERADO = '4x5tmmDA6fDIJJBSsAEfSwPJlr54QV2GEI0sGZ11roRXglA8q47lVV7P9tlkj6T5'
 		if (token !== TOKEN_ESPERADO) {
 			return res.status(403).json({ error: 'Token inválido' })
 		}

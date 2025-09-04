@@ -9,6 +9,16 @@ const saveAlarm = async (data) => {
 	}
 }
 
+const discordCredentials = async () => {
+	try {
+		const credentials = await db.Discord.findOne({ where: { id: 1 } })
+		return credentials
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	saveAlarm,
+	discordCredentials,
 }
