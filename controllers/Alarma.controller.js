@@ -60,9 +60,9 @@ async function discord(title, content) {
 					description: `**Ingresa a Reconecta para ver todos los detalles**`,
 					color: 15007526,
 					url: 'https://reconecta.cooptech.com.ar/',
-					image: {
-						url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
-					},
+					// image: {
+					// 	url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
+					// },
 				},
 			],
 		})
