@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
 			id_map: DataTypes.INTEGER,
 			lat: DataTypes.DECIMAL,
 			lon: DataTypes.DECIMAL,
-			serial: DataTypes.STRING,
+			feed: DataTypes.INTEGER,
 			image: DataTypes.STRING,
 			status: DataTypes.BOOLEAN,
 			id_user: DataTypes.INTEGER,
