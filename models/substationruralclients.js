@@ -14,9 +14,7 @@ module.exports = (sequelize, DataTypes) => {
 	SubstationRuralClient.init(
 		{
 			name: DataTypes.STRING,
-			feed: DataTypes.INTEGER,
-			power: DataTypes.INTEGER,
-			pat: DataTypes.DECIMAL,
+			meter: DataTypes.STRING,
 			id_element: DataTypes.INTEGER,
 			status: DataTypes.BOOLEAN,
 		},

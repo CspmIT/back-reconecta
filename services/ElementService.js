@@ -98,8 +98,7 @@ const saveElement = async (element, equipment = [], client = []) => {
 			if (data.type === 3 && client.length > 0) {
 				client.map((cli) => {
 					cli.id_element = data.id
-					cli.pat = cli.pat || null
-					cli.power = cli.power || null
+					cli.meter = cli.meter || null
 					cli.status = 1
 					delete cli.id
 				})
@@ -167,8 +166,7 @@ const updateElement = async (element, equipment = [], client = []) => {
 				const cleanClient = {
 					...cli,
 					id_element: data.id,
-					pat: cli.pat || null,
-					power: cli.power || null,
+					meter: cli.meter || null,
 					status: 1,
 				}
 				delete cleanClient.id
