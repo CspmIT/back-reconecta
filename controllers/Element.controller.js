@@ -6,6 +6,9 @@ const {
 	saveElement,
 	saveEquipment,
 	updateElement,
+	saveSubstationPat,
+	historySubstationPat,
+	updateSubstationClient,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
 const { getStatus } = require('../services/MeterService')
@@ -120,6 +123,41 @@ const addEquipment = async (req, res) => {
 	}
 }
 
+const editSubstationClient = async (req, res) => {
+	try {
+		const body = req.body
+		const data = await updateSubstationClient(body)
+		return res.status(200).json({ message: 'Equipo creado correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const listSubstationPat = async (req, res) => {
+	try {
+		const { id, status } = req.params
+		const data = await historySubstationPat(id, status)
+		return res.status(200).json(data)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const addSubstationPat = async (req, res) => {
+	try {
+		const body = {
+			value: req.body.value,
+			id_element: req.body.element,
+			status: true,
+			id_user: req.user.id,
+		}
+		const data = await saveSubstationPat(body)
+		return res.status(200).json({ message: 'Medicion PAT cargada correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	listElements,
 	listEquipments,
@@ -127,4 +165,7 @@ module.exports = {
 	addElement,
 	editElement,
 	addEquipment,
+	editSubstationClient,
+	listSubstationPat,
+	addSubstationPat,
 }

@@ -7,6 +7,9 @@ const {
 	listEquipments,
 	addEquipment,
 	editElement,
+	addSubstationPat,
+	listSubstationPat,
+	editSubstationClient,
 } = require('../controllers/Element.controller')
 const router = express.Router()
 
@@ -19,5 +22,9 @@ router.get('/Equipments', verifyToken, listEquipments)
 router.get('/Equipment/:id', verifyToken, listEquipments)
 router.post('/Equipment', verifyToken, addEquipment)
 router.patch('/Equipment', verifyToken, addEquipment)
+//SUBESTACIONES
+router.patch('/SubstationClient', verifyToken, editSubstationClient)
+router.post('/SubstationPat', verifyToken, addSubstationPat)
+router.get('/SubstationPat/:id/:status', verifyToken, listSubstationPat)
 
 module.exports = router

@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
 			this.belongsTo(models.MapLocation, { foreignKey: 'id_map', as: 'maps' })
 			this.hasMany(models.Equipment, { foreignKey: 'id_element', as: 'equipments' })
 			this.hasMany(models.SubstationRuralClient, { foreignKey: 'id_element', as: 'clients' })
+			this.hasMany(models.SubstationRuralPat, { foreignKey: 'id_element', as: 'pat' })
 		}
 	}
 	Element.init(
