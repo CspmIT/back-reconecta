@@ -193,6 +193,35 @@ const updateElement = async (element, equipment = [], client = []) => {
 	}
 }
 
+const updateSubstationClient = async (data) => {
+	try {
+		return db.SubstationRuralClient.update(data, { where: { id: data.id } })
+	} catch (e) {
+		throw e
+	}
+}
+
+const historySubstationPat = async (id_element, status) => {
+	try {
+		return db.SubstationRuralPat.findAll({ where: { id_element, status } })
+	} catch (e) {
+		throw e
+	}
+}
+const saveSubstationPat = async (data) => {
+	const transaction = await db.sequelize.transaction()
+	try {
+		const newStatus = { status: false }
+		await db.SubstationRuralPat.update(newStatus, { where: { id_element: data.id_element }, transaction })
+		const dataCreated = await db.SubstationRuralPat.create(data, { transaction })
+		await transaction.commit()
+		return dataCreated
+	} catch (e) {
+		await transaction.rollback()
+		throw e
+	}
+}
+
 module.exports = {
 	getElements,
 	getEquipment,
@@ -200,4 +229,7 @@ module.exports = {
 	saveElement,
 	saveEquipment,
 	updateElement,
+	updateSubstationClient,
+	historySubstationPat,
+	saveSubstationPat,
 }
