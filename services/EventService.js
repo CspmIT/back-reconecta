@@ -150,15 +150,14 @@ const getAllEvents = async () => {
 	try {
 		const [Events, versions] = await Promise.all([
 			db.Event.findAll({ where: { status: 1 } }),
-			db.Version.findAll({
+			db.EquipmentModel.findAll({
 				where: { status: 1 },
-				include: [{ association: 'brand' }],
 			}),
 		])
 
 		const dataResult = Events.reduce((acc, current) => {
 			const version = versions.find((item) => item.id === current.id_version)
-			const brandName = version?.brand?.name
+			const brandName = version?.brand
 			const versionName = version?.name
 			const eventType = current.type_device
 
@@ -227,9 +226,9 @@ const getEventsDevice = async (id_version, type_device) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante las consultas.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsInflux = async (influx_name, Events) => {
+const getEventsInflux = async (influx_name, Events, id = false) => {
 	try {
-		const reclosers = await getEquipment()
+		const reclosers = await getEquipment(id)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				if (Events.some((item) => item.id_version === recloser.id_model)) {
@@ -284,6 +283,86 @@ const saveNotify = async (data) => {
 	}
 }
 
+const EventsCustom = async (filter) => {
+	try {
+		const query = {
+			where: filter,
+		}
+		return await db.Event.findAll(query)
+	} catch (e) {
+		throw e
+	}
+}
+
+const saveEvent = async (data) => {
+	try {
+		if (data.id) {
+			const event = await db.Event.findByPk(data.id)
+			if (event) {
+				await event.update(data)
+				return await event
+			}
+		}
+		return await db.Event.create(data)
+	} catch (e) {
+		throw e
+	}
+}
+
+const updateEventIndex = async (data) => {
+	try {
+		const updatePromises = data.map((entry) => {
+			return db.Event.update(
+				{ index_file: entry[0] },
+				{
+					where: {
+						id_event_influx: {
+							[Op.or]: [entry[1], entry[1] + 1],
+						},
+						id_version: 2,
+					},
+				}
+			)
+		})
+		const promises = await Promise.all(updatePromises)
+		return promises
+	} catch (e) {
+		throw e
+	}
+}
+
+const updateEvents = async (events) => {
+	try {
+		if (!Array.isArray(events)) throw new Error('Invalid input')
+
+		const updatePromises = events
+			.filter((data) => data?.id != null)
+			.map((data) => db.Event.update(data, { where: { id: data.id } }))
+
+		const results = await Promise.all(updatePromises)
+		const updatedCount = results.reduce((acc, [count]) => acc + count, 0)
+
+		return updatedCount
+	} catch (e) {
+		throw e
+	}
+}
+
+const checkIsAlarm = async (data) => {
+	try {
+		const alarm = await db.Event.findOne({
+			where: {
+				alarm: 1,
+				id_version: data.version,
+				id_event_influx: data.eventId,
+			},
+		})
+		return alarm
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
@@ -294,4 +373,9 @@ module.exports = {
 	saveNotify,
 	getEventsActive,
 	getEventsInflux,
+	saveEvent,
+	updateEventIndex,
+	updateEvents,
+	EventsCustom,
+	checkIsAlarm,
 }

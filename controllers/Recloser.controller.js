@@ -22,6 +22,7 @@ const {
 	acRecloser,
 	getManauver,
 	getReclosersxVersion,
+	acReclosers,
 } = require('../services/RecloserServices')
 const { getTask } = require('../services/TaskInfluxService')
 const { getListVariables } = require('../services/VariablesServices')
@@ -29,17 +30,18 @@ const { getListVersions } = require('../services/VersionService')
 
 const listAllRecloser = async (req, res) => {
 	try {
-		const reclosers = await getAllRecloser()
+		const filter = { type: 1 }
+		const reclosers = await getEquipment(filter)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				let relation = []
-				if (recloser.id_node) {
+				/* if (recloser.id_node) {
 					const history = await searchRelationActive(recloser.id, 1)
 					relation = history?.nodes?.get() || []
-				}
+				} */
 				const statusRecloser = await getStatusRecloser(
 					{
-						brand: recloser.version.brand.name,
+						brand: recloser.equipmentmodels.name,
 						serial: recloser.serial,
 					},
 					req.user.influx_name
@@ -49,17 +51,17 @@ const listAllRecloser = async (req, res) => {
 				return {
 					id: recloser.id,
 					serial: recloser.serial,
-					status: recloser.status,
-					status_alarm: recloser.status_alarm,
+					status: recloser.status || null,
+					status_alarm: recloser.status_alarm || null,
 					status_recloser: finalStatusRecloser,
-					config: recloser.config,
+					config: recloser.config || null,
 					id_node: recloser.id_node || null,
 					id_relation: relation?.id || null,
 					name: relation?.name || null,
 					number: relation?.number || null,
-					version: `${recloser.version.name} ${recloser.version.brand.name}`,
-					id_version: recloser.version.id,
-					brand: recloser.version.brand.name,
+					version: `${recloser.equipmentmodels.name} ${recloser.equipmentmodels.brand}`,
+					id_version: recloser.equipmentmodels.id,
+					brand: recloser.equipmentmodels.name,
 				}
 			})
 		)
@@ -130,7 +132,6 @@ const getDataInfluxRecloser = async (req, res) => {
 		}
 		/* const relation = await searchRelationActive(recloser.id, 1)
 		recloser.setDataValue('relation', relation) */
-		console.log(recloser)
 		const dataRecloser = {
 			id,
 			name: recloser.observation,
@@ -138,6 +139,7 @@ const getDataInfluxRecloser = async (req, res) => {
 			version: recloser.equipmentmodels.brand,
 			id_version: recloser.equipmentmodels.id,
 			brand: recloser.equipmentmodels.name,
+			element: recloser.elements.name,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await dataRecloseInflux(
@@ -201,31 +203,17 @@ const metrologiaIntantanea = async (req, res) => {
 		}
 	}
 }
-const getAcRecloser = async (req, res) => {
+const getAcReclosers = async (req, res) => {
 	try {
-		const { id } = req.query
-		if (!id) {
-			return res.status(400).json({ message: 'El ID es requerido' })
-		}
-		const recloser = await getRecloserId(id)
-		if (!recloser) {
-			return res.status(404).json({ message: 'Reconectador no encontrado' })
-		}
 		const influxName = req.user.influx_name
-		const dataInflux = await acRecloser(
-			{
-				serial: recloser.serial,
-				brand: recloser.version.brand.name,
-			},
-			influxName
-		)
+		const reclosers = await getEquipment({ type: 1 })
+		const filterTopics = reclosers
+			.map((r) => `"coop/energia/Reconectadores/${r.equipmentmodels.name}/${r.serial}/status/channel_bin"`)
+			.join(' or r["topic"] == ')
+		const dataInflux = await acReclosers(filterTopics, influxName)
 		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
+	} catch (e) {
+		return res.status(400).json({ message: e.message })
 	}
 }
 
@@ -281,6 +269,7 @@ const listEvents = async (req, res) => {
 const tensionABCGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
@@ -293,6 +282,8 @@ const tensionABCGraf = async (req, res) => {
 			{
 				serial: recloser[0].serial,
 				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
 			},
 			influxName
 		)
@@ -309,6 +300,7 @@ const tensionABCGraf = async (req, res) => {
 const corrientesGraf = async (req, res) => {
 	try {
 		const { id } = req.query
+		const { dateStart, dateFinished } = req.body
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
@@ -321,6 +313,8 @@ const corrientesGraf = async (req, res) => {
 			{
 				serial: recloser[0].serial,
 				brand: recloser[0].equipmentmodels.name,
+				dateStart,
+				dateFinished,
 			},
 			influxName
 		)
@@ -340,13 +334,13 @@ const interruptions = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getEquipment(req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await getInterruption(
-			{ serial: recloser.serial, brand: recloser.version.brand.name },
+			{ serial: recloser[0].serial, brand: recloser[0].equipmentmodels.name },
 			influxName
 		)
 		res.status(200).json(dataInflux)
@@ -529,11 +523,11 @@ const recloserAlarm = async (req, res) => {
 			.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
 			.reduce((acc, value) => {
 				if (value.statusAlert == 1 && value.priority == 1) {
-					acc[value.id_device] = 1
+					acc[value.id_device] = value
 				}
 				return acc
 			}, {})
-		return res.status(200).json(Object.keys(returnData).length)
+		return res.status(200).json(returnData)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })
@@ -608,7 +602,7 @@ module.exports = {
 	controlAction,
 	changeStatusAlarm,
 	recloserAlarm,
-	getAcRecloser,
 	manauvers,
 	reclosersxVersion,
+	getAcReclosers,
 }

@@ -100,10 +100,56 @@ const getAllProfile = async () => {
 	}
 }
 
+const getChecksxUser = async (data) => {
+	try {
+		const whereCondition = { id_user: data.user, status: 0 }
+		if (data.type) {
+			whereCondition.type = data.type
+		}
+		const listChecks = await db.UserChecksHome.findAll({
+			where: whereCondition,
+		})
+		return listChecks
+	} catch (error) {
+		throw error
+	}
+}
+
+const saveChecksxUser = async (data) => {
+	try {
+		const whereCondition = { id_user: data.id_user, check: data.check, type: data.type }
+		if (data.id_map) {
+			whereCondition.id_map = data.id_map
+		}
+		const [check, created] = await db.UserChecksHome.findOrCreate({
+			where: whereCondition,
+			defaults: { ...data },
+		})
+		if (!created) {
+			await check.update(data)
+		}
+		return check
+	} catch (e) {
+		throw e
+	}
+}
+
+const getUserxID = async (id) => {
+	try {
+		const user = await db.User.findOne({ where: { id, status: 1 } })
+		return user
+	} catch (error) {
+		throw error
+	}
+}
+
 module.exports = {
 	getAllUser,
 	getAllUserPass,
 	getPassxID,
 	savePassRecloser,
 	getAllProfile,
+	getChecksxUser,
+	saveChecksxUser,
+	getUserxID,
 }

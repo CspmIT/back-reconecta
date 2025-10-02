@@ -1,27 +1,27 @@
 'use strict'
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
-	class RecloserSendMqtt extends Model {
+	class SubstationRuralPat extends Model {
 		/**
 		 * Helper method for defining associations.
 		 * This method is not a part of Sequelize lifecycle.
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			this.belongsTo(models.User, { foreignKey: 'id_user', targetKey: 'id', as: 'user_create' })
+			this.belongsTo(models.Element, { foreignKey: 'id_element', as: 'elements' })
 		}
 	}
-	RecloserSendMqtt.init(
+	SubstationRuralPat.init(
 		{
-			serial: DataTypes.STRING,
-			action: DataTypes.STRING,
+			value: DataTypes.DECIMAL,
+			id_element: DataTypes.INTEGER,
 			status: DataTypes.BOOLEAN,
-			id_user: DataTypes.BIGINT,
+			id_user: DataTypes.INTEGER,
 		},
 		{
 			sequelize,
-			modelName: 'RecloserSendMqtt',
+			modelName: 'SubstationRuralPat',
 		}
 	)
-	return RecloserSendMqtt
+	return SubstationRuralPat
 }

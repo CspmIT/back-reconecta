@@ -8,7 +8,8 @@ module.exports = (sequelize, DataTypes) => {
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			// define association here
+			this.belongsTo(models.Equipment, { foreignKey: 'id_device', as: 'equipment' })
+			this.belongsTo(models.Event, { foreignKey: 'id_event', as: 'event' })
 		}
 	}
 	Logs_Alarm.init(

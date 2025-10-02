@@ -13,6 +13,9 @@ module.exports = {
 				type: Sequelize.INTEGER,
 				allowNull: false,
 			},
+			id_database: {
+				type: Sequelize.STRING,
+			},
 			name: {
 				type: Sequelize.STRING,
 				allowNull: false,
@@ -30,6 +33,10 @@ module.exports = {
 				allowNull: false,
 			},
 			flash_screen: {
+				type: Sequelize.BOOLEAN,
+				allowNull: false,
+			},
+			customizable: {
 				type: Sequelize.BOOLEAN,
 				allowNull: false,
 			},

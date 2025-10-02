@@ -1,15 +1,21 @@
 const mqtt = require('mqtt')
 const {
 	getAllEvents,
-	saveNotify,
 	getEventsActive,
 	getEventsInflux,
 	getEventsDevice,
+	saveEvent,
+	updateEventIndex,
+	updateEvents,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
 const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
 const { getEquipment } = require('../services/ElementService')
+const { uploadFile } = require('../services/SshServices')
+const { saveSendActionMQTT } = require('../services/SendMqttServices')
+const config_ssh = require(__dirname + '/../config/config_ssh.js')
+
 const getConfigNotify = async (req, res) => {
 	try {
 		const Events = await getAllEvents()
@@ -24,7 +30,7 @@ const getConfigNotify = async (req, res) => {
 }
 const saveConfigNotify = async (req, res) => {
 	try {
-		const Events = await saveNotify(req.body)
+		const Events = await saveEvent(req.body)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {
@@ -108,7 +114,14 @@ const eventsDevices = async (req, res) => {
 		const recloser = await getEquipment({ id })
 		const Events = await getEventsDevice(recloser[0].equipmentmodels.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
-			return { id: item.id_event_influx, name: item.name, priority: item.priority, type_var: item.type_var }
+			return {
+				id: item.id,
+				id_influx: item.id_event_influx,
+				name: item.name,
+				priority: item.priority,
+				type_var: item.type_var,
+				custom: item.customizable,
+			}
 		})
 		const eventsInflux = await getEventRecloserOld(
 			{
@@ -145,6 +158,96 @@ const saveLogsChecks = async (req, res) => {
 		}
 	}
 }
+
+const updateConfigIndex = async (req, res) => {
+	try {
+		const data = req.body
+		const response = await updateEventIndex(data)
+		// Para el archivo que envio por ssh utilizo la hora unix
+		const name = '/perfiles_' + new Date().getTime() + '.json'
+		await uploadFile(data, name)
+
+		// Envio la configuración a mqtt para que impacte en los recos
+		const promises = reclosers.map(async (item) => {
+			const path = config_ssh['mqtt_morteros'].SSH_PATH + name
+			const data = {
+				id_user: req.user.id,
+				status: 1,
+				action: `UPD_MAP:${path}`,
+				serial: item.serial,
+				brand: item.equipmentmodels.name,
+			}
+			await conectionMqtt(data)
+		})
+		await Promise.all(promises)
+		return res.status(200).json(response)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+}
+
+const updateConfigNotify = async (req, res) => {
+	try {
+		const data = req.body
+		const response = await updateEvents(data)
+		return res.status(200).json(response)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+}
+
+const conectionMqtt = async (data) => {
+	const configMqtt = await getConectionMqtt()
+
+	return new Promise((resolve, reject) => {
+		const client = mqtt.connect(configMqtt)
+
+		client.on('connect', () => {
+			const topic = `coop/energia/Reconectadores/${data.brand}/${data.serial}/action`
+
+			client.publish(topic, data.action, async (err) => {
+				client.end()
+
+				if (err) {
+					console.error('Error al publicar:', err.message)
+					return reject(err)
+				}
+
+				try {
+					await saveSendActionMQTT(data)
+					resolve(true)
+				} catch (saveError) {
+					reject(saveError)
+				}
+			})
+		})
+
+		client.on('error', (err) => {
+			client.end()
+			reject(err)
+		})
+	})
+}
+
+/* 
+FUNCION PARA CARGAR LAS CONFIGURACIONES MEDIANTE EL JSON DE INICIO
+const importConfigInitial = async (req, res) => {
+	try {
+		let dataDb = []
+		initialConfig.forEach((item) => {
+			const double = item[1] * 2
+			const data = {
+				index: item[0],
+				in: [double, double + 1],
+			}
+			dataDb.push(data)
+		})
+		const processData = await Promise.all(await updateEventIndex(dataDb))
+		return res.status(200).json(processData)
+	} catch (e) {
+		return res.status(500).json(e)
+	}
+} */
 module.exports = {
 	getConfigNotify,
 	saveConfigNotify,
@@ -152,4 +255,6 @@ module.exports = {
 	AllEvents,
 	eventsDevices,
 	saveLogsChecks,
+	updateConfigIndex,
+	updateConfigNotify,
 }

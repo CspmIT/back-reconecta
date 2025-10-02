@@ -1,6 +1,7 @@
 const { Op } = require('sequelize')
 const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
+const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 /**
  * Guarda o actualiza un reconectador en la base de datos.
@@ -354,10 +355,11 @@ const getMetrologiaIntantanea = async (data, influxName) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  *
  */
-const acRecloser = async (data, influxName) => {
+
+const acReclosers = async (filter, influxName) => {
 	try {
-		const query = `|> range(start: -30s, stop: now())
-		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+		const query = `|> range(start: -1m, stop: now())
+		|> filter(fn: (r) => r["topic"] == ${filter})
         |> filter(fn: (r) => r["_field"] == "ac" )
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
@@ -366,7 +368,7 @@ const acRecloser = async (data, influxName) => {
 
 		if (!dataInflux || !dataInflux.length) {
 			const fallbackQuery = `|> range(start: -1d, stop: now())
-			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
+			|> filter(fn: (r) => r["topic"] == ${filter})
 			|> filter(fn: (r) => r["_field"] == "ac" )
 			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 			|> last()`
@@ -374,8 +376,7 @@ const acRecloser = async (data, influxName) => {
 			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 		}
 		if (!dataInflux || !dataInflux.length) return null
-		let dataReturn = dataInflux[0]._value
-		return dataReturn
+		return dataInflux
 	} catch (error) {
 		throw error
 	}
@@ -444,20 +445,22 @@ const getListEvents = async (data, influxName) => {
 const getTensionABC = async (data, influxName) => {
 	try {
 		const query = `
-			|> range(start: -2h)
+			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
-			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
 		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
 			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+				dataReturn[element._field] = { name: element._field, values: [], time: [] }
 			}
 
-			dataReturn[element._field].push([element._time, element._value])
+			dataReturn[element._field].values.push(element._value)
+			const timeConvert = await convertIsoToDate(element._time)
+			dataReturn[element._field].time.push(timeConvert)
 		}
 		return dataReturn
 	} catch (error) {
@@ -476,20 +479,22 @@ const getTensionABC = async (data, influxName) => {
 const getCorriente = async (data, influxName) => {
 	try {
 		const query = `
-			|> range(start: -2h)
+			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
-			|> aggregateWindow(every: 1s, fn: last, createEmpty: false)
+			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
 		const dataInflux = await ConsultaInflux(query, influxName)
 		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 		let dataReturn = {}
 		for (const element of dataInflux) {
 			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
+				dataReturn[element._field] = { name: element._field, values: [], time: [] }
 			}
 
-			dataReturn[element._field].push([element._time, element._value])
+			dataReturn[element._field].values.push(element._value)
+			const timeConvert = await convertIsoToDate(element._time)
+			dataReturn[element._field].time.push(timeConvert)
 		}
 		return dataReturn
 	} catch (error) {
@@ -542,7 +547,14 @@ const getInterruption = async (data, influxName) => {
  */
 const getManauver = async (serial) => {
 	try {
-		let dataReturn = await db.RecloserSendMqtt.findAll({ where: { status: 1, serial: serial } })
+		let dataReturn = await db.RecloserSendMqtt.findAll({
+			include: [
+				{
+					association: 'user_create',
+				},
+			],
+			where: { status: 1, serial: serial },
+		})
 		return dataReturn
 	} catch (error) {
 		throw new Error(error)
@@ -568,7 +580,7 @@ const controlChange = async (data, influxName) => {
                         |> filter(fn: (r) => r["_field"] == "${data.field}")
                         |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
 		let status = false
-		for (let attempt = 0; attempt < 11; attempt++) {
+		for (let attempt = 0; attempt < 20; attempt++) {
 			const dataInflux = await ConsultaInflux(baseQuery, influxName)
 
 			if (!dataInflux || dataInflux.length === 0) {
@@ -581,7 +593,7 @@ const controlChange = async (data, influxName) => {
 					break
 				}
 			}
-			if (attempt === 10) {
+			if (attempt === 20) {
 				if (data.field === 'd/c') {
 					const queryDC = `|> range(start: -1m, stop: now())
                         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
@@ -705,13 +717,22 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 		for (const reg of Object.values(packsEvents)) {
 			const eventData = data.event.find((even) => even.id == reg?.id)
 			if (eventData) {
+				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0 // a los noja hay que sumarle 3 horas
 				const dataPack =
-					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000 ? new Date(reg.unixtime) : reg?.time
-
+					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
+						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
+						: false
+				if (!dataPack) continue
 				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
-				const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
-
-				const statusAlarm = newdate >= dateEvent ? 0 : 1
+				//const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
+				const dateInflux = new Date(reg?.time).setHours(new Date(reg?.time).getHours())
+				if (reg?.id === 257 && reg?.info) {
+					//extrar la hora que me trae en unix y convertirla
+					const unixValue = Number(reg.info.replace(' ms', ''))
+					const dateConverted = new Date(unixValue)
+					reg.info = await convertIsoToDate(dateConverted.toISOString())
+				}
+				const statusAlarm = newdate >= dateInflux ? 0 : 1
 				packsReturn.push({
 					event: `${eventData.name}`,
 					priority: eventData.priority,
@@ -754,18 +775,29 @@ const getEventRecloserOld = async (data, influxName) => {
 		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
 		const packsReturn = []
 		for (const reg of Object.values(packsEvents)) {
-			const matchingEvent = data.event.find((even) => even.id == reg?.id)
+			const matchingEvent = data.event.find((even) => even.id_influx == reg?.id)
 			if (matchingEvent) {
+				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0
 				const dataPack =
-					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000 ? new Date(reg.unixtime) : reg?.time
-
+					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
+						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
+						: false
+				if (!dataPack) continue
+				if (reg?.id === 257 && reg?.info) {
+					//extrar la hora que me trae en unix y convertirla
+					const unixValue = Number(reg.info.replace(' ms', ''))
+					const dateConverted = new Date(unixValue)
+					reg.info = await convertIsoToDate(dateConverted.toISOString())
+				}
 				packsReturn.push({
 					event: `${matchingEvent.name}`,
+					eventId: matchingEvent.id,
 					id: reg?.id,
 					dateAlert: dataPack,
 					priority: matchingEvent.priority,
 					type_var: matchingEvent.type_var,
 					infoAdd: reg?.info,
+					custom: matchingEvent.custom,
 				})
 			}
 		}
@@ -847,7 +879,7 @@ module.exports = {
 	getEventCheckRecloserOld,
 	getStatusAlarm,
 	updateRecloser,
-	acRecloser,
+	acReclosers,
 	getManauver,
 	getReclosersxVersion,
 }

@@ -1,27 +1,27 @@
 'use strict'
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
-	class Alarms_sents extends Model {
+	class SubstationRuralClient extends Model {
 		/**
 		 * Helper method for defining associations.
 		 * This method is not a part of Sequelize lifecycle.
 		 * The `models/index` file will call this method automatically.
 		 */
 		static associate(models) {
-			// define association here
+			this.belongsTo(models.Element, { foreignKey: 'id_element', as: 'elements' })
 		}
 	}
-	Alarms_sents.init(
+	SubstationRuralClient.init(
 		{
-			id_device: DataTypes.INTEGER,
-			type: DataTypes.ENUM('Recloser', 'Medidor', 'Analizador'),
-			id_event: DataTypes.INTEGER,
+			name: DataTypes.STRING,
+			meter: DataTypes.STRING,
+			id_element: DataTypes.INTEGER,
 			status: DataTypes.BOOLEAN,
 		},
 		{
 			sequelize,
-			modelName: 'Alarms_sents',
+			modelName: 'SubstationRuralClient',
 		}
 	)
-	return Alarms_sents
+	return SubstationRuralClient
 }

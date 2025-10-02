@@ -68,9 +68,9 @@ module.exports = {
 					updatedAt: date,
 				},
 				{
-					name: 'Notificaciones',
+					name: 'Definiciones',
 					link: 'config/notifications',
-					icon: 'MdNotificationsActive',
+					icon: 'FaThList',
 					level: '2',
 					group_menu: '4',
 					sub_menu: '4',

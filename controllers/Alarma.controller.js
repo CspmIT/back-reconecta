@@ -1,94 +1,76 @@
-// const TelegramBot = require('node-telegram-bot-api')
-// const crypto = require('crypto')
-// const telegramConf = require('../config/telegram.conf')
-const config_influx = require('../config/config_influx')
-const { searchEnableAlarm, saveAlertSend, saveLogAlert } = require('../services/EventService')
-const { createTask, saveTest, formaterDataAlarm } = require('../services/InfluxServices')
-const { searchRelationActive } = require('../services/NodeService')
-const { sendMsjTelegram } = require('../services/TelegramService')
-// const sendMsjTelegram = async (req, res) => {
-// 	const token = telegramConf[req.user.name_coop].token
-// 	const bot = new TelegramBot(token, { polling: false })
-// 	const chatId = telegramConf[req.user.name_coop].chatIdReconecta
-// 	bot.sendMessage(chatId, '¡Hola desde Node.js!')
-// 		.then((response) => {
-// 			console.log('Mensaje enviado:', response)
-// 			bot.stopPolling()
-// 			return res.status(200).json({ result: 'Se envio correctamente' })
-// 		})
-// 		.catch((err) => {
-// 			console.error('Error enviando mensaje:', err)
-// 			bot.stopPolling()
-// 			return res.status(400).json({ result: 'Error enviando mensaje:' + err })
-// 		})
-// }
-const contrlAlarm = async (req, res) => {
+const { default: axios } = require('axios')
+const { changeSchema } = require('../models')
+const { getEquipment } = require('../services/ElementService')
+const { checkIsAlarm } = require('../services/EventService')
+const { saveAlarm, discordCredentials } = require('../services/AlarmService')
+const { listClients } = require('../utils/js/clients')
+
+const influxAlarm = async (req, res) => {
 	try {
-		const url = config_influx[req.query.influx_name].INFLUX_URL + 'api/v2/tasks'
-		const token = config_influx[req.query.influx_name].INFLUXDB_TOKEN
-		const org = config_influx[req.query.influx_name].INFLUX_ORG
-		// const orgID = config_influx[req.query.influx_name].INFLUX_ORG
-		// const bucket = config_influx[req.query.influx_name].INFLUX_BUCKET
-		const telegramEndpoint = 'http://localhost:4000/api/sendMsjTelegram'
-		try {
-			const taskData = await createTask(url, token, org, telegramEndpoint)
-			return res.status(200).json({ data: taskData })
-		} catch (error) {
-			return res.status(400).json({ data: error })
-		}
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json(error.errors)
+		const { topic, _value } = req.body
+		const { scheme } = req.params
+		const eventId = _value
+		if (!topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
+
+		const topicSplit = topic.split('/')
+		const serial = topicSplit[4]
+		let recloser = []
+		if (scheme !== 'externo') {
+			await changeSchema(`reconecta_${scheme}`)
+			recloser = await getEquipment({ serial })
 		} else {
-			return res.status(400).json(error.message)
+			for (const client of listClients) {
+				await changeSchema(`reconecta_${client}`)
+				recloser = await getEquipment({ serial })
+				if (recloser && recloser[0]) break
+			}
 		}
+		if (!recloser || !recloser[0]) {
+			return res.json({ message: 'Equipo no encontrado' })
+		}
+		const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
+		if (!isAlarm) return res.json({ message: 'No es alarma' })
+		const body = {
+			id_device: recloser[0].id,
+			type: 'Reconectador',
+			id_event: isAlarm.id,
+		}
+		const title = `Alerta reconectador ${recloser[0].observation}`
+		const content = isAlarm.name
+		await saveAlarm(body)
+		await discord(title, content)
+
+		return res.json({ message: 'OK' })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
 	}
 }
-const alarmRecloser = async (req, res) => {
+
+async function discord(title, content) {
 	try {
-		const dataFormater = await formaterDataAlarm(req.body)
-		// Filtrar por id único y quedarnos con el último registro basado en _time
-		const uniqueData = dataFormater.reduce((acc, current) => {
-			if (!acc[current.id] || new Date(acc[current.id]._time) < new Date(current._time)) {
-				acc[current.id] = current
-			}
-			return acc
-		}, {})
-		const filteredData = Object.values(uniqueData)
-		const alarmSend = []
-		for (const item of filteredData) {
-			const eventEnable = await searchEnableAlarm(item)
-			if (eventEnable) {
-				const nodo = eventEnable.device?.[0]?.history
-					? await searchRelationActive(eventEnable.device?.[0].id, 1)
-					: false
-				alarmSend.push(item)
-				const message = `Alarma en reconectador ${nodo?.nodes?.number} - ${nodo?.nodes?.name}, evento: ${eventEnable.event?.name}`
-				const send = await sendMsjTelegram(message)
-				const dataSend = {
-					id_device: eventEnable.device[0].id,
-					type: eventEnable.typeDevice,
-					id_event: eventEnable.event.id,
-					status: 1,
-					error: !send?.status ? send.err : '',
-				}
-				if (send?.status) {
-					await saveAlertSend(dataSend)
-				}
-				await saveLogAlert(dataSend)
-			}
-		}
-		return res.status(200).json(alarmSend)
-	} catch (error) {
-		console.error('Error procesando la alarma:', error)
-		res.status(500).json({
-			message: 'Error procesando la alarma',
+		const credentials = await discordCredentials()
+		const webhookURL = `https://discord.com/api/webhooks/${credentials.webhook}`
+		await axios.post(webhookURL, {
+			username: credentials.username,
+			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
+			content,
+			embeds: [
+				{
+					title: `:warning: ${title}`,
+					description: `**Ingresa a Reconecta para ver todos los detalles**`,
+					color: 15007526,
+					url: 'https://reconecta.cooptech.com.ar/',
+					// image: {
+					// 	url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
+					// },
+				},
+			],
 		})
+	} catch (error) {
+		console.error('Error al enviar mensaje:', error)
 	}
 }
 
 module.exports = {
-	sendMsjTelegram,
-	contrlAlarm,
-	alarmRecloser,
+	influxAlarm,
 }

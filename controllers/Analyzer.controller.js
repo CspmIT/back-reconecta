@@ -1,4 +1,5 @@
-const { getDataAnalyzer, getHistoryAnalyzer } = require('../services/AnalyzerService')
+const { getDataAnalyzer, getHistoryAnalyzer, getYearAnalyzer } = require('../services/AnalyzerService')
+const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 const getMetrology = async (req, res) => {
 	try {
@@ -16,6 +17,9 @@ const getMetrology = async (req, res) => {
 				pot_reactiva += value[0].value
 			}
 			dataAnalyzer[key] = value[0].value
+			if (!dataAnalyzer.time) {
+				dataAnalyzer.time = value[0].time
+			}
 		})
 		dataAnalyzer.f_0_ain = dataAnalyzer.f_0_ain || dataAnalyzer.ae_imp
 		dataAnalyzer.f_1_ain = dataAnalyzer.f_1_ain || dataAnalyzer.re_imp
@@ -131,7 +135,97 @@ const getHistory = async (req, res) => {
 	}
 }
 
+const getGraphics = async (req, res) => {
+	try {
+		const { influx_name } = req.user
+		const analyzer = await getHistoryAnalyzer(req.body, influx_name)
+		const tension = await formatData(analyzer, 'v')
+		const corriente = await formatData(analyzer, 'i')
+		const activa = await formatData(analyzer, 'p')
+		const reactiva = await formatData(analyzer, 'q')
+		const graphicData = [
+			{
+				tension,
+				corriente,
+				activa,
+				reactiva,
+			},
+		]
+		return res.status(200).json(graphicData)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const formatData = async (data, field) => {
+	const dataReturn = {
+		R: { name: 'Fase R', values: [] },
+		S: { name: 'Fase S', values: [] },
+		T: { name: 'Fase T', values: [] },
+		time: [],
+	}
+	data.forEach(async (value) => {
+		value.map(async (item) => {
+			if (item.field === `f_0_${field}`) {
+				dataReturn.R.values.push(item.value)
+				const time = await convertIsoToDate(item.time)
+				dataReturn.time.push(time)
+			}
+			if (item.field === `f_1_${field}`) {
+				dataReturn.S.values.push(item.value)
+			}
+			if (item.field === `f_2_${field}`) {
+				dataReturn.T.values.push(item.value)
+			}
+		})
+	})
+	return dataReturn
+}
+
+const getMonthData = async (req, res) => {
+	try {
+		const { influx_name } = req.user
+		const data = await getYearAnalyzer(req.body, influx_name)
+		const months = [
+			'Enero',
+			'Febrero',
+			'Marzo',
+			'Abril',
+			'Mayo',
+			'Junio',
+			'Julio',
+			'Agosto',
+			'Septiembre',
+			'Octubre',
+			'Noviembre',
+			'Diciembre',
+		]
+		const dataReturn = new Map()
+		let i = 0
+		data.forEach((value, key) => {
+			const month = new Date(key).getMonth()
+			const expValue = value.find((item) => item.field === 'ae_exp')
+			const impValue = value.find((item) => item.field === 'ae_imp')
+			const total = expValue.value < 0 ? impValue.value - 0 : impValue.value - expValue.value
+			const neta = i === 0 ? total : total - dataReturn.get(i - 1).total
+			if (!dataReturn.has(i)) {
+				dataReturn.set(i, { name: months[month], total: total.toFixed(2), value: neta.toFixed(2) })
+			}
+			i++
+		})
+		dataReturn.get(0).name = dataReturn.get(0).name + ' (acumulado)'
+		dataReturn.get(i - 1).name = dataReturn.get(i - 1).name + ' (en curso)'
+		dataReturn.delete(0)
+
+		return res.status(200).json(Object.fromEntries(dataReturn))
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	getMetrology,
 	getHistory,
+	getGraphics,
+	getMonthData,
 }

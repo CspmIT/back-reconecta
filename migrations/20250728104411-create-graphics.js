@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('Elements', {
+		await queryInterface.createTable('Graphics', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
@@ -12,28 +12,10 @@ module.exports = {
 			name: {
 				type: Sequelize.STRING,
 			},
-			description: {
-				type: Sequelize.STRING,
-			},
 			type: {
 				type: Sequelize.INTEGER,
 			},
-			power: {
-				type: Sequelize.STRING,
-			},
-			id_map: {
-				type: Sequelize.INTEGER,
-			},
-			lat: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			lon: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			serial: {
-				type: Sequelize.STRING,
-			},
-			image: {
+			unit: {
 				type: Sequelize.STRING,
 			},
 			status: {
@@ -50,6 +32,6 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('Elements')
+		await queryInterface.dropTable('Graphics')
 	},
 }

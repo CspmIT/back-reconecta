@@ -19,11 +19,11 @@ const {
 	controlAction,
 	changeStatusAlarm,
 	recloserAlarm,
-	getAcRecloser,
 	manauvers,
 	reclosersxVersion,
+	getAcReclosers,
 } = require('../controllers/Recloser.controller')
-const { testMQTT, sendMQTT, sendMqttMessagge } = require('../controllers/Mqtt.controller')
+const { sendMQTT, sendMqttMessagge } = require('../controllers/Mqtt.controller')
 
 router.get('/getDataRecloser', verifyToken, getDataInfluxRecloser)
 router.post('/changeStatusAlarm', verifyToken, changeStatusAlarm)
@@ -33,8 +33,8 @@ router.get('/getRecloserxID', verifyToken, getRecloserxID)
 router.get('/getVersionsRecloser', verifyToken, getVersions)
 router.get('/metrologiaIntantanea', verifyToken, metrologiaIntantanea)
 router.get('/listEvents', verifyToken, listEvents)
-router.get('/tensionABC', verifyToken, tensionABCGraf)
-router.get('/corrientesGraf', verifyToken, corrientesGraf)
+router.post('/tensionABC', verifyToken, tensionABCGraf)
+router.post('/corrientesGraf', verifyToken, corrientesGraf)
 router.get('/interruptions', verifyToken, interruptions)
 router.get('/manauvers', verifyToken, manauvers)
 
@@ -45,11 +45,10 @@ router.post('/unlinkRelation', verifyToken, unlinkRelation)
 router.get('/getDataMap', verifyToken, getDataMap)
 
 router.get('/recloserAlarm', verifyToken, recloserAlarm)
-router.get('/getAcRecloser', verifyToken, getAcRecloser)
+router.get('/getAcReclosers', verifyToken, getAcReclosers)
 
 router.get('/getRecloserxVersion', verifyToken, reclosersxVersion)
 // Section MQTT
-router.get('/testMQTT', testMQTT)
 router.post('/sendMQTT', verifyToken, sendMQTT)
 router.post('/sendMqttMessagge', verifyToken, sendMqttMessagge)
 router.post('/controlAction', verifyToken, controlAction)

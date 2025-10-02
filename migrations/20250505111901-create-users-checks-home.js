@@ -1,43 +1,36 @@
 'use strict'
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
 	async up(queryInterface, Sequelize) {
-		await queryInterface.createTable('Elements', {
+		await queryInterface.createTable('UserChecksHome', {
 			id: {
 				allowNull: false,
 				autoIncrement: true,
 				primaryKey: true,
 				type: Sequelize.INTEGER,
 			},
-			name: {
-				type: Sequelize.STRING,
-			},
-			description: {
-				type: Sequelize.STRING,
+			check: {
+				type: Sequelize.INTEGER,
+				allowNull: false,
 			},
 			type: {
 				type: Sequelize.INTEGER,
+				allowNull: false,
 			},
-			power: {
-				type: Sequelize.STRING,
-			},
-			id_map: {
+			id_user: {
 				type: Sequelize.INTEGER,
-			},
-			lat: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			lon: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			serial: {
-				type: Sequelize.STRING,
-			},
-			image: {
-				type: Sequelize.STRING,
+				references: {
+					model: 'Users',
+					key: 'id',
+				},
+				allowNull: false,
+				onUpdate: 'CASCADE',
+				onDelete: 'CASCADE',
 			},
 			status: {
-				type: Sequelize.BOOLEAN,
+				type: Sequelize.INTEGER,
+				allowNull: false,
 			},
 			createdAt: {
 				allowNull: false,
@@ -49,7 +42,13 @@ module.exports = {
 			},
 		})
 	},
+
 	async down(queryInterface, Sequelize) {
-		await queryInterface.dropTable('Elements')
+		/**
+		 * Add reverting commands here.
+		 *
+		 * Example:
+		 * await queryInterface.dropTable('users');
+		 */
 	},
 }

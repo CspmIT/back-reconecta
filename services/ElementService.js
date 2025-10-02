@@ -18,6 +18,10 @@ const getElements = async (filter = null) => {
 						},
 					],
 				},
+				{
+					model: db.SubstationRuralClient,
+					as: 'clients',
+				},
 			],
 		}
 		if (filter?.id) {
@@ -43,6 +47,7 @@ const getEquipment = async (filter = null) => {
 				{
 					model: db.EquipmentModel,
 					as: 'equipmentmodels',
+					where: {},
 				},
 			],
 		}
@@ -51,6 +56,16 @@ const getEquipment = async (filter = null) => {
 		}
 		if (filter?.element) {
 			query.where = { id_element: filter.element }
+		}
+		if (filter?.model) {
+			query.where = { id_model: filter.model }
+		}
+		if (filter?.serial) {
+			query.where = { serial: filter.serial }
+		}
+		if (filter?.type) {
+			const equipmentModelsInclude = query.include.find((model) => model.as === 'equipmentmodels')
+			equipmentModelsInclude.where.type = filter.type
 		}
 		return await db.Equipment.findAll(query)
 	} catch (e) {
@@ -66,20 +81,29 @@ const getModels = async () => {
 	}
 }
 
-const saveElement = async (element, equipment = []) => {
+const saveElement = async (element, equipment = [], client = []) => {
 	const transaction = await db.sequelize.transaction()
 	try {
 		const data = await db.Element.create(element, { transaction })
-		if (data.id && equipment.length > 0) {
-			console.log(data)
-			equipment.map((equip) => {
-				equip.id_element = data.id
-				equip.id_user = data.id_user
-				equip.observation = equip.observation || null
-				delete equip.id
-			})
-			console.log(equipment)
-			await db.Equipment.bulkCreate(equipment, { transaction })
+		if (data.id) {
+			if (equipment.length > 0 && data.type !== 3) {
+				equipment.map((equip) => {
+					equip.id_element = data.id
+					equip.id_user = data.id_user
+					equip.observation = equip.observation || null
+					delete equip.id
+				})
+				await db.Equipment.bulkCreate(equipment, { transaction })
+			}
+			if (data.type === 3 && client.length > 0) {
+				client.map((cli) => {
+					cli.id_element = data.id
+					cli.meter = cli.meter || null
+					cli.status = 1
+					delete cli.id
+				})
+				await db.SubstationRuralClient.bulkCreate(client, { transaction })
+			}
 		}
 		await transaction.commit()
 		return data
@@ -106,10 +130,106 @@ const saveEquipment = async (data) => {
 	}
 }
 
+const updateElement = async (element, equipment = [], client = []) => {
+	const transaction = await db.sequelize.transaction()
+	try {
+		const data = await db.Element.findByPk(element.id)
+		if (!data) throw new Error('Elemento no encontrado')
+		await data.update(element, { transaction })
+		if (equipment.length > 0) {
+			const operations = equipment.map((equip) => {
+				const cleanEquip = {
+					...equip,
+					id_element: data.id,
+					id_user: data.id_user,
+					observation: equip.observation || null,
+				}
+				delete cleanEquip.id
+
+				if (cleanEquip.bd_id) {
+					const bdId = cleanEquip.bd_id
+					delete cleanEquip.bd_id
+					return db.Equipment.update(cleanEquip, {
+						where: { id: bdId },
+						transaction,
+					})
+				} else {
+					delete cleanEquip.bd_id
+					return db.Equipment.create(cleanEquip, { transaction })
+				}
+			})
+
+			await Promise.all(operations)
+		}
+		if (data.type === 3 && client.length > 0) {
+			const operations = client.map((cli) => {
+				const cleanClient = {
+					...cli,
+					id_element: data.id,
+					meter: cli.meter || null,
+					status: 1,
+				}
+				delete cleanClient.id
+
+				if (cleanClient.bd_id) {
+					const bdId = cleanClient.bd_id
+					delete cleanClient.bd_id
+					return db.SubstationRuralClient.update(cleanClient, {
+						where: { id: bdId },
+						transaction,
+					})
+				} else {
+					delete cleanClient.bd_id
+					return db.SubstationRuralClient.create(cleanClient, { transaction })
+				}
+			})
+			await Promise.all(operations)
+		}
+		await transaction.commit()
+		return data
+	} catch (e) {
+		await transaction.rollback()
+		throw e
+	}
+}
+
+const updateSubstationClient = async (data) => {
+	try {
+		return db.SubstationRuralClient.update(data, { where: { id: data.id } })
+	} catch (e) {
+		throw e
+	}
+}
+
+const historySubstationPat = async (id_element, status) => {
+	try {
+		return db.SubstationRuralPat.findAll({ where: { id_element, status } })
+	} catch (e) {
+		throw e
+	}
+}
+const saveSubstationPat = async (data) => {
+	const transaction = await db.sequelize.transaction()
+	try {
+		const newStatus = { status: false }
+		await db.SubstationRuralPat.update(newStatus, { where: { id_element: data.id_element }, transaction })
+		const dataCreated = await db.SubstationRuralPat.create(data, { transaction })
+		await transaction.commit()
+		return dataCreated
+	} catch (e) {
+		await transaction.rollback()
+		throw e
+	}
+}
+
 module.exports = {
 	getElements,
 	getEquipment,
 	getModels,
 	saveElement,
 	saveEquipment,
+	updateElement,
+	updateSubstationClient,
+	historySubstationPat,
+	saveSubstationPat,
 }

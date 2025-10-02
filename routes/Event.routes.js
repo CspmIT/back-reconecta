@@ -7,6 +7,8 @@ const {
 	AllEvents,
 	saveLogsChecks,
 	eventsDevices,
+	updateConfigIndex,
+	updateConfigNotify,
 } = require('../controllers/Event.controller')
 const router = express.Router()
 
@@ -14,8 +16,10 @@ router.get('/AllEvents', verifyToken, AllEvents)
 router.get('/eventsDevices', verifyToken, eventsDevices)
 router.post('/saveLogsChecks', verifyToken, saveLogsChecks)
 
-router.get('/getConfigNotify', getConfigNotify)
-router.post('/sendConfigMQTT', sendConfigMQTT)
-router.post('/ConfigNotify', saveConfigNotify)
+router.get('/getConfigNotify', verifyToken, getConfigNotify)
+router.post('/sendConfigMQTT', verifyToken, sendConfigMQTT)
+router.post('/ConfigNotify', verifyToken, saveConfigNotify)
+router.patch('/ConfigNotify', verifyToken, updateConfigNotify)
+router.patch('/ConfigNotifyIndex', verifyToken, updateConfigIndex)
 
 module.exports = router
