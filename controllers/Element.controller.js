@@ -9,6 +9,7 @@ const {
 	saveSubstationPat,
 	historySubstationPat,
 	updateSubstationClient,
+	saveImage,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
 const { getStatus } = require('../services/MeterService')
@@ -135,8 +136,7 @@ const editSubstationClient = async (req, res) => {
 
 const listSubstationPat = async (req, res) => {
 	try {
-		const { id, status } = req.params
-		const data = await historySubstationPat(id, status)
+		const data = await historySubstationPat(req.body)
 		return res.status(200).json(data)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
@@ -158,6 +158,18 @@ const addSubstationPat = async (req, res) => {
 	}
 }
 
+const addImageElement = async (req, res) => {
+	try {
+		if (!req.body.image || !req.body.id) {
+			return res.status(500).json({ message: 'Faltan datos' })
+		}
+		await saveImage(req.body)
+		return res.status(200).json({ message: 'Imagen guardada correctamente' })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	listElements,
 	listEquipments,
@@ -168,4 +180,5 @@ module.exports = {
 	editSubstationClient,
 	listSubstationPat,
 	addSubstationPat,
+	addImageElement,
 }

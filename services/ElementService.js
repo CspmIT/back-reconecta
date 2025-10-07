@@ -1,3 +1,4 @@
+const { Op } = require('sequelize')
 const { db } = require('../models')
 
 const getElements = async (filter = null) => {
@@ -201,9 +202,26 @@ const updateSubstationClient = async (data) => {
 	}
 }
 
-const historySubstationPat = async (id_element, status) => {
+const historySubstationPat = async (data) => {
 	try {
-		return db.SubstationRuralPat.findAll({ where: { id_element, status } })
+		const query = {
+			where: {
+				id_element: data.id,
+			},
+		}
+		if (data.status) {
+			query.where.status = data.status
+		}
+		if (data.dateStart || data.dateCurrent) {
+			query.where.createdAt = {}
+			if (data.dateStart) {
+				query.where.createdAt[Op.gte] = new Date(data.dateStart)
+			}
+			if (data.dateCurrent) {
+				query.where.createdAt[Op.lte] = new Date(data.dateCurrent)
+			}
+		}
+		return db.SubstationRuralPat.findAll(query)
 	} catch (e) {
 		throw e
 	}
@@ -222,6 +240,14 @@ const saveSubstationPat = async (data) => {
 	}
 }
 
+const saveImage = async (data) => {
+	try {
+		await db.Element.update(data, { where: { id: data.id } })
+	} catch (e) {
+		throw e
+	}
+}
+
 module.exports = {
 	getElements,
 	getEquipment,
@@ -232,4 +258,5 @@ module.exports = {
 	updateSubstationClient,
 	historySubstationPat,
 	saveSubstationPat,
+	saveImage,
 }
