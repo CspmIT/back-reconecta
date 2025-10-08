@@ -53,7 +53,7 @@ async function discord(title, content) {
 		await axios.post(webhookURL, {
 			username: credentials.username,
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
-			title,
+			content: title,
 			embeds: [
 				{
 					title: `:warning: ${content}`,
