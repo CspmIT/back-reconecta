@@ -721,7 +721,7 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
 						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
-						: false
+						: new Date(new Date(reg.time).getTime() + nojaSuma)
 				if (!dataPack) continue
 				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
 				//const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
@@ -781,7 +781,7 @@ const getEventRecloserOld = async (data, influxName) => {
 				const dataPack =
 					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
 						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
-						: false
+						: new Date(new Date(reg.time).getTime() + nojaSuma)
 				if (!dataPack) continue
 				if (reg?.id === 257 && reg?.info) {
 					//extrar la hora que me trae en unix y convertirla
