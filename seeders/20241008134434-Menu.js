@@ -69,7 +69,7 @@ module.exports = {
 				},
 				{
 					name: 'Definiciones',
-					link: 'config/notifications',
+					link: 'config/definitions',
 					icon: 'FaThList',
 					level: '2',
 					group_menu: '4',
