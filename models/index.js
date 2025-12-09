@@ -5,7 +5,8 @@ const path = require('path')
 const Sequelize = require('sequelize')
 
 const basename = path.basename(__filename)
-const configs = require('../config/config.js')
+const env = process.env.DATABASE || 'reconecta'
+const baseConfig = require('../config/config.js')[env]
 
 // 🟢 CACHÉ opcional (mejora rendimiento pero no es obligatorio)
 const tenants = {}
@@ -13,17 +14,20 @@ const tenants = {}
 /**
  * Crea una instancia DB NUEVA por tenant
  */
-const getTenantDb = async (tenantKey) => {
-	if (!configs[tenantKey]) {
-		throw new Error(`No existe configuración para el tenant: ${tenantKey}`)
+const getTenantDb = async (tenantKey = null) => {
+	const key = tenantKey || 'default'
+
+	// Si ya existe, lo devolvemos
+	if (tenants[key]) return tenants[key]
+
+	// Clonar configuración para NO afectar global config
+	const tenantConfig = {
+		...baseConfig,
+		database: tenantKey || process.env.DB_NAME,
 	}
 
-	//Si querés cachear para evitar crear miles de conexiones, descomentá:
-	if (tenants[tenantKey]) return tenants[tenantKey]
-
-	const config = configs[tenantKey]
-
-	const sequelize = new Sequelize(config.database, config.username, config.password, config)
+	// Nueva instancia Sequelize
+	const sequelize = new Sequelize(tenantConfig.database, tenantConfig.username, tenantConfig.password, tenantConfig)
 
 	const db = {}
 
@@ -43,7 +47,7 @@ const getTenantDb = async (tenantKey) => {
 	db.sequelize = sequelize
 	db.Sequelize = Sequelize
 
-	tenants[tenantKey] = db
+	tenants[key] = db
 	return db
 }
 
