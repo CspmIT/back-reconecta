@@ -1,5 +1,4 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
 
 /**
  * Obtiene todos los usuarios activos de la base de datos.
@@ -9,7 +8,7 @@ const { db } = require('../models')
  * @throws {Error} Si ocurre algún problema durante la consulta.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getAllUser = async () => {
+const getAllUser = async (db) => {
 	try {
 		const listUser = await db.User.findAll({ where: { status: 1 } })
 		return listUser
@@ -26,7 +25,7 @@ const getAllUser = async () => {
  * @throws {Error} Si ocurre algún problema durante la consulta o la inclusión de las asociaciones.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getAllUserPass = async () => {
+const getAllUserPass = async (db) => {
 	try {
 		const listUser = await db.User.findAll({
 			where: { status: 1 },
@@ -48,7 +47,7 @@ const getAllUserPass = async () => {
  * @throws {Error} Si ocurre algún problema durante la consulta o la inclusión de las asociaciones.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getPassxID = async (id) => {
+const getPassxID = async (db, id) => {
 	try {
 		const listUser = await db.RecloserPassword.findOne({
 			where: { id_user: id },
@@ -67,7 +66,7 @@ const getPassxID = async (id) => {
  * @throws {Error} Si ocurre algún problema durante la transacción.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const savePassRecloser = async (dataRecloser, transaction) => {
+const savePassRecloser = async (db, dataRecloser, transaction) => {
 	try {
 		const [RecloserPassword, created] = await db.RecloserPassword.findOrCreate({
 			where: { [Op.or]: [{ id_user: dataRecloser.id_user }, { id: dataRecloser.id || 0 }] },
@@ -91,7 +90,7 @@ const savePassRecloser = async (dataRecloser, transaction) => {
  * @throws {Error} Si ocurre algún problema durante la consulta o la inclusión de las asociaciones.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getAllProfile = async () => {
+const getAllProfile = async (db) => {
 	try {
 		const listProfiles = await db.Profile.findAll()
 		return listProfiles
@@ -100,7 +99,7 @@ const getAllProfile = async () => {
 	}
 }
 
-const getChecksxUser = async (data) => {
+const getChecksxUser = async (db, data) => {
 	try {
 		const whereCondition = { id_user: data.user, status: 0 }
 		if (data.type) {
@@ -115,7 +114,7 @@ const getChecksxUser = async (data) => {
 	}
 }
 
-const saveChecksxUser = async (data) => {
+const saveChecksxUser = async (db, data) => {
 	try {
 		const whereCondition = { id_user: data.id_user, check: data.check, type: data.type }
 		if (data.id_map) {
@@ -134,7 +133,7 @@ const saveChecksxUser = async (data) => {
 	}
 }
 
-const getUserxID = async (id) => {
+const getUserxID = async (db, id) => {
 	try {
 		const user = await db.User.findOne({ where: { id, status: 1 } })
 		return user

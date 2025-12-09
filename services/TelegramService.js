@@ -1,7 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api')
-const { db } = require('../models')
 const { decrypt } = require('../utils/js/encrypt')
-const getDataConnectTelegram = async () => {
+const getDataConnectTelegram = async (db) => {
 	try {
 		const parameters = await db.Parameter.findAll({
 			where: { type: 1 },

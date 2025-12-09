@@ -1,5 +1,4 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
 
 /**
  * Obtiene todos los menús activos de la base de datos.
@@ -9,7 +8,7 @@ const { db } = require('../models')
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const getMenus = async () => {
+const getMenus = async (db) => {
 	try {
 		const Menus = await db.Menu.findAll({
 			order: [['order']],
@@ -32,7 +31,7 @@ const getMenus = async () => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const saveMenu = async (dataMenu, transaction) => {
+const saveMenu = async (db, dataMenu, transaction) => {
 	try {
 		const [Menu, created] = await db.Menu.findOrCreate({
 			where: { id: dataMenu.id },
@@ -58,7 +57,7 @@ const saveMenu = async (dataMenu, transaction) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const listPermissionUser = async (data) => {
+const listPermissionUser = async (db, data) => {
 	try {
 		const filters =
 			data.type == 'id_user'
@@ -82,7 +81,7 @@ const listPermissionUser = async (data) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const saveMenu_Selected = async (dataMenu, transaction) => {
+const saveMenu_Selected = async (db, dataMenu, transaction) => {
 	try {
 		const [Menu_selected, created] = await db.Menu_selected.findOrCreate({
 			where: { id: dataMenu.id },

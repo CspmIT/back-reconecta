@@ -3,7 +3,6 @@ const crypto = require('crypto')
 require('dotenv').config()
 const axios = require('axios')
 const { TasksAPI } = require('@influxdata/influxdb-client-apis')
-const { db } = require('../models')
 const config_influx = require(__dirname + '/../config/config_influx.js')
 
 const ConsultaInflux = async (query, influxName) => {

@@ -1,5 +1,4 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 
 /**
@@ -9,7 +8,7 @@ const { ConsultaInflux } = require('./InfluxServices')
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const getList = async () => {
+const getList = async (db) => {
 	try {
 		const MeterElectricity = await db.MeterElectricity.findAll({
 			where: {
@@ -47,7 +46,7 @@ const getList = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const getxID = async (id) => {
+const getxID = async (db, id) => {
 	try {
 		const MeterElectricity = await db.MeterElectricity.findOne({
 			where: {
@@ -131,7 +130,7 @@ const getStatus = async (data, influxName) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la validación.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const validateEnable = async (serial, id_version, id) => {
+const validateEnable = async (db, serial, id_version, id) => {
 	try {
 		const MeterElectricity = await db.MeterElectricity.findOne({
 			where: {
@@ -157,7 +156,7 @@ const validateEnable = async (serial, id_version, id) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante el guardado o la actualización.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const saveMeter = async (data, transaction) => {
+const saveMeter = async (db, data, transaction) => {
 	try {
 		const [MeterElectricity, created] = await db.MeterElectricity.findOrCreate({
 			where: { [Op.or]: [{ id: data.id }, { serial: data.serial, id_version: data.id_version }] },
@@ -180,9 +179,9 @@ const saveMeter = async (data, transaction) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getEnabled = async (data, transaction) => {
+const getEnabled = async (db, data, transaction) => {
 	try {
-		const meters = await getList()
+		const meters = await getList(db)
 		const result = meters.filter(
 			(item) => item.history.every((rel) => rel.status === 0) || item.history.length === 0
 		)

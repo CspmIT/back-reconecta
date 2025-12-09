@@ -1,4 +1,3 @@
-const { db } = require('../models')
 /**
  * Migra las tablas proporcionadas a la base de datos, creando nuevas entradas si no existen
  * o actualizando las existentes.
@@ -9,7 +8,7 @@ const { db } = require('../models')
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getIdTable = async (TableName) => {
+const getIdTable = async (db, TableName) => {
 	try {
 		const Table = await db.Table.findOne({ where: { name: TableName } })
 		return Table
@@ -28,7 +27,7 @@ const getIdTable = async (TableName) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getIdColumn = async (table_id, column_name) => {
+const getIdColumn = async (db, table_id, column_name) => {
 	try {
 		const Column = await db.ColumnsTable.findOne({ where: { name: column_name, id_table: table_id } })
 		return Column
@@ -47,7 +46,7 @@ const getIdColumn = async (table_id, column_name) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const saveColumnUser = async (Columns) => {
+const saveColumnUser = async (db, Columns) => {
 	return db.sequelize.transaction(async (t) => {
 		try {
 			const savedColumns = []
@@ -79,7 +78,7 @@ const saveColumnUser = async (Columns) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getColumnsUser = async (id_table, id_user) => {
+const getColumnsUser = async (db, id_table, id_user) => {
 	try {
 		const Columns = await db.User_Column.findAll({
 			where: { id_user: id_user },
@@ -96,7 +95,7 @@ const getColumnsUser = async (id_table, id_user) => {
 	}
 }
 
-const getControlsRecloser = async (version) => {
+const getControlsRecloser = async (db, version) => {
 	try {
 		const idVersion = await db.Version.findOne({
 			where: {
@@ -113,7 +112,7 @@ const getControlsRecloser = async (version) => {
 	}
 }
 
-const getControlsRecloserNew = async (version) => {
+const getControlsRecloserNew = async (db, version) => {
 	try {
 		const controls = await db.ControlsModel.findAll({
 			attributes: ['id', 'status'],
@@ -135,7 +134,7 @@ const getControlsRecloserNew = async (version) => {
 	}
 }
 
-const getControlsUserConfig = async (user, version) => {
+const getControlsUserConfig = async (db, user, version) => {
 	try {
 		const idVersion = await db.Version.findOne({
 			where: {
@@ -168,7 +167,7 @@ const getControlsUserConfig = async (user, version) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const saveCrontrolsUser = async (Controls) => {
+const saveCrontrolsUser = async (db, Controls) => {
 	return db.sequelize.transaction(async (t) => {
 		try {
 			const savedControls = []

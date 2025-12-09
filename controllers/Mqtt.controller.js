@@ -7,7 +7,7 @@ const sendMQTT = async (req, res) => {
 		if (!req.body.action || !req.body.brand || !req.body.serial) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const configMqtt = await getConectionMqtt()
+		const configMqtt = await getConectionMqtt(req.db)
 		const client = mqtt.connect(configMqtt)
 		client.on('connect', () => {
 			// Publicar en el tópico
@@ -17,7 +17,7 @@ const sendMQTT = async (req, res) => {
 				async (err) => {
 					if (!err) {
 						const data = { ...req.body, id_user: req.user.id, status: 1 }
-						const result = await saveSendActionMQTT(data)
+						const result = await saveSendActionMQTT(req.db, data)
 						res.status(200).json({ message: 'Se envio correctamente la accion' })
 					} else {
 						return res.status(403).json({ message: err.message })
@@ -46,7 +46,7 @@ const sendMqttMessagge = async (req, res) => {
 		if (!req.body.url || !req.body.brand || !req.body.serial || !req.body.data) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const configMqtt = await getConectionMqtt()
+		const configMqtt = await getConectionMqtt(req.db)
 		const client = mqtt.connect(configMqtt)
 		client.on('connect', () => {
 			// Publicar en el tópico

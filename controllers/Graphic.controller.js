@@ -9,7 +9,7 @@ const saveSunBurst = async (req, res) => {
 			status: 1,
 		}
 		const { data } = req.body
-		const response = await saveAllSunBurst(graphic, data)
+		const response = await saveAllSunBurst(req.db, graphic, data)
 		return res.status(200).json(response)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
@@ -18,7 +18,7 @@ const saveSunBurst = async (req, res) => {
 
 const getSunBurst = async (req, res) => {
 	try {
-		const graphic = await getListGraphics()
+		const graphic = await getListGraphics(req.db)
 		return res.status(200).json(graphic)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })

@@ -1,4 +1,3 @@
-const { db } = require('../models')
 const { getDateCheck } = require('../services/ChecksAlarmsService')
 const { getEquipment } = require('../services/ElementService')
 const { getEventsDevice, getEventsActive, getEventsInflux } = require('../services/EventService')
@@ -31,7 +30,7 @@ const { getListVersions } = require('../services/VersionService')
 const listAllRecloser = async (req, res) => {
 	try {
 		const filter = { type: 1 }
-		const reclosers = await getEquipment(filter)
+		const reclosers = await getEquipment(req.db, filter)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				let relation = []
@@ -102,7 +101,7 @@ const listReclosersEnabled = async (req, res) => {
 const getRecloserxID = async (req, res) => {
 	try {
 		const { id } = req.query
-		const recloser = await getRecloserId(id)
+		const recloser = await getRecloserId(req.db, id)
 		const dataRecloser = {
 			...recloser.get(),
 			version: recloser.version.name,
@@ -125,7 +124,7 @@ const getDataInfluxRecloser = async (req, res) => {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
 		const filter = { id }
-		const recloserFilter = await getEquipment(filter)
+		const recloserFilter = await getEquipment(req.db, filter)
 		const recloser = recloserFilter[0]
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
@@ -182,7 +181,7 @@ const metrologiaIntantanea = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getEquipment(req.query)
+		const recloser = await getEquipment(req.db, req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -206,7 +205,7 @@ const metrologiaIntantanea = async (req, res) => {
 const getAcReclosers = async (req, res) => {
 	try {
 		const influxName = req.user.influx_name
-		const reclosers = await getEquipment({ type: 1 })
+		const reclosers = await getEquipment(req.db, { type: 1 })
 		const filterTopics = reclosers
 			.map((r) => `"coop/energia/Reconectadores/${r.equipmentmodels.name}/${r.serial}/status/channel_bin"`)
 			.join(' or r["topic"] == ')
@@ -223,7 +222,7 @@ const listEvents = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getRecloserId(id)
+		const recloser = await getRecloserId(req.db, id)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -232,7 +231,7 @@ const listEvents = async (req, res) => {
 			{ serial: recloser.serial, brand: recloser.version.brand.name },
 			influxName
 		)
-		const variables = await getListVariables()
+		const variables = await getListVariables(req.db)
 		const result = dataInflux.map((item) => {
 			item.variable.value = variables.find((variable) => variable.id_variable === item.variable.value).name
 			item.event.value = item.event.value ? 'ON' : 'OFF'
@@ -273,7 +272,7 @@ const tensionABCGraf = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getEquipment(req.query)
+		const recloser = await getEquipment(req.db, req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -304,7 +303,7 @@ const corrientesGraf = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getEquipment(req.query)
+		const recloser = await getEquipment(req.db, req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -334,7 +333,7 @@ const interruptions = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getEquipment(req.query)
+		const recloser = await getEquipment(req.db, req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
@@ -359,11 +358,11 @@ const manauvers = async (req, res) => {
 		if (!id) {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
-		const recloser = await getEquipment(req.query)
+		const recloser = await getEquipment(req.db, req.query)
 		if (!recloser) {
 			return res.status(404).json({ message: 'Reconectador no encontrado' })
 		}
-		const dataInflux = await getManauver(recloser[0].serial)
+		const dataInflux = await getManauver(req.db, recloser[0].serial)
 		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
@@ -378,13 +377,13 @@ const addRecloser = async (req, res) => {
 	let transaction
 	try {
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		// Validaciones previas
 		if (!req.body.serial || !req.body.status || !req.body.config || !req.body.version) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
 		if (req.body.id > 0) {
-			const validateReclosers = await validateRecloser(req.body.id)
+			const validateReclosers = await validateRecloser(req.db, req.body.id)
 			if (validateReclosers) {
 				throw new Error(validateReclosers)
 			}
@@ -392,7 +391,7 @@ const addRecloser = async (req, res) => {
 		} else {
 			req.body.id_user_create = req.user.id
 		}
-		const Recloser = await saveRecloser(req.body, transaction)
+		const Recloser = await saveRecloser(req.db, req.body, transaction)
 		if (!Recloser) throw new Error('Error al guardar el recloser.')
 		// Si todo está bien, se confirma la transacción
 		await transaction.commit()
@@ -412,7 +411,7 @@ const addRecloser = async (req, res) => {
 const deleteRecloser = async (req, res) => {
 	let transaction
 	try {
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
@@ -429,13 +428,13 @@ const deleteRecloser = async (req, res) => {
 		} else {
 			req.body.id_user_create = req.user.id
 		}
-		const Recloser = await saveRecloser(req.body, transaction)
+		const Recloser = await saveRecloser(req.db, req.body, transaction)
 		if (!Recloser) throw new Error('Error al guardar el recloser.')
 		if (Recloser.id_node) {
 			relation.id_node = Recloser.id_node
 		}
 		if (relation.id_node) {
-			const dataRelation = await saveRelation(relation, transaction)
+			const dataRelation = await saveRelation(req.db, relation, transaction)
 			if (!dataRelation) throw new Error('Error al guardar la relación entre entidad y recloser.')
 		}
 		await transaction.commit()
@@ -452,7 +451,7 @@ const deleteRecloser = async (req, res) => {
 const unlinkRelation = async (req, res) => {
 	let transaction
 	try {
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		if (!req.body.id || !req.body.id_node) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
@@ -463,7 +462,7 @@ const unlinkRelation = async (req, res) => {
 			id_user_edit: req.user.id,
 			status: 0,
 		}
-		const dataRelation = await saveRelation(relation, transaction)
+		const dataRelation = await saveRelation(req.db, relation, transaction)
 		if (!dataRelation) throw new Error('Error al guardar la relación entre entidad y recloser.')
 		const Recloser = await saveRecloser(
 			{ id: req.body.id, id_node: null, serial: req.body.serial, id_user_edit: req.user.id },
@@ -483,7 +482,7 @@ const unlinkRelation = async (req, res) => {
 }
 const getVersions = async (req, res) => {
 	try {
-		const versions = await getListVersions()
+		const versions = await getListVersions(req.db)
 		if (!versions) {
 			return res.status(404).json({ message: 'Versiones no encontrado' })
 		}
@@ -498,7 +497,7 @@ const getVersions = async (req, res) => {
 }
 const getDataMap = async (req, res) => {
 	try {
-		const dataMap = await getInfoMap()
+		const dataMap = await getInfoMap(req.db)
 		if (!dataMap) {
 			return res.status(404).json({ message: 'Dato de mapa no encontrado' })
 		}
@@ -513,8 +512,8 @@ const getDataMap = async (req, res) => {
 }
 const recloserAlarm = async (req, res) => {
 	try {
-		const Events = await getEventsActive()
-		const eventsInflux = await getEventsInflux(req.user.influx_name, Events)
+		const Events = await getEventsActive(req.db)
+		const eventsInflux = await getEventsInflux(req.db, req.user.influx_name, Events)
 		const returnData = eventsInflux
 			.reduce((acc, value) => {
 				acc.push(...value)
@@ -554,7 +553,7 @@ const changeStatusAlarm = async (req, res) => {
 		if (!req.body.id || typeof req.body.status_alarm !== 'boolean') {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const dataRecloser = await getTask(req.body.id)
+		const dataRecloser = await getTask(req.db, req.body.id)
 		// await changeStatusTaskInflux()
 		// const Recloser = await updateRecloser(req.body)
 
@@ -573,7 +572,7 @@ const reclosersxVersion = async (req, res) => {
 		if (!req.query.id_version) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const listReclosers = await getReclosersxVersion(req.query.id_version)
+		const listReclosers = await getReclosersxVersion(req.db, req.query.id_version)
 		return res.status(200).json(listReclosers)
 	} catch (error) {
 		if (error.errors) {

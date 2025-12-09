@@ -1,5 +1,3 @@
-const { Op } = require('sequelize')
-const { db } = require('../models')
 const { decrypt } = require('../utils/js/encrypt')
 
 /**
@@ -10,7 +8,7 @@ const { decrypt } = require('../utils/js/encrypt')
  * @author  Jose Romani <jose.romani@hotmail.com>
  */
 
-const getConectionMqtt = async () => {
+const getConectionMqtt = async (db) => {
 	try {
 		const parameters = await db.Parameter.findAll({
 			where: { type: 2 },

@@ -1,6 +1,4 @@
-const { db } = require('../models')
-
-const getListGraphics = async (id = false) => {
+const getListGraphics = async (db) => {
 	try {
 		const query = {
 			include: [
@@ -29,7 +27,7 @@ const getListGraphics = async (id = false) => {
 	}
 }
 
-const saveAllSunBurst = async (dataGraphic, data) => {
+const saveAllSunBurst = async (db, dataGraphic, data) => {
 	const t = await db.sequelize.transaction()
 	try {
 		const graphic = await db.Graphic.create(dataGraphic, { transaction: t })

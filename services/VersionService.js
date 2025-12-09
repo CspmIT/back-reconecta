@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Recupera una lista de marcas y sus versiones activas desde la base de datos.
  * Solo incluye marcas cuyo estado es activo (`status: 1`).
@@ -11,7 +9,7 @@ const { db } = require('../models')
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author
  */
-const getListVersions = async () => {
+const getListVersions = async (db) => {
 	try {
 		const versions = await db.Brand.findAll({
 			where: {
@@ -28,7 +26,7 @@ const getListVersions = async () => {
 		throw error
 	}
 }
-const getersionxName = async (name) => {
+const getersionxName = async (db, name) => {
 	try {
 		const versions = await db.Version.findOne({
 			where: {

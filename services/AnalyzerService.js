@@ -1,5 +1,3 @@
-const { Op } = require('sequelize')
-const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 
 const getDataAnalyzer = async (data, influxName) => {

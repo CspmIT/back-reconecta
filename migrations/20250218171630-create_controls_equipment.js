@@ -41,6 +41,7 @@ module.exports = {
 	},
 
 	async down(queryInterface, Sequelize) {
+		await queryInterface.removeConstraint('ControlsModels', 'ControlsModels_ibfk_2')
 		await queryInterface.dropTable('MqttControls')
 	},
 }
