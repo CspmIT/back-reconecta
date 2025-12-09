@@ -1,44 +1,63 @@
 const { default: axios } = require('axios')
-const { changeSchema } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm, discordCredentials } = require('../services/AlarmService')
 const { listClients } = require('../utils/js/clients')
+const { getTenantDb } = require('../models')
 
 const influxAlarm = async (req, res) => {
 	try {
 		const { topic, _value } = req.body
 		const { scheme } = req.params
 		const eventId = _value
+
 		if (!topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
-		const topicSplit = topic.split('/')
-		const serial = topicSplit[4]
+		const serial = topic.split('/')[4]
+
+		let dbTenant = null
 		let recloser = []
+
+		// Caso 1 — buscar SOLO en un tenant
 		if (scheme !== 'externo') {
-			await changeSchema(`reconecta_${scheme}`)
-			recloser = await getEquipment({ serial })
-		} else {
+			const schemaName = `reconecta_${scheme}`
+			dbTenant = await getTenantDb(schemaName)
+
+			recloser = await getEquipment(dbTenant, { serial })
+		}
+
+		// Caso 2 — buscar en TODOS los tenants
+		else {
 			for (const client of listClients) {
-				await changeSchema(`reconecta_${client}`)
-				recloser = await getEquipment({ serial })
-				if (recloser && recloser[0]) break
+				const schemaName = `reconecta_${client}`
+				const dbLoop = await getTenantDb(schemaName)
+
+				recloser = await getEquipment(dbLoop, { serial })
+
+				if (recloser && recloser.length > 0) {
+					dbTenant = dbLoop
+					break
+				}
 			}
 		}
-		if (!recloser || !recloser[0]) {
-			return res.json({ message: 'Equipo no encontrado' })
-		}
-		const isAlarm = await checkIsAlarm({ version: recloser[0].equipmentmodels.id, eventId })
-		if (!isAlarm) return res.json({ message: 'No es alarma' })
+
+		if (!recloser || recloser.length === 0) return res.json({ message: 'Equipo no encontrado' })
+
+		const alarmDef = await checkIsAlarm(dbTenant, { version: recloser[0].equipmentmodels.id, eventId })
+
+		if (!alarmDef) return res.json({ message: 'No es alarma' })
+
 		const body = {
 			id_device: recloser[0].id,
 			type: 'Reconectador',
-			id_event: isAlarm.id,
+			id_event: alarmDef.id,
 		}
+
+		await saveAlarm(dbTenant, body)
+
 		const title = `Alerta reconectador ${recloser[0].observation}`
-		const content = isAlarm.name
-		await saveAlarm(body)
-		await discord(title, content)
+		const content = alarmDef.name
+		await discord(dbTenant, title, content)
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
@@ -46,9 +65,9 @@ const influxAlarm = async (req, res) => {
 	}
 }
 
-async function discord(title, content) {
+async function discord(db, title, content) {
 	try {
-		const credentials = await discordCredentials()
+		const credentials = await discordCredentials(db)
 		const webhookURL = `https://discord.com/api/webhooks/${credentials.webhook}`
 		await axios.post(webhookURL, {
 			username: credentials.username,
@@ -57,12 +76,8 @@ async function discord(title, content) {
 			embeds: [
 				{
 					title: `:warning: ${content}`,
-					// description: `**Ingresa a Reconecta para ver todos los detalles**`,
 					color: 15007526,
 					url: 'https://reconecta.cooptech.com.ar/',
-					// image: {
-					// 	url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
-					// },
 				},
 			],
 		})

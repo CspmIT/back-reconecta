@@ -57,6 +57,7 @@ module.exports = {
 		})
 	},
 	async down(queryInterface, Sequelize) {
+		await queryInterface.removeConstraint('Logs_Alarms', 'Logs_Alarms_id_device_Equipment_fk')
 		await queryInterface.dropTable('Equipment')
 	},
 }

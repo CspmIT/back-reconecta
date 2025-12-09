@@ -1,5 +1,4 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
 const { ConsultaInflux } = require('./InfluxServices')
 const { convertIsoToDate } = require('../utils/js/dateConvert')
 
@@ -10,7 +9,7 @@ const { convertIsoToDate } = require('../utils/js/dateConvert')
  * @throws {Error} Si ocurre algún problema durante la transacción.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const saveRecloser = async (dataRecloser, transaction) => {
+const saveRecloser = async (db, dataRecloser, transaction) => {
 	try {
 		let idVersion = null
 		if (dataRecloser.status) {
@@ -59,7 +58,7 @@ const saveRecloser = async (dataRecloser, transaction) => {
  * @throws {Error} Si ocurre algún problema durante la transacción.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const updateRecloser = async (dataRecloser) => {
+const updateRecloser = async (db, dataRecloser) => {
 	try {
 		const Recloser = await db.Recloser.update(dataRecloser, { where: { id: dataRecloser.id } })
 		return Recloser
@@ -75,7 +74,7 @@ const updateRecloser = async (dataRecloser) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const getAllRecloser = async () => {
+const getAllRecloser = async (db) => {
 	try {
 		const RecloserDesarrollo = await db.Recloser.findAll({
 			where: { status: 1 },
@@ -128,7 +127,7 @@ const getReclosersEnabled = async () => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const getRecloserId = async (id) => {
+const getRecloserId = async (db, id) => {
 	try {
 		const Recloser = await db.Recloser.findOne({
 			where: { id: id },
@@ -158,7 +157,7 @@ const getRecloserId = async (id) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const validateRecloser = async (id_recloser) => {
+const validateRecloser = async (db, id_recloser) => {
 	try {
 		const relationnode = await db.Node_History.findOne({
 			where: [
@@ -545,7 +544,7 @@ const getInterruption = async (data, influxName) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getManauver = async (serial) => {
+const getManauver = async (db, serial) => {
 	try {
 		let dataReturn = await db.RecloserSendMqtt.findAll({
 			include: [
@@ -633,7 +632,7 @@ const controlChange = async (data, influxName) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const getInfoMap = async () => {
+const getInfoMap = async (db) => {
 	try {
 		const dataMap = await db.MapLocation.findAll({ where: { status: 1 } })
 		return dataMap
@@ -838,7 +837,7 @@ const getStatusAlarm = async (data, influxName) => {
 	}
 }
 
-const getReclosersxVersion = async (id_version) => {
+const getReclosersxVersion = async (db, id_version) => {
 	try {
 		const recloser = await db.Recloser.findAll({
 			where: { id_version: id_version },

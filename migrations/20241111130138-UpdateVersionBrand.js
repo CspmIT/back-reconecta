@@ -19,10 +19,6 @@ module.exports = {
 			type: Sequelize.ENUM,
 			values: ['Reconectador', 'Sub estación rural', 'Sub estación urbana'],
 		})
-		await queryInterface.changeColumn('Alarms_sents', 'type', {
-			type: Sequelize.ENUM,
-			values: ['Reconectador', 'Medidor', 'Analizador'],
-		})
 	},
 
 	async down(queryInterface, Sequelize) {
@@ -35,10 +31,6 @@ module.exports = {
 		await queryInterface.changeColumn('Node_Histories', 'type_device', {
 			type: Sequelize.INTEGER,
 			comment: '1: reconectador, 2: sub estación rural, 3: sub estación urbana, 4: otros dispositivos',
-		})
-		await queryInterface.changeColumn('Alarms_sents', 'type', {
-			type: Sequelize.ENUM,
-			values: ['Recloser', 'Medidor', 'Analizador'],
 		})
 	},
 }

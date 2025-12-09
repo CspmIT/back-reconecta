@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Obtiene todos los reconectadores de la base de datos de Desarrollo.
  *
@@ -7,7 +5,7 @@ const { db } = require('../models')
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const getListVariables = async () => {
+const getListVariables = async (db) => {
 	try {
 		const Variables = await db.Variables.findAll({ where: { status: 1 } })
 		if (!Variables) throw new Error('No existe ningun reconectador')

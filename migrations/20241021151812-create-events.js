@@ -39,6 +39,7 @@ module.exports = {
 			customizable: {
 				type: Sequelize.BOOLEAN,
 				allowNull: false,
+				defaultValue: 0,
 			},
 			id_version: {
 				type: Sequelize.INTEGER,

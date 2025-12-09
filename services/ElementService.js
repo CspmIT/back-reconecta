@@ -1,7 +1,4 @@
-const { Op } = require('sequelize')
-const { db } = require('../models')
-
-const getElements = async (filter = null) => {
+const getElements = async (db, filter = null) => {
 	try {
 		const query = {
 			include: [
@@ -16,6 +13,7 @@ const getElements = async (filter = null) => {
 						{
 							model: db.EquipmentModel,
 							as: 'equipmentmodels',
+							required: false,
 						},
 					],
 				},
@@ -37,7 +35,7 @@ const getElements = async (filter = null) => {
 	}
 }
 
-const getEquipment = async (filter = null) => {
+const getEquipment = async (db, filter = null) => {
 	try {
 		const query = {
 			include: [
@@ -74,7 +72,7 @@ const getEquipment = async (filter = null) => {
 	}
 }
 
-const getModels = async () => {
+const getModels = async (db) => {
 	try {
 		return await db.EquipmentModel.findAll()
 	} catch (e) {
@@ -82,7 +80,7 @@ const getModels = async () => {
 	}
 }
 
-const saveElement = async (element, equipment = [], client = []) => {
+const saveElement = async (db, element, equipment = [], client = []) => {
 	const transaction = await db.sequelize.transaction()
 	try {
 		const data = await db.Element.create(element, { transaction })
@@ -115,7 +113,7 @@ const saveElement = async (element, equipment = [], client = []) => {
 	}
 }
 
-const saveEquipment = async (data) => {
+const saveEquipment = async (db, data) => {
 	try {
 		if (data.id) {
 			const equipment = await db.Equipment.findByPk(data.id)
@@ -131,7 +129,7 @@ const saveEquipment = async (data) => {
 	}
 }
 
-const updateElement = async (element, equipment = [], client = []) => {
+const updateElement = async (db, element, equipment = [], client = []) => {
 	const transaction = await db.sequelize.transaction()
 	try {
 		const data = await db.Element.findByPk(element.id)
@@ -194,7 +192,7 @@ const updateElement = async (element, equipment = [], client = []) => {
 	}
 }
 
-const updateSubstationClient = async (data) => {
+const updateSubstationClient = async (db, data) => {
 	try {
 		return db.SubstationRuralClient.update(data, { where: { id: data.id } })
 	} catch (e) {
@@ -202,7 +200,7 @@ const updateSubstationClient = async (data) => {
 	}
 }
 
-const historySubstationPat = async (data) => {
+const historySubstationPat = async (db, data) => {
 	try {
 		const query = {
 			where: {
@@ -226,7 +224,7 @@ const historySubstationPat = async (data) => {
 		throw e
 	}
 }
-const saveSubstationPat = async (data) => {
+const saveSubstationPat = async (db, data) => {
 	const transaction = await db.sequelize.transaction()
 	try {
 		const newStatus = { status: false }
@@ -240,7 +238,7 @@ const saveSubstationPat = async (data) => {
 	}
 }
 
-const saveImage = async (data) => {
+const saveImage = async (db, data) => {
 	try {
 		await db.Element.update(data, { where: { id: data.id } })
 	} catch (e) {

@@ -1,4 +1,3 @@
-const { db } = require('../models')
 /**
  * Obtiene el último registro de verificación de alarma para un dispositivo específico y tipo.
  *
@@ -8,7 +7,7 @@ const { db } = require('../models')
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getListMaps = async (id, typeDevice) => {
+const getListMaps = async (db) => {
 	try {
 		const dataResult = await db.MapLocation.findAll()
 		return dataResult

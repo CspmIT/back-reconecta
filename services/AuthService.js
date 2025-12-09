@@ -1,11 +1,11 @@
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
-const { changeSchema, db } = require('../models')
+const { getTenantDb } = require('../models')
 const secret = process.env.SECRET
 
 const getEnabledUser = async (email, schemaName) => {
 	try {
-		await changeSchema(schemaName)
+		const db = await getTenantDb(schemaName)
 		const user = await db.User.findOne({ where: { email: email } })
 		return user
 	} catch (error) {
@@ -57,7 +57,7 @@ const signTokenCooptechExternal = async (user, tokenApp, schemaName, influx_name
 	}
 	return jwt.sign(configSing, secret)
 }
-const getUser = async (id) => {
+const getUser = async (db, id) => {
 	try {
 		const data = await db.User.findOne({ where: { id, status: 1 } })
 		if (data) {

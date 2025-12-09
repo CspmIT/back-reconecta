@@ -18,7 +18,7 @@ const config_ssh = require(__dirname + '/../config/config_ssh.js')
 
 const getConfigNotify = async (req, res) => {
 	try {
-		const Events = await getAllEvents()
+		const Events = await getAllEvents(req.db)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {
@@ -30,7 +30,7 @@ const getConfigNotify = async (req, res) => {
 }
 const saveConfigNotify = async (req, res) => {
 	try {
-		const Events = await saveEvent(req.body)
+		const Events = await saveEvent(req.db, req.body)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {
@@ -47,7 +47,7 @@ const sendConfigMQTT = async (req, res) => {
 		}
 		// console.log(`${req.body.topic}`, JSON.stringify(req.body.data))
 		// return res.json(true)
-		const configMqtt = await getConectionMqtt()
+		const configMqtt = await getConectionMqtt(req.db)
 		const client = mqtt.connect(configMqtt)
 		client.on('connect', () => {
 			// Publicar en el tópico
@@ -80,8 +80,8 @@ const sendConfigMQTT = async (req, res) => {
 
 const AllEvents = async (req, res) => {
 	try {
-		const Events = await getEventsActive()
-		const eventsInflux = await getEventsInflux(req.user.influx_name, Events)
+		const Events = await getEventsActive(req.db)
+		const eventsInflux = await getEventsInflux(req.db, req.user.influx_name, Events)
 		const returnData = eventsInflux
 			.reduce((acc, value) => {
 				acc.push(...value)
@@ -111,8 +111,8 @@ const eventsDevices = async (req, res) => {
 			return res.status(400).json({ message: 'Debe enviar todo los parametros necesarios tanto id como type' })
 		}
 		//const recloser = await getRecloserId(id)
-		const recloser = await getEquipment({ id })
-		const Events = await getEventsDevice(recloser[0].equipmentmodels.id, 'Reconectador')
+		const recloser = await getEquipment(req.db, { id })
+		const Events = await getEventsDevice(req.db, recloser[0].equipmentmodels.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
 			return {
 				id: item.id,
@@ -148,7 +148,7 @@ const saveLogsChecks = async (req, res) => {
 			item.id_user = req.user.id
 			return item
 		})
-		const Logs = await addLogsChecks(data)
+		const Logs = await addLogsChecks(req.db, data)
 		return res.status(200).json(Logs)
 	} catch (error) {
 		if (error.errors) {
@@ -162,7 +162,7 @@ const saveLogsChecks = async (req, res) => {
 const updateConfigIndex = async (req, res) => {
 	try {
 		const data = req.body
-		const response = await updateEventIndex(data)
+		const response = await updateEventIndex(req.db, data)
 		// Para el archivo que envio por ssh utilizo la hora unix
 		const name = '/perfiles_' + new Date().getTime() + '.json'
 		await uploadFile(data, name)
@@ -214,7 +214,7 @@ const conectionMqtt = async (data) => {
 				}
 
 				try {
-					await saveSendActionMQTT(data)
+					await saveSendActionMQTT(req.db, data)
 					resolve(true)
 				} catch (saveError) {
 					reject(saveError)

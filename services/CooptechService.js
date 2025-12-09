@@ -1,7 +1,7 @@
-const { db, changeSchema } = require('../models')
+const { getTenantDb } = require('../models')
 
 const addUserCooptech = async (data) => {
-	await changeSchema(data.schema_name)
+	const db = await getTenantDb(data.schema_name)
 	return db.sequelize.transaction(async (t) => {
 		try {
 			const dataUser = {
@@ -13,7 +13,11 @@ const addUserCooptech = async (data) => {
 				token_app: data.token,
 				dark: 0,
 			}
-			const [User, createdUser] = await db.User.findOrCreate({ where: { email: dataUser.email }, defaults: { ...dataUser }, transaction: t })
+			const [User, createdUser] = await db.User.findOrCreate({
+				where: { email: dataUser.email },
+				defaults: { ...dataUser },
+				transaction: t,
+			})
 			if (!createdUser) {
 				const dataUpdate = {
 					first_name: data.name,

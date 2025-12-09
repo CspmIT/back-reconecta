@@ -1,7 +1,4 @@
-const { Op } = require('sequelize')
-const { db } = require('../models')
-
-const saveAlarm = async (data) => {
+const saveAlarm = async (db, data) => {
 	try {
 		await db.Logs_Alarm.create(data)
 	} catch (e) {
@@ -9,7 +6,7 @@ const saveAlarm = async (data) => {
 	}
 }
 
-const discordCredentials = async () => {
+const discordCredentials = async (db) => {
 	try {
 		const credentials = await db.Discord.findOne({ where: { id: 1 } })
 		return credentials

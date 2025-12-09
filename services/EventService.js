@@ -1,7 +1,5 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
-const { getAllRecloser, getEventCheckRecloserOld } = require('./RecloserServices')
-const { searchRelationActive } = require('./NodeService')
+const { getEventCheckRecloserOld } = require('./RecloserServices')
 const { getDateCheck } = require('./ChecksAlarmsService')
 const { getEquipment } = require('./ElementService')
 
@@ -18,7 +16,7 @@ const typeDeviceInflux = {
  * @throws {Error} Si ocurre un error al obtener la información o procesar el evento.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const searchEnableAlarm = async (event) => {
+const searchEnableAlarm = async (db, event) => {
 	try {
 		const nroSerie = event.topic.split('/')[4]
 		const brand = event.topic.split('/')[3]
@@ -68,7 +66,7 @@ const searchEnableAlarm = async (event) => {
  * @throws {Error} Si ocurre un error al buscar el dispositivo en la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getDevicexSerieBrand = async (nroSerie, brand) => {
+const getDevicexSerieBrand = async (db, nroSerie, brand) => {
 	const Recloser = await db.Recloser.findAll({
 		where: [{ serial: nroSerie }],
 		include: [
@@ -101,7 +99,7 @@ const getDevicexSerieBrand = async (nroSerie, brand) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 
-const saveAlertSend = async (data) => {
+const saveAlertSend = async (db, data) => {
 	return db.sequelize.transaction(async (t) => {
 		try {
 			const [Alarms_sents, created] = await db.Alarms_sents.findOrCreate({
@@ -128,7 +126,7 @@ const saveAlertSend = async (data) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 
-const saveLogAlert = async (data) => {
+const saveLogAlert = async (db, data) => {
 	try {
 		const Logs_Alarm = await db.Logs_Alarm.create(data)
 		return Logs_Alarm
@@ -146,7 +144,7 @@ const saveLogAlert = async (data) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getAllEvents = async () => {
+const getAllEvents = async (db) => {
 	try {
 		const [Events, versions] = await Promise.all([
 			db.Event.findAll({ where: { status: 1 } }),
@@ -181,7 +179,7 @@ const getAllEvents = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsActive = async () => {
+const getEventsActive = async (db) => {
 	try {
 		const Events = await db.Event.findAll({
 			where: {
@@ -203,7 +201,7 @@ const getEventsActive = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsDevice = async (id_version, type_device) => {
+const getEventsDevice = async (db, id_version, type_device) => {
 	try {
 		const Events = await db.Event.findAll({
 			where: {
@@ -226,9 +224,9 @@ const getEventsDevice = async (id_version, type_device) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante las consultas.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsInflux = async (influx_name, Events, id = false) => {
+const getEventsInflux = async (db, influx_name, Events, id = false) => {
 	try {
-		const reclosers = await getEquipment(id)
+		const reclosers = await getEquipment(db, id)
 		const result = await Promise.all(
 			reclosers.map(async (recloser) => {
 				if (Events.some((item) => item.id_version === recloser.id_model)) {
@@ -240,7 +238,7 @@ const getEventsInflux = async (influx_name, Events, id = false) => {
 							description: item.description,
 						})
 					)
-					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
+					const dateCheck = await getDateCheck(db, recloser.id, 'Reconectador')
 					return await getEventCheckRecloserOld(
 						{
 							brand: recloser.equipmentmodels.name,
@@ -272,7 +270,7 @@ const getEventsInflux = async (influx_name, Events, id = false) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const saveNotify = async (data) => {
+const saveNotify = async (db, data) => {
 	try {
 		const dataResult = await db.Event.bulkCreate(data, {
 			updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
@@ -283,7 +281,7 @@ const saveNotify = async (data) => {
 	}
 }
 
-const EventsCustom = async (filter) => {
+const EventsCustom = async (db, filter) => {
 	try {
 		const query = {
 			where: filter,
@@ -294,7 +292,7 @@ const EventsCustom = async (filter) => {
 	}
 }
 
-const saveEvent = async (data) => {
+const saveEvent = async (db, data) => {
 	try {
 		if (data.id) {
 			const event = await db.Event.findByPk(data.id)
@@ -309,7 +307,7 @@ const saveEvent = async (data) => {
 	}
 }
 
-const updateEventIndex = async (data) => {
+const updateEventIndex = async (db, data) => {
 	try {
 		const updatePromises = data.map((entry) => {
 			return db.Event.update(
@@ -331,7 +329,7 @@ const updateEventIndex = async (data) => {
 	}
 }
 
-const updateEvents = async (events) => {
+const updateEvents = async (db, events) => {
 	try {
 		if (!Array.isArray(events)) throw new Error('Invalid input')
 
@@ -348,7 +346,7 @@ const updateEvents = async (events) => {
 	}
 }
 
-const checkIsAlarm = async (data) => {
+const checkIsAlarm = async (db, data) => {
 	try {
 		const alarm = await db.Event.findOne({
 			where: {

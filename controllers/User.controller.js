@@ -1,4 +1,3 @@
-const { db } = require('../models')
 const { getMenus, saveMenu, listPermissionUser, saveMenu_Selected } = require('../services/MenuService')
 const {
 	getAllUser,
@@ -13,7 +12,7 @@ const {
 
 async function getListUser(req, res) {
 	try {
-		const listUser = await getAllUser()
+		const listUser = await getAllUser(req.db)
 		return res.status(200).json(listUser)
 	} catch (error) {
 		if (error.errors) {
@@ -26,7 +25,7 @@ async function getListUser(req, res) {
 
 async function getListUserPass(req, res) {
 	try {
-		const listUser = await getAllUserPass()
+		const listUser = await getAllUserPass(req.db)
 		const list = listUser.map((item) => {
 			item.dataValues.password = item.passwordRecloser?.password || null
 			return item
@@ -43,7 +42,7 @@ async function getListUserPass(req, res) {
 
 async function getProfiles(req, res) {
 	try {
-		const listProfile = await getAllProfile()
+		const listProfile = await getAllProfile(req.db)
 		return res.status(200).json(listProfile)
 	} catch (error) {
 		if (error.errors) {
@@ -56,7 +55,7 @@ async function getProfiles(req, res) {
 
 async function getUserPass(req, res) {
 	try {
-		const userPass = await getPassxID(req.query.id_user)
+		const userPass = await getPassxID(req.db, req.query.id_user)
 		return res.status(200).json(userPass)
 	} catch (error) {
 		if (error.errors) {
@@ -71,7 +70,7 @@ const addPassRecloser = async (req, res) => {
 	let transaction
 	try {
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		// Validaciones previas
 		if (!req.body.password || !req.body.id_user) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
@@ -81,7 +80,7 @@ const addPassRecloser = async (req, res) => {
 		} else {
 			req.body.id_user_create = req.user.id
 		}
-		const passRecloser = await savePassRecloser(req.body, transaction)
+		const passRecloser = await savePassRecloser(req.db, req.body, transaction)
 		if (!passRecloser) throw new Error('Error al guardar la contraseña.')
 		// Si todo está bien, se confirma la transacción
 		await transaction.commit()
@@ -100,20 +99,7 @@ const addPassRecloser = async (req, res) => {
 
 async function getAllMenu(req, res) {
 	try {
-		const menus = await getMenus()
-		return res.status(200).json(menus)
-	} catch (error) {
-		if (error.errors) {
-			res.status(500).json(error.errors)
-		} else {
-			res.status(400).json(error.message)
-		}
-	}
-}
-
-async function getAllMenu(req, res) {
-	try {
-		const menus = await getMenus()
+		const menus = await getMenus(req.db)
 		return res.status(200).json(menus)
 	} catch (error) {
 		if (error.errors) {
@@ -128,12 +114,12 @@ async function abmMenu(req, res) {
 	let transaction
 	try {
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		// Validaciones previas
 		if (!req.body.name || !req.body.level || !req.body.group_menu) {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
-		const Menu = await saveMenu(req.body, transaction)
+		const Menu = await saveMenu(req.db, req.body, transaction)
 		if (!Menu) throw new Error('Error al guardar la contraseña.')
 		// Si todo está bien, se confirma la transacción
 		await transaction.commit()
@@ -153,14 +139,14 @@ async function deleteMenu(req, res) {
 	let transaction
 	try {
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		let Menu = true
 		for (const element of req.body) {
 			// Validaciones previas
 			if (!element.name || !element.level || !element.group_menu) {
 				return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 			}
-			Menu = await saveMenu(element, transaction)
+			Menu = await saveMenu(req.db, element, transaction)
 			if (!Menu) throw new Error('Error al guardar la contraseña.')
 		}
 		// Si todo está bien, se confirma la transacción
@@ -182,7 +168,7 @@ async function getPermission(req, res) {
 	try {
 		if (!req.query.type || !req.query.id || !req.query.profile)
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
-		const menus = await listPermissionUser(req.query)
+		const menus = await listPermissionUser(req.db, req.query)
 		return res.status(200).json(menus)
 	} catch (error) {
 		if (error.errors) {
@@ -197,14 +183,14 @@ async function savePermission(req, res) {
 	let transaction
 	try {
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		let Menu_selected = true
 		for (const element of req.body) {
 			// Validaciones previas
 			if (!element.id_menu) {
 				return res.status(400).json({ message: 'Se solicita enviar el identificador del menu.' })
 			}
-			Menu_selected = await saveMenu_Selected(element, transaction)
+			Menu_selected = await saveMenu_Selected(req.db, element, transaction)
 			if (!Menu_selected) throw new Error('Error al guardar la contraseña.')
 		}
 		// Si todo está bien, se confirma la transacción
@@ -228,7 +214,7 @@ const getChecksHome = async (req, res) => {
 			user: req.user.id,
 			type: req.params.type || false,
 		}
-		const data = await getChecksxUser(body)
+		const data = await getChecksxUser(req.db, body)
 		return res.status(200).json(data)
 	} catch (error) {
 		if (error.errors) {
@@ -243,7 +229,7 @@ const updateChecksHome = async (req, res) => {
 	try {
 		const dataBody = req.body
 		dataBody.id_user = req.user.id
-		await saveChecksxUser(dataBody)
+		await saveChecksxUser(req.db, dataBody)
 		return res.status(200).json({ message: 'Se guardaron los cambios correctamente.' })
 	} catch (e) {
 		res.status(500).json(e.errors)
@@ -253,7 +239,7 @@ const updateChecksHome = async (req, res) => {
 const getUser = async (req, res) => {
 	try {
 		const { id } = req.params
-		const user = await getUserxID(id)
+		const user = await getUserxID(req.db, id)
 		return res.status(200).json(user)
 	} catch (e) {
 		res.status(500).json(e.errors)

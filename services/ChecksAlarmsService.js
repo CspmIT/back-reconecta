@@ -1,4 +1,3 @@
-const { db } = require('../models')
 /**
  * Obtiene el último registro de verificación de alarma para un dispositivo específico y tipo.
  *
@@ -8,7 +7,7 @@ const { db } = require('../models')
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getDateCheck = async (id, typeDevice) => {
+const getDateCheck = async (db, id, typeDevice) => {
 	try {
 		const dataResult = await db.Logs_check_alarms.findOne({
 			where: { type: typeDevice, id_device: id },
@@ -27,7 +26,7 @@ const getDateCheck = async (id, typeDevice) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la creación de los registros.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const addLogsChecks = async (logs) => {
+const addLogsChecks = async (db, logs) => {
 	try {
 		const dataResult = await db.Logs_check_alarms.bulkCreate(logs, { validate: true })
 		return dataResult
