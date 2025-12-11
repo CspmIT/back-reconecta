@@ -121,6 +121,7 @@ const eventsDevices = async (req, res) => {
 				priority: item.priority,
 				type_var: item.type_var,
 				custom: item.customizable,
+				id_file: item.index_file,
 			}
 		})
 		const eventsInflux = await getEventRecloserOld(
