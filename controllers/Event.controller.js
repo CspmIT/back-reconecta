@@ -189,7 +189,7 @@ const updateConfigIndex = async (req, res) => {
 const updateConfigNotify = async (req, res) => {
 	try {
 		const data = req.body
-		const response = await updateEvents(data)
+		const response = await updateEvents(req.db, data)
 		return res.status(200).json(response)
 	} catch (e) {
 		return res.status(500).json(e)
