@@ -797,6 +797,7 @@ const getEventRecloserOld = async (data, influxName) => {
 					type_var: matchingEvent.type_var,
 					infoAdd: reg?.info,
 					custom: matchingEvent.custom,
+					idFile: matchingEvent.id_file ?? '-',
 				})
 			}
 		}
