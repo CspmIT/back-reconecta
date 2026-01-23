@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken')
 const { getTenantDb } = require('../models')
 const { getUser } = require('../services/AuthService')
 const secret = process.env.SECRET
+const TOKEN_ALARMA = process.env.ALARM_TOKEN
 
 const verifyToken = async (req, res, next) => {
 	try {
@@ -44,8 +45,7 @@ const alarmToken = async (req, res, next) => {
 
 		const token = parts[1]
 
-		const TOKEN_ESPERADO = '4x5tmmDA6fDIJJBSsAEfSwPJlr54QV2GEI0sGZ11roRXglA8q47lVV7P9tlkj6T5'
-		if (token !== TOKEN_ESPERADO) {
+		if (token !== TOKEN_ALARMA) {
 			return res.status(403).json({ error: 'Token inválido' })
 		}
 
