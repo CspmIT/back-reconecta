@@ -59,8 +59,8 @@ const influxAlarmDeadman = async (req, res) => {
 
 async function discord(db, title, content, webhook = false) {
 	try {
-		const urlWebhook = webhook || credentials.webhook
 		const credentials = await discordCredentials(db)
+		const urlWebhook = webhook || credentials.webhook
 		const webhookURL = `https://discord.com/api/webhooks/${urlWebhook}`
 		await axios.post(webhookURL, {
 			username: credentials.username,
