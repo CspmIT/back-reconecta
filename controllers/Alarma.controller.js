@@ -13,33 +13,7 @@ const influxAlarm = async (req, res) => {
 
 		if (!topic || !eventId) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
-		const serial = topic.split('/')[4]
-
-		let dbTenant = null
-		let recloser = []
-
-		// Caso 1 — buscar SOLO en un tenant
-		if (scheme !== 'externo') {
-			const schemaName = `reconecta_${scheme}`
-			dbTenant = await getTenantDb(schemaName)
-
-			recloser = await getEquipment(dbTenant, { serial })
-		}
-
-		// Caso 2 — buscar en TODOS los tenants
-		else {
-			for (const client of listClients) {
-				const schemaName = `reconecta_${client}`
-				const dbLoop = await getTenantDb(schemaName)
-
-				recloser = await getEquipment(dbLoop, { serial })
-
-				if (recloser && recloser.length > 0) {
-					dbTenant = dbLoop
-					break
-				}
-			}
-		}
+		const { dbTenant, recloser } = await dataSchema(scheme, topic)
 
 		if (!recloser || recloser.length === 0) return res.json({ message: 'Equipo no encontrado' })
 
@@ -65,10 +39,29 @@ const influxAlarm = async (req, res) => {
 	}
 }
 
-async function discord(db, title, content) {
+const influxAlarmDeadman = async (req, res) => {
 	try {
+		const { topic } = req.body
+		const { scheme } = req.params
+		if (!topic) return res.status(400).json({ error: 'Faltan campos obligatorios' })
+		const { dbTenant } = await dataSchema(scheme, topic)
+		const title = `Alerta prueba de deadman`
+		const content = 'Erika'
+		const webhook =
+			'https://discord.com/api/webhooks/1464248365465211004/X8QLDMKj0s-BcWyJNtdqYDfQu0btZvNDZRJoaA248CmZZCNHGKSmRmzW2bO2B_PxS3kl'
+		await discord(dbTenant, title, content, webhook)
+
+		return res.json({ message: 'OK' })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+async function discord(db, title, content, webhook = false) {
+	try {
+		const urlWebhook = webhook || credentials.webhook
 		const credentials = await discordCredentials(db)
-		const webhookURL = `https://discord.com/api/webhooks/${credentials.webhook}`
+		const webhookURL = `https://discord.com/api/webhooks/${urlWebhook}`
 		await axios.post(webhookURL, {
 			username: credentials.username,
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
@@ -86,6 +79,37 @@ async function discord(db, title, content) {
 	}
 }
 
+async function dataSchema(scheme, topic) {
+	let dbTenant = null
+	let recloser = []
+	const serial = topic.split('/')[4]
+
+	// Caso 1 — buscar SOLO en un tenant
+	if (scheme !== 'externo') {
+		const schemaName = `reconecta_${scheme}`
+		dbTenant = await getTenantDb(schemaName)
+
+		recloser = await getEquipment(dbTenant, { serial })
+	}
+
+	// Caso 2 — buscar en TODOS los tenants
+	else {
+		for (const client of listClients) {
+			const schemaName = `reconecta_${client}`
+			const dbLoop = await getTenantDb(schemaName)
+
+			recloser = await getEquipment(dbLoop, { serial })
+
+			if (recloser && recloser.length > 0) {
+				dbTenant = dbLoop
+				break
+			}
+		}
+	}
+	return { dbTenant, recloser }
+}
+
 module.exports = {
 	influxAlarm,
+	influxAlarmDeadman,
 }
