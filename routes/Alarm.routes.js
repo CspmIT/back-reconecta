@@ -4,5 +4,5 @@ const { alarmToken } = require('../middleware/Auth.middleware')
 const router = express.Router()
 
 router.post('/alarmInflux/:scheme', alarmToken, influxAlarm)
-router.post('/alarmDeadmanInflux/:scheme', alarmToken, influxAlarmDeadman)
+router.post('/alarmDeadmanInflux/:scheme', influxAlarmDeadman)
 module.exports = router
