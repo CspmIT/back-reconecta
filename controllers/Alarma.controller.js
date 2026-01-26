@@ -43,10 +43,12 @@ const influxAlarmDeadman = async (req, res) => {
 	try {
 		const { topic } = req.body
 		const { scheme } = req.params
+		console.log(`Entro aqui \n \n \n ${topic} ${scheme}`)
 		if (!topic) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 		const { dbTenant } = await dataSchema(scheme, topic)
 		const title = `Alerta prueba de deadman`
 		const webhook = '1464248365465211004/X8QLDMKj0s-BcWyJNtdqYDfQu0btZvNDZRJoaA248CmZZCNHGKSmRmzW2bO2B_PxS3kl'
+		console.log('paso')
 		await discord(dbTenant, title, topic, webhook)
 
 		return res.json({ message: 'OK' })
