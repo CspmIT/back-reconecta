@@ -43,7 +43,7 @@ const getNodexId = async (req, res) => {
 
 const unlinkRelationNode = async (req, res) => {
 	try {
-		transaction = await req.db.sequelize.transaction()
+		const transaction = await req.db.sequelize.transaction()
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}
@@ -61,7 +61,7 @@ const unlinkRelationNode = async (req, res) => {
 }
 const deleteNode = async (req, res) => {
 	try {
-		transaction = await req.db.sequelize.transaction()
+		const transaction = await req.db.sequelize.transaction()
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}

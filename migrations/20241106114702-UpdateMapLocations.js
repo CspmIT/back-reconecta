@@ -19,7 +19,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('MapLocations', 'name')
 		await queryInterface.removeColumn('Nodes', 'id_map')
 	},

@@ -6,13 +6,9 @@
  *
  */
 const getListVariables = async (db) => {
-	try {
-		const Variables = await db.Variables.findAll({ where: { status: 1 } })
-		if (!Variables) throw new Error('No existe ningun reconectador')
-		return Variables.map((variable) => variable.get({ plain: true }))
-	} catch (error) {
-		throw error
-	}
+	const Variables = await db.Variables.findAll({ where: { status: 1 } })
+	if (!Variables) throw new Error('No existe ningun reconectador')
+	return Variables.map((variable) => variable.get({ plain: true }))
 }
 
 module.exports = {

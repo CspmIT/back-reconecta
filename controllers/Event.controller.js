@@ -10,7 +10,7 @@ const {
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
-const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
+const { getEventRecloserOld } = require('../services/RecloserServices')
 const { getEquipment } = require('../services/ElementService')
 const { uploadFile } = require('../services/SshServices')
 const { saveSendActionMQTT } = require('../services/SendMqttServices')
@@ -53,10 +53,8 @@ const sendConfigMQTT = async (req, res) => {
 			// Publicar en el tópico
 			client.publish(`${req.body.topic}`, JSON.stringify(req.body.data), async (err) => {
 				if (!err) {
-					console.log('lo envio')
 					res.status(200).json(true)
 				} else {
-					console.log('no envio')
 					return res.status(403).json({ message: err.message })
 				}
 			})
@@ -66,7 +64,6 @@ const sendConfigMQTT = async (req, res) => {
 			return res.status(401).json({ message: err.message })
 		})
 		client.on('close', () => {
-			console.log('Cliente desconectado del broker')
 			return
 		})
 	} catch (error) {
@@ -169,6 +166,7 @@ const updateConfigIndex = async (req, res) => {
 		await uploadFile(data, name)
 
 		// Envio la configuración a mqtt para que impacte en los recos
+		const reclosers = await getEquipment(req.db, { type: 2 })
 		const promises = reclosers.map(async (item) => {
 			const path = config_ssh['mqtt_morteros'].SSH_PATH + name
 			const data = {
@@ -178,7 +176,7 @@ const updateConfigIndex = async (req, res) => {
 				serial: item.serial,
 				brand: item.equipmentmodels.name,
 			}
-			await conectionMqtt(data)
+			await conectionMqtt(data, req.db)
 		})
 		await Promise.all(promises)
 		return res.status(200).json(response)
@@ -197,8 +195,8 @@ const updateConfigNotify = async (req, res) => {
 	}
 }
 
-const conectionMqtt = async (data) => {
-	const configMqtt = await getConectionMqtt()
+const conectionMqtt = async (data, db) => {
+	const configMqtt = await getConectionMqtt(db)
 
 	return new Promise((resolve, reject) => {
 		const client = mqtt.connect(configMqtt)
@@ -210,12 +208,11 @@ const conectionMqtt = async (data) => {
 				client.end()
 
 				if (err) {
-					console.error('Error al publicar:', err.message)
 					return reject(err)
 				}
 
 				try {
-					await saveSendActionMQTT(req.db, data)
+					await saveSendActionMQTT(db, data)
 					resolve(true)
 				} catch (saveError) {
 					reject(saveError)

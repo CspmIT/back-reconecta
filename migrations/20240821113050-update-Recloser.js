@@ -25,7 +25,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('Versions', 'id_brand')
 		await queryInterface.removeColumn('Reclosers', 'id_version')
 	},

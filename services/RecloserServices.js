@@ -10,45 +10,41 @@ const { convertIsoToDate } = require('../utils/js/dateConvert')
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
 const saveRecloser = async (db, dataRecloser, transaction) => {
-	try {
-		let idVersion = null
-		if (dataRecloser.status) {
-			idVersion = await db.Version.findOne({
-				where: {
-					name: dataRecloser.version,
-				},
-			})
-		}
-		const data = dataRecloser.status
-			? {
-					id: dataRecloser.id || 0,
-					serial: dataRecloser.serial,
-					status: dataRecloser.status,
-					config: dataRecloser.config,
-					id_version: idVersion.id,
-					status_recloser: dataRecloser.status_recloser || 3,
-					id_node: dataRecloser.id_node || null,
-			  }
-			: { ...dataRecloser }
-		if (dataRecloser.id_user_create) {
-			data.id_user_create = dataRecloser.id_user_create
-		}
-		if (dataRecloser.id_user_edit) {
-			data.id_user_edit = dataRecloser.id_user_edit
-		}
-
-		const [Recloser, created] = await db.Recloser.findOrCreate({
-			where: { [Op.or]: [{ serial: data.serial }, { id: data.id }] },
-			defaults: { ...data },
-			transaction,
+	let idVersion = null
+	if (dataRecloser.status) {
+		idVersion = await db.Version.findOne({
+			where: {
+				name: dataRecloser.version,
+			},
 		})
-		if (!created) {
-			await Recloser.update(data, { transaction })
-		}
-		return Recloser
-	} catch (error) {
-		throw error
 	}
+	const data = dataRecloser.status
+		? {
+				id: dataRecloser.id || 0,
+				serial: dataRecloser.serial,
+				status: dataRecloser.status,
+				config: dataRecloser.config,
+				id_version: idVersion.id,
+				status_recloser: dataRecloser.status_recloser || 3,
+				id_node: dataRecloser.id_node || null,
+		  }
+		: { ...dataRecloser }
+	if (dataRecloser.id_user_create) {
+		data.id_user_create = dataRecloser.id_user_create
+	}
+	if (dataRecloser.id_user_edit) {
+		data.id_user_edit = dataRecloser.id_user_edit
+	}
+
+	const [Recloser, created] = await db.Recloser.findOrCreate({
+		where: { [Op.or]: [{ serial: data.serial }, { id: data.id }] },
+		defaults: { ...data },
+		transaction,
+	})
+	if (!created) {
+		await Recloser.update(data, { transaction })
+	}
+	return Recloser
 }
 
 /**
@@ -59,12 +55,8 @@ const saveRecloser = async (db, dataRecloser, transaction) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
 const updateRecloser = async (db, dataRecloser) => {
-	try {
-		const Recloser = await db.Recloser.update(dataRecloser, { where: { id: dataRecloser.id } })
-		return Recloser
-	} catch (error) {
-		throw error
-	}
+	const Recloser = await db.Recloser.update(dataRecloser, { where: { id: dataRecloser.id } })
+	return Recloser
 }
 
 /**
@@ -75,27 +67,23 @@ const updateRecloser = async (db, dataRecloser) => {
  *
  */
 const getAllRecloser = async (db) => {
-	try {
-		const RecloserDesarrollo = await db.Recloser.findAll({
-			where: { status: 1 },
-			include: [
-				{
-					association: 'version',
+	const RecloserDesarrollo = await db.Recloser.findAll({
+		where: { status: 1 },
+		include: [
+			{
+				association: 'version',
+				attributes: ['id', 'name'],
+				include: {
+					association: 'brand',
 					attributes: ['id', 'name'],
-					include: {
-						association: 'brand',
-						attributes: ['id', 'name'],
-					},
 				},
-				{
-					association: 'history',
-				},
-			],
-		})
-		return RecloserDesarrollo
-	} catch (error) {
-		throw error
-	}
+			},
+			{
+				association: 'history',
+			},
+		],
+	})
+	return RecloserDesarrollo
 }
 
 /**
@@ -106,17 +94,13 @@ const getAllRecloser = async (db) => {
  *
  */
 const getReclosersEnabled = async () => {
-	try {
-		const recloser = await getAllRecloser()
-		const result = recloser.filter((item) => {
-			if (item.history.every((rel) => rel.status == 1) || item.history.length == 1) {
-				return item
-			}
-		})
-		return result
-	} catch (error) {
-		throw error
-	}
+	const recloser = await getAllRecloser()
+	const result = recloser.filter((item) => {
+		if (item.history.every((rel) => rel.status == 1) || item.history.length == 1) {
+			return item
+		}
+	})
+	return result
 }
 
 /**
@@ -128,25 +112,21 @@ const getReclosersEnabled = async () => {
  *
  */
 const getRecloserId = async (db, id) => {
-	try {
-		const Recloser = await db.Recloser.findOne({
-			where: { id: id },
-			include: [
-				{
-					association: 'version',
-					include: [
-						{
-							association: 'brand',
-						},
-					],
-				},
-			],
-		})
-		if (!Recloser) throw new Error('No existe ningun reconectador')
-		return Recloser
-	} catch (error) {
-		throw error
-	}
+	const Recloser = await db.Recloser.findOne({
+		where: { id: id },
+		include: [
+			{
+				association: 'version',
+				include: [
+					{
+						association: 'brand',
+					},
+				],
+			},
+		],
+	})
+	if (!Recloser) throw new Error('No existe ningun reconectador')
+	return Recloser
 }
 
 /**
@@ -158,27 +138,23 @@ const getRecloserId = async (db, id) => {
  *
  */
 const validateRecloser = async (db, id_recloser) => {
-	try {
-		const relationnode = await db.Node_History.findOne({
-			where: [
-				{
-					id_device: id_recloser,
-				},
-				{
-					status: 1,
-				},
-				{
-					type_device: 1,
-				},
-			],
-		})
-		if (relationnode === null) {
-			return false
-		} else {
-			return 'El reconectador ya esta relacionada a otro Nodo'
-		}
-	} catch (error) {
-		throw error
+	const relationnode = await db.Node_History.findOne({
+		where: [
+			{
+				id_device: id_recloser,
+			},
+			{
+				status: 1,
+			},
+			{
+				type_device: 1,
+			},
+		],
+	})
+	if (relationnode === null) {
+		return false
+	} else {
+		return 'El reconectador ya esta relacionada a otro Nodo'
 	}
 }
 
@@ -191,20 +167,18 @@ const validateRecloser = async (db, id_recloser) => {
  *
  */
 const brandRecloser = async (typeRecloser) => {
-	try {
-		if (!!typeRecloser) throw new Error('No se paso tipo de reconectador')
-		switch (typeRecloser) {
-			case 0:
-				return 'NOJA'
-			case 1:
-				return 'COOPER'
-			case 2:
-				return 'ABM'
-			default:
-				return ''
-		}
-	} catch (error) {
-		throw error
+	if (!typeRecloser) {
+		throw new Error('No se pasó tipo de reconectador')
+	}
+	switch (typeRecloser) {
+		case 0:
+			return 'NOJA'
+		case 1:
+			return 'COOPER'
+		case 2:
+			return 'ABM'
+		default:
+			return ''
 	}
 }
 
@@ -217,30 +191,26 @@ const brandRecloser = async (typeRecloser) => {
  *
  */
 const dataRecloseInflux = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -3m, stop: now())
+	const query = `|> range(start: -3m, stop: now())
         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
-		const dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux) throw new Error('No existe ningun reconectador')
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			// Si aún no existe un array para este campo (_field), lo inicializa
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
-			}
-			// Agrega el elemento al array correspondiente
-			dataReturn[element._field].push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
+	const dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux) throw new Error('No existe ningun reconectador')
+	let dataReturn = {}
+	for (const element of dataInflux) {
+		// Si aún no existe un array para este campo (_field), lo inicializa
+		if (!dataReturn[element._field]) {
+			dataReturn[element._field] = []
 		}
-		return dataReturn
-	} catch (error) {
-		throw error
+		// Agrega el elemento al array correspondiente
+		dataReturn[element._field].push({
+			field: element._field,
+			value: element._value,
+			time: element._time,
+		})
 	}
+	return dataReturn
 }
 
 /**
@@ -258,45 +228,41 @@ const dataRecloseInflux = async (data, influxName) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
 const getStatusRecloser = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -3m, stop: now())
+	const query = `|> range(start: -3m, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
         |> filter(fn: (r) => r["_field"] == "ac" or r["_field"] == "d/c")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) return 3
-		const dataReturn = new Map()
+	let dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) return 3
+	const dataReturn = new Map()
 
-		dataInflux.forEach((element) => {
-			if (!dataReturn.has(element._field)) {
-				dataReturn.set(element._field, [])
-			}
-			dataReturn.get(element._field).push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
+	dataInflux.forEach((element) => {
+		if (!dataReturn.has(element._field)) {
+			dataReturn.set(element._field, [])
+		}
+		dataReturn.get(element._field).push({
+			field: element._field,
+			value: element._value,
+			time: element._time,
 		})
+	})
 
-		const acValue = dataReturn.get('ac')?.[0]?.value
-		const dcValue = dataReturn.get('d/c')?.[0]?.value
+	const acValue = dataReturn.get('ac')?.[0]?.value
+	const dcValue = dataReturn.get('d/c')?.[0]?.value
 
-		if (acValue === undefined || dcValue === undefined) {
-			return 3
-		}
-		if (acValue === 1 && dcValue === 1) {
-			return 0 // Cerrado
-		} else if ((acValue === 1 && dcValue === 0) || (acValue === 0 && dcValue === 0)) {
-			return 1 // Abierto
-		} else if (acValue === 0 && dcValue === 1) {
-			return 2 // Cerrado sin tensión
-		}
-		return 3 // Sin Señal
-	} catch (error) {
-		throw error
+	if (acValue === undefined || dcValue === undefined) {
+		return 3
 	}
+	if (acValue === 1 && dcValue === 1) {
+		return 0 // Cerrado
+	} else if ((acValue === 1 && dcValue === 0) || (acValue === 0 && dcValue === 0)) {
+		return 1 // Abierto
+	} else if (acValue === 0 && dcValue === 1) {
+		return 2 // Cerrado sin tensión
+	}
+	return 3 // Sin Señal
 }
 
 /**
@@ -309,40 +275,36 @@ const getStatusRecloser = async (data, influxName) => {
  *
  */
 const getMetrologiaIntantanea = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -30s, stop: now())
+	const query = `|> range(start: -30s, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
         |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "bat_0" or r["_field"] == "bat_1" or r["_field"] == "bat_2" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2" or r["_field"] == "I_n" or r["_field"] == "V_f_ABC_0" or r["_field"] == "V_f_ABC_1" or r["_field"] == "V_f_ABC_2" or r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2" or r["_field"] == "F_ABC" or r["_field"] == "V_L_SRT_0" or r["_field"] == "V_L_SRT_1" or r["_field"] == "V_L_SRT_2" or r["_field"] == "V_f_SRT_0" or r["_field"] == "V_f_SRT_1" or r["_field"] == "V_f_SRT_2" or r["_field"] == "W_0" or r["_field"] == "W_1" or r["_field"] == "W_2" or r["_field"] == "FP_f_0" or r["_field"] == "FP_f_1" or r["_field"] == "FP_f_2")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query, influxName)
+	let dataInflux = await ConsultaInflux(query, influxName)
 
-		if (!dataInflux) {
-			const fallbackQuery = `|> range(start: -1d, stop: now())
+	if (!dataInflux) {
+		const fallbackQuery = `|> range(start: -1d, stop: now())
 			|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain" or r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2")
 			|> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2" or r["_field"] == "I_n" or r["_field"] == "V_f_ABC_0" or r["_field"] == "V_f_ABC_1" or r["_field"] == "V_f_ABC_2" or r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2" or r["_field"] == "F_ABC" or r["_field"] == "V_L_SRT_0" or r["_field"] == "V_L_SRT_1" or r["_field"] == "V_L_SRT_2" or r["_field"] == "V_f_SRT_0" or r["_field"] == "V_f_SRT_1" or r["_field"] == "V_f_SRT_2" or r["_field"] == "W_0" or r["_field"] == "W_1" or r["_field"] == "W_2" or r["_field"] == "FP_f_0" or r["_field"] == "FP_f_1" or r["_field"] == "FP_f_2")
 			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 			|> last()`
 
-			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
-		}
-		if (!dataInflux) throw new Error('Sin datos en Influx')
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = []
-			}
-			dataReturn[element._field].push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
-		}
-		return dataReturn
-	} catch (error) {
-		throw error
+		dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 	}
+	if (!dataInflux) throw new Error('Sin datos en Influx')
+	let dataReturn = {}
+	for (const element of dataInflux) {
+		if (!dataReturn[element._field]) {
+			dataReturn[element._field] = []
+		}
+		dataReturn[element._field].push({
+			field: element._field,
+			value: element._value,
+			time: element._time,
+		})
+	}
+	return dataReturn
 }
 
 /**
@@ -356,29 +318,25 @@ const getMetrologiaIntantanea = async (data, influxName) => {
  */
 
 const acReclosers = async (filter, influxName) => {
-	try {
-		const query = `|> range(start: -1m, stop: now())
+	const query = `|> range(start: -1m, stop: now())
 		|> filter(fn: (r) => r["topic"] == ${filter})
         |> filter(fn: (r) => r["_field"] == "ac" )
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query, influxName)
+	let dataInflux = await ConsultaInflux(query, influxName)
 
-		if (!dataInflux || !dataInflux.length) {
-			const fallbackQuery = `|> range(start: -1d, stop: now())
+	if (!dataInflux || !dataInflux.length) {
+		const fallbackQuery = `|> range(start: -1d, stop: now())
 			|> filter(fn: (r) => r["topic"] == ${filter})
 			|> filter(fn: (r) => r["_field"] == "ac" )
 			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 			|> last()`
 
-			dataInflux = await ConsultaInflux(fallbackQuery, influxName)
-		}
-		if (!dataInflux || !dataInflux.length) return null
-		return dataInflux
-	} catch (error) {
-		throw error
+		dataInflux = await ConsultaInflux(fallbackQuery, influxName)
 	}
+	if (!dataInflux || !dataInflux.length) return null
+	return dataInflux
 }
 
 /**
@@ -390,47 +348,43 @@ const acReclosers = async (filter, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getListEvents = async (data, influxName) => {
-	try {
-		const query = `
+	const query = `
 			|> range(start: 2022-11-01)
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events") 
             |> aggregateWindow(every: 250ms, fn: last, createEmpty: false)
             |> sort(columns: ["_time"], desc: true)
             |> limit(n: 200)
         `
-		const dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+	const dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
 
-		let organizedData = []
-		let groupedRecords = {}
+	let organizedData = []
+	let groupedRecords = {}
 
-		dataInflux.forEach((record) => {
-			const timeKey = record._time
-			if (!groupedRecords[timeKey]) {
-				groupedRecords[timeKey] = []
-			}
-			groupedRecords[timeKey].push({
-				value: record._value,
-				time: timeKey,
-				field: record._field,
-			})
+	dataInflux.forEach((record) => {
+		const timeKey = record._time
+		if (!groupedRecords[timeKey]) {
+			groupedRecords[timeKey] = []
+		}
+		groupedRecords[timeKey].push({
+			value: record._value,
+			time: timeKey,
+			field: record._field,
 		})
-		Object.keys(groupedRecords).forEach((timeKey) => {
-			const recordsGroup = groupedRecords[timeKey]
-			for (let i = 0; i < recordsGroup.length; i += 3) {
-				let records = {
-					variable: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '0')[0],
-					event: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '1')[0],
-					time: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '2')[0],
-				}
-				organizedData.push(records)
+	})
+	Object.keys(groupedRecords).forEach((timeKey) => {
+		const recordsGroup = groupedRecords[timeKey]
+		for (let i = 0; i < recordsGroup.length; i += 3) {
+			let records = {
+				variable: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '0')[0],
+				event: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '1')[0],
+				time: recordsGroup.slice(i, i + 3).filter((item) => item.field.slice(-1) == '2')[0],
 			}
-		})
+			organizedData.push(records)
+		}
+	})
 
-		return organizedData
-	} catch (error) {
-		throw new Error('No se pudieron obtener los datos de InfluxDB.')
-	}
+	return organizedData
 }
 
 /**
@@ -442,29 +396,25 @@ const getListEvents = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getTensionABC = async (data, influxName) => {
-	try {
-		const query = `
+	const query = `
 			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "V_L_ABC_0" or r["_field"] == "V_L_ABC_1" or r["_field"] == "V_L_ABC_2")
 			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = { name: element._field, values: [], time: [] }
-			}
-
-			dataReturn[element._field].values.push(element._value)
-			const timeConvert = await convertIsoToDate(element._time)
-			dataReturn[element._field].time.push(timeConvert)
+	const dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+	let dataReturn = {}
+	for (const element of dataInflux) {
+		if (!dataReturn[element._field]) {
+			dataReturn[element._field] = { name: element._field, values: [], time: [] }
 		}
-		return dataReturn
-	} catch (error) {
-		throw new Error('No se pudieron obtener los datos de InfluxDB.')
+
+		dataReturn[element._field].values.push(element._value)
+		const timeConvert = await convertIsoToDate(element._time)
+		dataReturn[element._field].time.push(timeConvert)
 	}
+	return dataReturn
 }
 
 /**
@@ -476,29 +426,25 @@ const getTensionABC = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getCorriente = async (data, influxName) => {
-	try {
-		const query = `
+	const query = `
 			|> range(start: ${data.dateStart}, stop: ${data.dateFinished})
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain") 
             |> filter(fn: (r) => r["_field"] == "I_f_0" or r["_field"] == "I_f_1" or r["_field"] == "I_f_2")
 			|> aggregateWindow(every: 1m, fn: last, createEmpty: false)
         `
-		const dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = { name: element._field, values: [], time: [] }
-			}
-
-			dataReturn[element._field].values.push(element._value)
-			const timeConvert = await convertIsoToDate(element._time)
-			dataReturn[element._field].time.push(timeConvert)
+	const dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+	let dataReturn = {}
+	for (const element of dataInflux) {
+		if (!dataReturn[element._field]) {
+			dataReturn[element._field] = { name: element._field, values: [], time: [] }
 		}
-		return dataReturn
-	} catch (error) {
-		throw new Error(error)
+
+		dataReturn[element._field].values.push(element._value)
+		const timeConvert = await convertIsoToDate(element._time)
+		dataReturn[element._field].time.push(timeConvert)
 	}
+	return dataReturn
 }
 
 /**
@@ -510,8 +456,7 @@ const getCorriente = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInterruption = async (data, influxName) => {
-	try {
-		const query = `
+	const query = `
 			|> range(start: -2h)
             |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_ain_2") 
 			|> filter(fn: (r) => r["_field"] == "Int_ABC_0" or r["_field"] == "Int_ABC_1" or r["_field"] == "Int_ABC_2" or r["_field"] == "Int_ABC_3" or r["_field"] == "Int_SRT_0" or r["_field"] == "Int_SRT_1" or r["_field"] == "Int_SRT_2" or r["_field"] == "Int_SRT_3")
@@ -519,20 +464,17 @@ const getInterruption = async (data, influxName) => {
 			|> sort(columns: ["_time"], desc: false)
 			|>limit(n: 1)
         `
-		const dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
-		let dataReturn = {}
-		for (const element of dataInflux) {
-			if (!dataReturn[element._field]) {
-				dataReturn[element._field] = ''
-			}
-
-			dataReturn[element._field] = element._value
+	const dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) throw new Error('Sin datos en Influx')
+	let dataReturn = {}
+	for (const element of dataInflux) {
+		if (!dataReturn[element._field]) {
+			dataReturn[element._field] = ''
 		}
-		return dataReturn
-	} catch (error) {
-		throw new Error(error)
+
+		dataReturn[element._field] = element._value
 	}
+	return dataReturn
 }
 
 /**
@@ -545,19 +487,15 @@ const getInterruption = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getManauver = async (db, serial) => {
-	try {
-		let dataReturn = await db.RecloserSendMqtt.findAll({
-			include: [
-				{
-					association: 'user_create',
-				},
-			],
-			where: { status: 1, serial: serial },
-		})
-		return dataReturn
-	} catch (error) {
-		throw new Error(error)
-	}
+	let dataReturn = await db.RecloserSendMqtt.findAll({
+		include: [
+			{
+				association: 'user_create',
+			},
+		],
+		where: { status: 1, serial: serial },
+	})
+	return dataReturn
 }
 
 /**
@@ -572,57 +510,53 @@ const getManauver = async (db, serial) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const controlChange = async (data, influxName) => {
-	try {
-		const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-		const baseQuery = `|> range(start: -3m, stop: now())
+	const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+	const baseQuery = `|> range(start: -3m, stop: now())
                         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
                         |> filter(fn: (r) => r["_field"] == "${data.field}")
                         |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
-		let status = false
-		for (let attempt = 0; attempt < 20; attempt++) {
-			const dataInflux = await ConsultaInflux(baseQuery, influxName)
+	let status = false
+	for (let attempt = 0; attempt < 20; attempt++) {
+		const dataInflux = await ConsultaInflux(baseQuery, influxName)
 
-			if (!dataInflux || dataInflux.length === 0) {
-				throw new Error('No se encontró valor en la base de datos.')
-			}
+		if (!dataInflux || dataInflux.length === 0) {
+			throw new Error('No se encontró valor en la base de datos.')
+		}
 
-			for (const element of dataInflux) {
-				if (element._value == data.action) {
-					status = true
-					break
-				}
+		for (const element of dataInflux) {
+			if (element._value == data.action) {
+				status = true
+				break
 			}
-			if (attempt === 20) {
-				if (data.field === 'd/c') {
-					const queryDC = `|> range(start: -1m, stop: now())
+		}
+		if (attempt === 20) {
+			if (data.field === 'd/c') {
+				const queryDC = `|> range(start: -1m, stop: now())
                         |> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_bin")
                         |> filter(fn: (r) => r["_field"] == "c/d_ack")
                         |> aggregateWindow(every: 1s, fn: last, createEmpty: false)`
 
-					const newDataInflux2 = await ConsultaInflux(queryDC, influxName)
+				const newDataInflux2 = await ConsultaInflux(queryDC, influxName)
 
-					if (!newDataInflux2 || newDataInflux2.length === 0) {
-						throw new Error('No se encontró valor en la base de datos.')
-					}
-
-					for (const element of newDataInflux2) {
-						if (element._value == data.action) {
-							throw new Error('El reconectador no ejecutó el comando.')
-						}
-					}
-				} else {
-					throw new Error('El reconectador no ejecutó el comando.')
+				if (!newDataInflux2 || newDataInflux2.length === 0) {
+					throw new Error('No se encontró valor en la base de datos.')
 				}
-			}
 
-			// Esperar 1 segundo antes del próximo intento
-			await sleep(1000)
+				for (const element of newDataInflux2) {
+					if (element._value == data.action) {
+						throw new Error('El reconectador no ejecutó el comando.')
+					}
+				}
+			} else {
+				throw new Error('El reconectador no ejecutó el comando.')
+			}
 		}
 
-		return status
-	} catch (error) {
-		throw new Error(`Error: ${error.message}`)
+		// Esperar 1 segundo antes del próximo intento
+		await sleep(1000)
 	}
+
+	return status
 }
 
 /**
@@ -633,12 +567,8 @@ const controlChange = async (data, influxName) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
 const getInfoMap = async (db) => {
-	try {
-		const dataMap = await db.MapLocation.findAll({ where: { status: 1 } })
-		return dataMap
-	} catch (error) {
-		throw error
-	}
+	const dataMap = await db.MapLocation.findAll({ where: { status: 1 } })
+	return dataMap
 }
 
 /**
@@ -656,39 +586,38 @@ const getInfoMap = async (db) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
 const consultEventRecloserInfluxOld = async (data, influxName) => {
-	try {
-		const query = ` |> range(start: 2022-11-01)
+	const query = ` |> range(start: 2022-11-01)
 		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
 		 	|> sort(columns: ["_time"], desc: true)
 		 	|> limit (n: 200)`
 
-		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) return []
-		// throw new Error('No se encontraron datos en InfluxDB para el reconectador
-		const packsEvents = {}
-		for (const element of dataInflux) {
-			const timeGroup = (packsEvents[element._time] ||= {})
-			timeGroup.time = element._time
-			switch (element._field) {
-				case 'events_0':
-					timeGroup.id = element._value
-					break
-				case 'events_1':
-					timeGroup.unixtime = element._value
-					break
-				case 'info':
-					timeGroup.info = element._value
-					break
-				default:
-					timeGroup.status = 0
-					break
-			}
+	let dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) return []
+	// throw new Error('No se encontraron datos en InfluxDB para el reconectador
+	const packsEvents = {}
+	for (const element of dataInflux) {
+		if (!packsEvents[element._time]) {
+			packsEvents[element._time] = {}
 		}
-
-		return packsEvents
-	} catch (error) {
-		throw error
+		const timeGroup = packsEvents[element._time]
+		timeGroup.time = element._time
+		switch (element._field) {
+			case 'events_0':
+				timeGroup.id = element._value
+				break
+			case 'events_1':
+				timeGroup.unixtime = element._value
+				break
+			case 'info':
+				timeGroup.info = element._value
+				break
+			default:
+				timeGroup.status = 0
+				break
+		}
 	}
+
+	return packsEvents
 }
 /**
  * Verifica el estado de eventos específicos de un reconectador consultado en InfluxDB.
@@ -710,49 +639,45 @@ const consultEventRecloserInfluxOld = async (data, influxName) => {
  * @author
  */
 const getEventCheckRecloserOld = async (data, influxName) => {
-	try {
-		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
-		const packsReturn = []
-		for (const reg of Object.values(packsEvents)) {
-			const eventData = data.event.find((even) => even.id == reg?.id)
-			if (eventData) {
-				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0 // a los noja hay que sumarle 3 horas
-				const dataPack =
-					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
-						: new Date(new Date(reg.time).getTime() + nojaSuma)
-				if (!dataPack) continue
-				const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
-				//const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
-				const dateInflux = new Date(reg?.time).setHours(new Date(reg?.time).getHours())
-				if (reg?.id === 257 && reg?.info) {
-					//extrar la hora que me trae en unix y convertirla
-					const unixValue = Number(reg.info.replace(' ms', ''))
-					const dateConverted = new Date(unixValue)
-					reg.info = await convertIsoToDate(dateConverted.toISOString())
-				}
-				const statusAlarm = newdate >= dateInflux ? 0 : 1
-				packsReturn.push({
-					event: `${eventData.name}`,
-					priority: eventData.priority,
-					description: eventData.description,
-					name: data.name,
-					nro_recloser: data.number,
-					typeDevice: data.typeDevice,
-					id_device: data.id_device,
-					id: reg?.id,
-					dateAlert: dataPack,
-					dateEvent: data.dateCheck,
-					statusAlert: statusAlarm,
-					infoAdd: reg?.info,
-				})
+	let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
+	const packsReturn = []
+	for (const reg of Object.values(packsEvents)) {
+		const eventData = data.event.find((even) => even.id == reg?.id)
+		if (eventData) {
+			const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0 // a los noja hay que sumarle 3 horas
+			const dataPack =
+				reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
+					? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
+					: new Date(new Date(reg.time).getTime() + nojaSuma)
+			if (!dataPack) continue
+			const newdate = new Date(data.dateCheck).setHours(new Date(data.dateCheck).getHours())
+			//const dateEvent = new Date(dataPack).setHours(new Date(dataPack).getHours())
+			const dateInflux = new Date(reg?.time).setHours(new Date(reg?.time).getHours())
+			if (reg?.id === 257 && reg?.info) {
+				//extrar la hora que me trae en unix y convertirla
+				const unixValue = Number(reg.info.replace(' ms', ''))
+				const dateConverted = new Date(unixValue)
+				reg.info = await convertIsoToDate(dateConverted.toISOString())
 			}
+			const statusAlarm = newdate >= dateInflux ? 0 : 1
+			packsReturn.push({
+				event: `${eventData.name}`,
+				priority: eventData.priority,
+				description: eventData.description,
+				name: data.name,
+				nro_recloser: data.number,
+				typeDevice: data.typeDevice,
+				id_device: data.id_device,
+				id: reg?.id,
+				dateAlert: dataPack,
+				dateEvent: data.dateCheck,
+				statusAlert: statusAlarm,
+				infoAdd: reg?.info,
+			})
 		}
-
-		return packsReturn
-	} catch (error) {
-		throw error
 	}
+
+	return packsReturn
 }
 /**
  * Consulta eventos históricos de un reconectador en InfluxDB, desde el 2022-11-01 hasta el presente.
@@ -770,42 +695,38 @@ const getEventCheckRecloserOld = async (data, influxName) => {
  */
 
 const getEventRecloserOld = async (data, influxName) => {
-	try {
-		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
-		const packsReturn = []
-		for (const reg of Object.values(packsEvents)) {
-			const matchingEvent = data.event.find((even) => even.id_influx == reg?.id)
-			if (matchingEvent) {
-				const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0
-				const dataPack =
-					reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
-						? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
-						: new Date(new Date(reg.time).getTime() + nojaSuma)
-				if (!dataPack) continue
-				if (reg?.id === 257 && reg?.info) {
-					//extrar la hora que me trae en unix y convertirla
-					const unixValue = Number(reg.info.replace(' ms', ''))
-					const dateConverted = new Date(unixValue)
-					reg.info = await convertIsoToDate(dateConverted.toISOString())
-				}
-				packsReturn.push({
-					event: `${matchingEvent.name}`,
-					eventId: matchingEvent.id,
-					id: reg?.id,
-					dateAlert: dataPack,
-					priority: matchingEvent.priority,
-					type_var: matchingEvent.type_var,
-					infoAdd: reg?.info,
-					custom: matchingEvent.custom,
-					idFile: matchingEvent.id_file ?? '-',
-				})
+	let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
+	const packsReturn = []
+	for (const reg of Object.values(packsEvents)) {
+		const matchingEvent = data.event.find((even) => even.id_influx == reg?.id)
+		if (matchingEvent) {
+			const nojaSuma = data.brand === 'NOJA' ? 3 * 60 * 60 * 1000 : 0
+			const dataPack =
+				reg?.unixtime > 1600000000000 && reg?.unixtime < 1900000000000
+					? new Date(reg.unixtime + nojaSuma) // Sumar 3 horas
+					: new Date(new Date(reg.time).getTime() + nojaSuma)
+			if (!dataPack) continue
+			if (reg?.id === 257 && reg?.info) {
+				//extrar la hora que me trae en unix y convertirla
+				const unixValue = Number(reg.info.replace(' ms', ''))
+				const dateConverted = new Date(unixValue)
+				reg.info = await convertIsoToDate(dateConverted.toISOString())
 			}
+			packsReturn.push({
+				event: `${matchingEvent.name}`,
+				eventId: matchingEvent.id,
+				id: reg?.id,
+				dateAlert: dataPack,
+				priority: matchingEvent.priority,
+				type_var: matchingEvent.type_var,
+				infoAdd: reg?.info,
+				custom: matchingEvent.custom,
+				idFile: matchingEvent.id_file ?? '-',
+			})
 		}
-
-		return packsReturn
-	} catch (error) {
-		throw error
 	}
+
+	return packsReturn
 }
 
 /**
@@ -822,41 +743,33 @@ const getEventRecloserOld = async (data, influxName) => {
  */
 
 const getStatusAlarm = async (data, influxName) => {
-	try {
-		let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
-		let statusAlarm = false
-		for (const reg of Object.values(packsEvents)) {
-			if (data.event.some((even) => even.id == reg?.id)) {
-				statusAlarm = !data.event_date || new Date(reg?.time) > new Date(data.event_date)
-				if (statusAlarm) break
-			}
+	let packsEvents = await consultEventRecloserInfluxOld(data, influxName)
+	let statusAlarm = false
+	for (const reg of Object.values(packsEvents)) {
+		if (data.event.some((even) => even.id == reg?.id)) {
+			statusAlarm = !data.event_date || new Date(reg?.time) > new Date(data.event_date)
 			if (statusAlarm) break
 		}
-		return statusAlarm
-	} catch (error) {
-		throw error
+		if (statusAlarm) break
 	}
+	return statusAlarm
 }
 
 const getReclosersxVersion = async (db, id_version) => {
-	try {
-		const recloser = await db.Recloser.findAll({
-			where: { id_version: id_version },
-			include: [
-				{
-					association: 'version',
-					include: [
-						{
-							association: 'brand',
-						},
-					],
-				},
-			],
-		})
-		return recloser
-	} catch (error) {
-		throw error
-	}
+	const recloser = await db.Recloser.findAll({
+		where: { id_version: id_version },
+		include: [
+			{
+				association: 'version',
+				include: [
+					{
+						association: 'brand',
+					},
+				],
+			},
+		],
+	})
+	return recloser
 }
 module.exports = {
 	getInterruption,

@@ -4,13 +4,9 @@ const { getTenantDb } = require('../models')
 const secret = process.env.SECRET
 
 const getEnabledUser = async (email, schemaName) => {
-	try {
-		const db = await getTenantDb(schemaName)
-		const user = await db.User.findOne({ where: { email: email } })
-		return user
-	} catch (error) {
-		throw error
-	}
+	const db = await getTenantDb(schemaName)
+	const user = await db.User.findOne({ where: { email: email } })
+	return user
 }
 // Funcion para firmar el token para usuario interno
 const signTokenCooptech = async (user, tokenApp, schemaName, influx_name) => {
@@ -58,22 +54,18 @@ const signTokenCooptechExternal = async (user, tokenApp, schemaName, influx_name
 	return jwt.sign(configSing, secret)
 }
 const getUser = async (db, id) => {
-	try {
-		const data = await db.User.findOne({ where: { id, status: 1 } })
-		if (data) {
-			// Clonamos dataValues para no modificar el objeto original
-			const result = data.get()
-			// Eliminamos los campos que no queremos en el resultado
-			//delete result.password
-			delete result.token_temp
-			delete result.createdAt
-			delete result.updatedAt
-			// Agrega aquí cualquier otro campo que desees eliminar
-			return result
-		}
-		return null // o manejar como prefieras si el usuario no se encuentra
-	} catch (error) {
-		throw error
+	const data = await db.User.findOne({ where: { id, status: 1 } })
+	if (data) {
+		// Clonamos dataValues para no modificar el objeto original
+		const result = data.get()
+		// Eliminamos los campos que no queremos en el resultado
+		//delete result.password
+		delete result.token_temp
+		delete result.createdAt
+		delete result.updatedAt
+		// Agrega aquí cualquier otro campo que desees eliminar
+		return result
 	}
+	return null // o manejar como prefieras si el usuario no se encuentra
 }
 module.exports = { getEnabledUser, signTokenCooptech, signTokenCooptechExternal, getUser }

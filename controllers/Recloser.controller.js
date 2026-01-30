@@ -1,9 +1,7 @@
-const { getDateCheck } = require('../services/ChecksAlarmsService')
 const { getEquipment } = require('../services/ElementService')
-const { getEventsDevice, getEventsActive, getEventsInflux } = require('../services/EventService')
-const { saveRelation, searchRelationActive } = require('../services/NodeService')
+const { getEventsActive, getEventsInflux } = require('../services/EventService')
+const { saveRelation } = require('../services/NodeService')
 const {
-	getAllRecloser,
 	getRecloserId,
 	dataRecloseInflux,
 	getMetrologiaIntantanea,
@@ -17,8 +15,6 @@ const {
 	getInfoMap,
 	getStatusRecloser,
 	controlChange,
-	getStatusAlarm,
-	acRecloser,
 	getManauver,
 	getReclosersxVersion,
 	acReclosers,

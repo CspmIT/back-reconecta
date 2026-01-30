@@ -12,7 +12,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('Events', 'type_var')
 		await queryInterface.removeColumn('Events', 'description')
 	},

@@ -1,30 +1,26 @@
 const getListGraphics = async (db) => {
-	try {
-		const query = {
-			include: [
-				{
-					model: db.GraphicsVariables,
-					as: 'variables',
-					include: [
-						{
-							model: db.Equipment,
-							as: 'equipments',
-							include: [
-								{
-									model: db.EquipmentModel,
-									as: 'equipmentmodels',
-								},
-							],
-						},
-					],
-				},
-			],
-			order: [[{ model: db.GraphicsVariables, as: 'variables' }, 'id', 'ASC']],
-		}
-		return await db.Graphic.findAll(query)
-	} catch (e) {
-		throw e
+	const query = {
+		include: [
+			{
+				model: db.GraphicsVariables,
+				as: 'variables',
+				include: [
+					{
+						model: db.Equipment,
+						as: 'equipments',
+						include: [
+							{
+								model: db.EquipmentModel,
+								as: 'equipmentmodels',
+							},
+						],
+					},
+				],
+			},
+		],
+		order: [[{ model: db.GraphicsVariables, as: 'variables' }, 'id', 'ASC']],
 	}
+	return await db.Graphic.findAll(query)
 }
 
 const saveAllSunBurst = async (db, dataGraphic, data) => {
@@ -65,6 +61,7 @@ const saveAllSunBurst = async (db, dataGraphic, data) => {
 		await t.commit()
 		return { message: 'Guardado con éxito' }
 	} catch (e) {
+		await t.rollback()
 		throw e
 	}
 }

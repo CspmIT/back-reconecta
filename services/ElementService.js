@@ -1,83 +1,72 @@
+const { Op } = require('sequelize')
 const getElements = async (db, filter = null) => {
-	try {
-		const query = {
-			include: [
-				{
-					model: db.MapLocation,
-					as: 'maps',
-				},
-				{
-					model: db.Equipment,
-					as: 'equipments',
-					include: [
-						{
-							model: db.EquipmentModel,
-							as: 'equipmentmodels',
-							required: false,
-						},
-					],
-				},
-				{
-					model: db.SubstationRuralClient,
-					as: 'clients',
-				},
-			],
-		}
-		if (filter?.id) {
-			query.where = { id: filter.id }
-		}
-		if (filter?.type) {
-			query.where = { type: filter.type }
-		}
-		return await db.Element.findAll(query)
-	} catch (e) {
-		throw e
+	const query = {
+		include: [
+			{
+				model: db.MapLocation,
+				as: 'maps',
+			},
+			{
+				model: db.Equipment,
+				as: 'equipments',
+				include: [
+					{
+						model: db.EquipmentModel,
+						as: 'equipmentmodels',
+						required: false,
+					},
+				],
+			},
+			{
+				model: db.SubstationRuralClient,
+				as: 'clients',
+			},
+		],
 	}
+	if (filter?.id) {
+		query.where = { id: filter.id }
+	}
+	if (filter?.type) {
+		query.where = { type: filter.type }
+	}
+	return await db.Element.findAll(query)
 }
 
 const getEquipment = async (db, filter = null) => {
-	try {
-		const query = {
-			include: [
-				{
-					model: db.Element,
-					as: 'elements',
-				},
-				{
-					model: db.EquipmentModel,
-					as: 'equipmentmodels',
-					where: {},
-				},
-			],
-		}
-		if (filter?.id) {
-			query.where = { id: filter.id }
-		}
-		if (filter?.element) {
-			query.where = { id_element: filter.element }
-		}
-		if (filter?.model) {
-			query.where = { id_model: filter.model }
-		}
-		if (filter?.serial) {
-			query.where = { serial: filter.serial }
-		}
-		if (filter?.type) {
-			const equipmentModelsInclude = query.include.find((model) => model.as === 'equipmentmodels')
-			equipmentModelsInclude.where.type = filter.type
-		}
-		return await db.Equipment.findAll(query)
-	} catch (e) {
-		throw e
+	const query = {
+		include: [
+			{
+				model: db.Element,
+				as: 'elements',
+			},
+			{
+				model: db.EquipmentModel,
+				as: 'equipmentmodels',
+				where: {},
+			},
+		],
 	}
+	if (filter?.id) {
+		query.where = { id: filter.id }
+	}
+	if (filter?.element) {
+		query.where = { id_element: filter.element }
+	}
+	if (filter?.model) {
+		query.where = { id_model: filter.model }
+	}
+	if (filter?.serial) {
+		query.where = { serial: filter.serial }
+	}
+	if (filter?.type) {
+		const equipmentModelsInclude = query.include.find((model) => model.as === 'equipmentmodels')
+		equipmentModelsInclude.where.type = filter.type
+	}
+	return await db.Equipment.findAll(query)
 }
 
 const getModels = async (db) => {
-	try {
-		return await db.EquipmentModel.findAll()
-	} catch (e) {
-		throw e
-	}
+	return await db.EquipmentModel.findAll()
 }
 
 const saveElement = async (db, element, equipment = [], client = []) => {
@@ -114,19 +103,14 @@ const saveElement = async (db, element, equipment = [], client = []) => {
 }
 
 const saveEquipment = async (db, data) => {
-	try {
-		if (data.id) {
-			const equipment = await db.Equipment.findByPk(data.id)
-			if (equipment) {
-				await equipment.update(data)
-				return await equipment
-			}
+	if (data.id) {
+		const equipment = await db.Equipment.findByPk(data.id)
+		if (equipment) {
+			await equipment.update(data)
+			return await equipment
 		}
-		return await db.Equipment.create(data)
-	} catch (e) {
-		console.log(e)
-		throw e
 	}
+	return await db.Equipment.create(data)
 }
 
 const updateElement = async (db, element, equipment = [], client = []) => {
@@ -193,36 +177,28 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 }
 
 const updateSubstationClient = async (db, data) => {
-	try {
-		return db.SubstationRuralClient.update(data, { where: { id: data.id } })
-	} catch (e) {
-		throw e
-	}
+	return db.SubstationRuralClient.update(data, { where: { id: data.id } })
 }
 
 const historySubstationPat = async (db, data) => {
-	try {
-		const query = {
-			where: {
-				id_element: data.id,
-			},
-		}
-		if (data.status) {
-			query.where.status = data.status
-		}
-		if (data.dateStart || data.dateCurrent) {
-			query.where.createdAt = {}
-			if (data.dateStart) {
-				query.where.createdAt[Op.gte] = new Date(data.dateStart)
-			}
-			if (data.dateCurrent) {
-				query.where.createdAt[Op.lte] = new Date(data.dateCurrent)
-			}
-		}
-		return db.SubstationRuralPat.findAll(query)
-	} catch (e) {
-		throw e
+	const query = {
+		where: {
+			id_element: data.id,
+		},
 	}
+	if (data.status) {
+		query.where.status = data.status
+	}
+	if (data.dateStart || data.dateCurrent) {
+		query.where.createdAt = {}
+		if (data.dateStart) {
+			query.where.createdAt[Op.gte] = new Date(data.dateStart)
+		}
+		if (data.dateCurrent) {
+			query.where.createdAt[Op.lte] = new Date(data.dateCurrent)
+		}
+	}
+	return db.SubstationRuralPat.findAll(query)
 }
 const saveSubstationPat = async (db, data) => {
 	const transaction = await db.sequelize.transaction()
@@ -239,11 +215,7 @@ const saveSubstationPat = async (db, data) => {
 }
 
 const saveImage = async (db, data) => {
-	try {
-		await db.Element.update(data, { where: { id: data.id } })
-	} catch (e) {
-		throw e
-	}
+	await db.Element.update(data, { where: { id: data.id } })
 }
 
 module.exports = {

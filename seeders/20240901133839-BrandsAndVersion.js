@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-	async up(queryInterface, Sequelize) {
+	async up(queryInterface) {
 		const date = new Date()
 		await queryInterface.bulkInsert(
 			'Brands',
@@ -37,7 +37,7 @@ module.exports = {
 		)
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.bulkDelete('Brands', null, {})
 		await queryInterface.bulkDelete('Versions', null, {})
 	},

@@ -105,7 +105,7 @@ const getHistory = async (req, res) => {
 		})
 		dataAnalyzer.forEach((item, index) => {
 			let ptotal = 0
-			let qtotal = 0
+			//let qtotal = 0
 			let atotal = 0
 			for (let j = 0; j <= 2; j++) {
 				if (!item[`p${j}`] || !item[`q${j}`]) {
@@ -121,7 +121,7 @@ const getHistory = async (req, res) => {
 				dataAnalyzer[index][`p${j}`] = item[`p${j}`] / 1000
 				dataAnalyzer[index][`q${j}`] = item[`q${j}`] / 1000
 				ptotal += item[`p${j}`]
-				qtotal += item[`q${j}`]
+				//qtotal += item[`q${j}`]
 				atotal += dataAnalyzer[index][`aparente_${j}`]
 				if (j === 2) {
 					dataAnalyzer[index].cos_total = (ptotal / atotal).toFixed(2)
