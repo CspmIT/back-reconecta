@@ -4,6 +4,23 @@ const { checkIsAlarm } = require('../services/EventService')
 const { saveAlarm, discordCredentials } = require('../services/AlarmService')
 const { listClients } = require('../utils/js/clients')
 const { getTenantDb } = require('../models')
+const https = require('https')
+const PQueue = require('p-queue').default
+const discordQueue = new PQueue({
+	concurrency: 1,
+	interval: 1000,
+	intervalCap: 3,
+})
+
+const httpsAgent = new https.Agent({
+	keepAlive: true,
+	maxSockets: 20,
+})
+
+const axiosInstance = axios.create({
+	httpsAgent,
+	timeout: 5000,
+})
 
 const influxAlarm = async (req, res) => {
 	try {
@@ -31,7 +48,7 @@ const influxAlarm = async (req, res) => {
 
 		const title = `Alerta reconectador ${recloser[0].observation}`
 		const content = alarmDef.name
-		await discord(dbTenant, title, content)
+		await discordQueue.add(() => discord(dbTenant, title, content))
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
@@ -43,13 +60,11 @@ const influxAlarmDeadman = async (req, res) => {
 	try {
 		const { topic } = req.body
 		const { scheme } = req.params
-		console.log(`Entro aqui \n \n \n ${topic} ${scheme}`)
 		if (!topic) return res.status(400).json({ error: 'Faltan campos obligatorios' })
 		const { dbTenant } = await dataSchema(scheme, topic)
-		const title = `Alerta prueba de deadman`
+		const title = `Haciendo moco`
 		const webhook = '1464248365465211004/X8QLDMKj0s-BcWyJNtdqYDfQu0btZvNDZRJoaA248CmZZCNHGKSmRmzW2bO2B_PxS3kl'
-		console.log('paso')
-		await discord(dbTenant, title, topic, webhook)
+		await discordQueue.add(() => discord(dbTenant, title, topic, webhook))
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
@@ -57,12 +72,13 @@ const influxAlarmDeadman = async (req, res) => {
 	}
 }
 
-async function discord(db, title, content, webhook = false) {
+async function discord(db, title, content, webhook = false, retries = 3) {
 	try {
 		const credentials = await discordCredentials(db)
 		const urlWebhook = webhook || credentials.webhook
 		const webhookURL = `https://discord.com/api/webhooks/${urlWebhook}`
-		await axios.post(webhookURL, {
+
+		await axiosInstance.post(webhookURL, {
 			username: credentials.username,
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
 			content: title,
@@ -75,7 +91,14 @@ async function discord(db, title, content, webhook = false) {
 			],
 		})
 	} catch (error) {
-		console.error('Error al enviar mensaje:', error)
+		const retryable = ['EAI_AGAIN', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT'].includes(error.code)
+
+		if (retryable && retries > 0) {
+			await new Promise((r) => setTimeout(r, 1000))
+			return discord(db, title, content, webhook, retries - 1)
+		}
+
+		throw error
 	}
 }
 

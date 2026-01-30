@@ -10,7 +10,7 @@ const {
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
-const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
+const { getEventRecloserOld } = require('../services/RecloserServices')
 const { getEquipment } = require('../services/ElementService')
 const { uploadFile } = require('../services/SshServices')
 const { saveSendActionMQTT } = require('../services/SendMqttServices')
@@ -169,6 +169,7 @@ const updateConfigIndex = async (req, res) => {
 		await uploadFile(data, name)
 
 		// Envio la configuración a mqtt para que impacte en los recos
+		const reclosers = await getEquipment(req.db, { type: 2 })
 		const promises = reclosers.map(async (item) => {
 			const path = config_ssh['mqtt_morteros'].SSH_PATH + name
 			const data = {
@@ -178,7 +179,7 @@ const updateConfigIndex = async (req, res) => {
 				serial: item.serial,
 				brand: item.equipmentmodels.name,
 			}
-			await conectionMqtt(data)
+			await conectionMqtt(data, req.db)
 		})
 		await Promise.all(promises)
 		return res.status(200).json(response)
@@ -197,8 +198,8 @@ const updateConfigNotify = async (req, res) => {
 	}
 }
 
-const conectionMqtt = async (data) => {
-	const configMqtt = await getConectionMqtt()
+const conectionMqtt = async (data, db) => {
+	const configMqtt = await getConectionMqtt(db)
 
 	return new Promise((resolve, reject) => {
 		const client = mqtt.connect(configMqtt)
@@ -215,7 +216,7 @@ const conectionMqtt = async (data) => {
 				}
 
 				try {
-					await saveSendActionMQTT(req.db, data)
+					await saveSendActionMQTT(db, data)
 					resolve(true)
 				} catch (saveError) {
 					reject(saveError)

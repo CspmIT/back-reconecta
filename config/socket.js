@@ -1,13 +1,8 @@
 const socketIo = require('socket.io')
-const { db } = require('../models')
-const jwt = require('jsonwebtoken')
-const { changeSchema } = require('../models')
-const { getEventsInflux, getEventsActive } = require('../services/EventService')
-const secret = process.env.SECRET
 let io
 
 module.exports = {
-	init: (server, req, res) => {
+	init: (server) => {
 		io = socketIo(server, {
 			path: '/api/socket.io',
 			cors: {

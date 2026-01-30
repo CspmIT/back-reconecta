@@ -85,7 +85,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('Nodes', 'id_user_create')
 		await queryInterface.removeColumn('Node_Histories', 'id_user_create')
 		await queryInterface.removeColumn('RecloserPasswords', 'id_user_create')

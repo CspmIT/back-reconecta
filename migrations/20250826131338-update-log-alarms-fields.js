@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-	async up(queryInterface, Sequelize) {
+	async up(queryInterface) {
 		await queryInterface.addConstraint('Logs_Alarms', {
 			fields: ['id_device'],
 			type: 'foreign key',
@@ -14,6 +14,4 @@ module.exports = {
 			onDelete: 'CASCADE',
 		})
 	},
-
-	async down(queryInterface, Sequelize) {},
 }

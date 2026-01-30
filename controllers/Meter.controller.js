@@ -1,11 +1,9 @@
-const { db } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const {
 	validateEnable,
 	getList,
 	getStatus,
 	getEnabled,
-	getxID,
 	getVIinflux,
 	getMetrologyPower,
 	getMetrologyEnergy,
