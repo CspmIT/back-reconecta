@@ -10,23 +10,19 @@
  */
 const migrationTables = async (db, Tables) => {
 	return db.sequelize.transaction(async (t) => {
-		try {
-			const savedTable = []
-			for (const item of Tables) {
-				const [Table, created] = await db.Table.findOrCreate({
-					where: { name: item.name },
-					defaults: { ...item },
-					transaction: t,
-				})
-				if (!created) {
-					await Table.update(item, { transaction: t })
-				}
-				savedTable.push(Table)
+		const savedTable = []
+		for (const item of Tables) {
+			const [Table, created] = await db.Table.findOrCreate({
+				where: { name: item.name },
+				defaults: { ...item },
+				transaction: t,
+			})
+			if (!created) {
+				await Table.update(item, { transaction: t })
 			}
-			return savedTable
-		} catch (error) {
-			throw error
+			savedTable.push(Table)
 		}
+		return savedTable
 	})
 }
 
@@ -42,23 +38,19 @@ const migrationTables = async (db, Tables) => {
  */
 const migrationColumns = async (db, Columns) => {
 	return db.sequelize.transaction(async (t) => {
-		try {
-			const savedTable = []
-			for (const item of Columns) {
-				const [Column, created] = await db.ColumnsTable.findOrCreate({
-					where: { name: item.name, id_table: item.id_table },
-					defaults: { ...item },
-					transaction: t,
-				})
-				if (!created) {
-					await Column.update(item, { transaction: t })
-				}
-				savedTable.push(Column)
+		const savedTable = []
+		for (const item of Columns) {
+			const [Column, created] = await db.ColumnsTable.findOrCreate({
+				where: { name: item.name, id_table: item.id_table },
+				defaults: { ...item },
+				transaction: t,
+			})
+			if (!created) {
+				await Column.update(item, { transaction: t })
 			}
-			return savedTable
-		} catch (error) {
-			throw error
+			savedTable.push(Column)
 		}
+		return savedTable
 	})
 }
 

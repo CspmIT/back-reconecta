@@ -7,12 +7,8 @@
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getTask = async (db, id) => {
-	try {
-		const Task_Influx_Recloser = await db.Task_Influx_Recloser.findOne({ where: { id_recloser: id } })
-		return Task_Influx_Recloser
-	} catch (error) {
-		throw error
-	}
+	const Task_Influx_Recloser = await db.Task_Influx_Recloser.findOne({ where: { id_recloser: id } })
+	return Task_Influx_Recloser
 }
 
 module.exports = {

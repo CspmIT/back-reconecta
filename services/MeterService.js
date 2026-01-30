@@ -9,33 +9,29 @@ const { ConsultaInflux } = require('./InfluxServices')
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
 const getList = async (db) => {
-	try {
-		const MeterElectricity = await db.MeterElectricity.findAll({
-			where: {
-				status: 1,
-			},
-			include: [
-				{
-					association: 'version',
+	const MeterElectricity = await db.MeterElectricity.findAll({
+		where: {
+			status: 1,
+		},
+		include: [
+			{
+				association: 'version',
+				attributes: ['id', 'name'],
+				include: {
+					association: 'brand',
 					attributes: ['id', 'name'],
-					include: {
-						association: 'brand',
-						attributes: ['id', 'name'],
-					},
 				},
-				{
-					association: 'history',
-					required: false,
-					where: {
-						type_device: 2,
-					},
+			},
+			{
+				association: 'history',
+				required: false,
+				where: {
+					type_device: 2,
 				},
-			],
-		})
-		return MeterElectricity
-	} catch (error) {
-		throw error
-	}
+			},
+		],
+	})
+	return MeterElectricity
 }
 
 /**
@@ -47,38 +43,34 @@ const getList = async (db) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
 const getxID = async (db, id) => {
-	try {
-		const MeterElectricity = await db.MeterElectricity.findOne({
-			where: {
-				status: 1,
-				id: id,
-			},
-			attributes: { exclude: ['createdAt', 'updatedAt'] },
-			include: [
-				{
-					association: 'version',
+	const MeterElectricity = await db.MeterElectricity.findOne({
+		where: {
+			status: 1,
+			id: id,
+		},
+		attributes: { exclude: ['createdAt', 'updatedAt'] },
+		include: [
+			{
+				association: 'version',
+				attributes: ['id', 'name'],
+				include: {
+					association: 'brand',
 					attributes: ['id', 'name'],
-					include: {
-						association: 'brand',
-						attributes: ['id', 'name'],
-					},
 				},
-				{
-					association: 'history',
-					required: false,
+			},
+			{
+				association: 'history',
+				required: false,
+				attributes: { exclude: ['createdAt', 'updatedAt'] },
+				where: { type_device: 2 },
+				include: {
+					association: 'nodes',
 					attributes: { exclude: ['createdAt', 'updatedAt'] },
-					where: { type_device: 2 },
-					include: {
-						association: 'nodes',
-						attributes: { exclude: ['createdAt', 'updatedAt'] },
-					},
 				},
-			],
-		})
-		return MeterElectricity
-	} catch (error) {
-		throw error
-	}
+			},
+		],
+	})
+	return MeterElectricity
 }
 
 /**
@@ -91,33 +83,29 @@ const getxID = async (db, id) => {
  * @author [José Romani] <jose.romani@hotmail.com>
  */
 const getStatus = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -30m, stop: now())
+	const query = `|> range(start: -30m, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI")
         |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
 		|> last()`
 
-		let dataInflux = await ConsultaInflux(query, influxName)
-		if (!dataInflux || dataInflux.length === 0) return 2
-		const dataReturn = new Map()
+	let dataInflux = await ConsultaInflux(query, influxName)
+	if (!dataInflux || dataInflux.length === 0) return 2
+	const dataReturn = new Map()
 
-		dataInflux.forEach((element) => {
-			if (!dataReturn.has(element._field)) {
-				dataReturn.set(element._field, [])
-			}
-			dataReturn.get(element._field).push({
-				field: element._field,
-				value: element._value,
-				time: element._time,
-			})
+	dataInflux.forEach((element) => {
+		if (!dataReturn.has(element._field)) {
+			dataReturn.set(element._field, [])
+		}
+		dataReturn.get(element._field).push({
+			field: element._field,
+			value: element._value,
+			time: element._time,
 		})
+	})
 
-		const v_0Value = dataReturn.get('V_0')?.[0]?.value
+	const v_0Value = dataReturn.get('V_0')?.[0]?.value
 
-		return v_0Value === undefined || !v_0Value ? 2 : 1
-	} catch (error) {
-		throw error
-	}
+	return v_0Value === undefined || !v_0Value ? 2 : 1
 }
 
 /**
@@ -131,20 +119,16 @@ const getStatus = async (data, influxName) => {
  * @author [José Romani] <jose.romani@hotmail.com>
  */
 const validateEnable = async (db, serial, id_version, id) => {
-	try {
-		const MeterElectricity = await db.MeterElectricity.findOne({
-			where: {
-				serial: serial,
-				id_version: id_version,
-			},
-		})
-		if (!MeterElectricity) {
-			return false
-		}
-		return MeterElectricity.id !== id ? 'El número de serie no está disponible' : false
-	} catch (error) {
-		throw error
+	const MeterElectricity = await db.MeterElectricity.findOne({
+		where: {
+			serial: serial,
+			id_version: id_version,
+		},
+	})
+	if (!MeterElectricity) {
+		return false
 	}
+	return MeterElectricity.id !== id ? 'El número de serie no está disponible' : false
 }
 
 /**
@@ -157,19 +141,15 @@ const validateEnable = async (db, serial, id_version, id) => {
  * @author [José Romani] <jose.romani@hotmail.com>
  */
 const saveMeter = async (db, data, transaction) => {
-	try {
-		const [MeterElectricity, created] = await db.MeterElectricity.findOrCreate({
-			where: { [Op.or]: [{ id: data.id }, { serial: data.serial, id_version: data.id_version }] },
-			defaults: { ...data },
-			transaction,
-		})
-		if (!created) {
-			await MeterElectricity.update(data, { transaction })
-		}
-		return MeterElectricity
-	} catch (error) {
-		throw error
+	const [MeterElectricity, created] = await db.MeterElectricity.findOrCreate({
+		where: { [Op.or]: [{ id: data.id }, { serial: data.serial, id_version: data.id_version }] },
+		defaults: { ...data },
+		transaction,
+	})
+	if (!created) {
+		await MeterElectricity.update(data, { transaction })
 	}
+	return MeterElectricity
 }
 
 /**
@@ -179,16 +159,10 @@ const saveMeter = async (db, data, transaction) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author [José Romani] <jose.romani@hotmail.com>
  */
-const getEnabled = async (db, data, transaction) => {
-	try {
-		const meters = await getList(db)
-		const result = meters.filter(
-			(item) => item.history.every((rel) => rel.status === 0) || item.history.length === 0
-		)
-		return result
-	} catch (error) {
-		throw error
-	}
+const getEnabled = async (db) => {
+	const meters = await getList(db)
+	const result = meters.filter((item) => item.history.every((rel) => rel.status === 0) || item.history.length === 0)
+	return result
 }
 
 /**
@@ -201,32 +175,28 @@ const getEnabled = async (db, data, transaction) => {
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  */
 const getMetrologyBasic = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -1h, stop: now())
+	const query = `|> range(start: -1h, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Res")
 		|> last()`
-		const maxMensual = `|> range(start: -2mo, stop: now())
+	const maxMensual = `|> range(start: -2mo, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_6")
 		 |> filter(fn: (r) => r["_field"] == "RMS_Max_0" or r["_field"] == "RMS_Max_2" or r["_field"] == "RMS_Max_4" or r["_field"] == "RMS_Max_6" or r["_field"] == "RMS_Max_8" or r["_field"] == "RMS_Max_10")
 		|> max()`
-		const maxHistorico = `|> range(start: 2022-03-01, stop: now())
+	const maxHistorico = `|> range(start: 2022-03-01, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_6")
 		 |> filter(fn: (r) => r["_field"] == "RMS_Max_0" or r["_field"] == "RMS_Max_2" or r["_field"] == "RMS_Max_4" or r["_field"] == "RMS_Max_6" or r["_field"] == "RMS_Max_8" or r["_field"] == "RMS_Max_10")
 		|> max()`
-		const [result1, result2, result3] = await Promise.all([
-			ConsultaInflux(query, influxName),
-			ConsultaInflux(maxMensual, influxName),
-			ConsultaInflux(maxHistorico, influxName),
-		])
-		const dataReturn = {
-			VI: await processInfluxData(result1),
-			maxMonth: await processInfluxData(result2),
-			maxHistory: await processInfluxData(result3),
-		}
-		return dataReturn
-	} catch (error) {
-		throw error
+	const [result1, result2, result3] = await Promise.all([
+		ConsultaInflux(query, influxName),
+		ConsultaInflux(maxMensual, influxName),
+		ConsultaInflux(maxHistorico, influxName),
+	])
+	const dataReturn = {
+		VI: await processInfluxData(result1),
+		maxMonth: await processInfluxData(result2),
+		maxHistory: await processInfluxData(result3),
 	}
+	return dataReturn
 }
 
 /**
@@ -239,15 +209,11 @@ const getMetrologyBasic = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getMetrologyEnergy = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -30m, stop: now())
+	const query = `|> range(start: -30m, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/E_exp" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/E_imp" )
 		|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		return await processInfluxData(result)
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	return await processInfluxData(result)
 }
 
 /**
@@ -260,15 +226,11 @@ const getMetrologyEnergy = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getMetrologyPower = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -30m, stop: now())
+	const query = `|> range(start: -30m, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/P_exp" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/P_imp" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" )
 		|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		return await processInfluxData(result)
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	return await processInfluxData(result)
 }
 
 /**
@@ -281,16 +243,12 @@ const getMetrologyPower = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getVIinflux = async (data, influxName) => {
-	try {
-		const query = `|> range(start: -1h, stop: now())
+	const query = `|> range(start: -1h, stop: now())
 		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Res")
 		|> last()`
-		const queryResult = await ConsultaInflux(query, influxName)
-		const processedData = await processInfluxData(queryResult)
-		return { VI: processedData }
-	} catch (error) {
-		throw error
-	}
+	const queryResult = await ConsultaInflux(query, influxName)
+	const processedData = await processInfluxData(queryResult)
+	return { VI: processedData }
 }
 
 /**
@@ -355,29 +313,25 @@ const processInfluxDataArray = async (influxData) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getCurva = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-			limit: `|> sort(columns: ["_time"], desc: true)
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+		limit: `|> sort(columns: ["_time"], desc: true)
                     |> limit(n: 400)
                     |> sort(columns: ["_time"], desc: false)`,
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-			attrQuery.limit = ''
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		attrQuery.limit = ''
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/curva" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" )
 						|> filter(fn: (r) => r["_field"] == "V_0" or r["_field"] == "V_1" or r["_field"] == "V_2" or r["_field"] == "Ev" or r["_field"] == "Date" or r["_field"] == "CFi" or r["_field"] == "AIP_1" or r["_field"] == "AcP_0" or r["_field"] == "AcP_1" or r["_field"] == "AcP_2" or r["_field"] == "VT_0" or r["_field"] == "VT_1")
 						${attrQuery.limit}`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 /**
  * Consulta información de voltaje y corriente de un reconectador específico en InfluxDB.
@@ -394,32 +348,28 @@ const getCurva = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getVoltageCurrent = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-			limit: `|> sort(columns: ["_time"], desc: true)
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+		limit: `|> sort(columns: ["_time"], desc: true)
                     |> limit(n: 400)
                     |> sort(columns: ["_time"], desc: false)`,
-			every: '1m',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-			attrQuery.limit = ''
-			attrQuery.every = '15m'
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+		every: '1m',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		attrQuery.limit = ''
+		attrQuery.every = '15m'
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" )
 						|> filter(fn: (r) => r["_field"] == "I_0" or r["_field"] == "I_1" or r["_field"] == "I_2" or r["_field"] == "V_0" or r["_field"] == "V_1" or r["_field"] == "V_2" or r["_field"] == "Date" or r["_field"] == "VT_0" or r["_field"] == "VT_1" or r["_field"] == "CT_0" or r["_field"] == "CT_1")
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 /**
  * Consulta el coseno phi (CFi) de un reconectador específico en InfluxDB.
@@ -436,32 +386,28 @@ const getVoltageCurrent = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getCosenoFi = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-			limit: `|> sort(columns: ["_time"], desc: true)
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+		limit: `|> sort(columns: ["_time"], desc: true)
                     |> limit(n: 400)
                     |> sort(columns: ["_time"], desc: false)`,
-			every: '1m',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-			attrQuery.limit = ''
-			attrQuery.every = '15m'
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+		every: '1m',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+		attrQuery.limit = ''
+		attrQuery.every = '15m'
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" )
 						|> filter(fn: (r) => r["_field"] == "CFi_0" or r["_field"] == "CFi_1" or r["_field"] == "CFi_2" or r["_field"] == "Date")
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 /**
  * Consulta datos gráficos (como voltaje, corriente, y potencia) de un reconectador específico en InfluxDB.
@@ -478,34 +424,30 @@ const getCosenoFi = async (data, influxName) => {
  * @author [Jose Romani] <jose.romani@hotmail.com>
  */
 const getInfoGraf = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2d',
-			dateFinished: 'now()',
-			limit: `|> sort(columns: ["_time"], desc: true)
+	const attrQuery = {
+		dateStart: '-2d',
+		dateFinished: 'now()',
+		limit: `|> sort(columns: ["_time"], desc: true)
                     |> limit(n: 200)
                     |> sort(columns: ["_time"], desc: false)`,
-			every: '1m',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}`
-			attrQuery.dateFinished = `${data.dateFinished}`
-			attrQuery.limit = ''
-			attrQuery.every = '5m'
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+		every: '1m',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}`
+		attrQuery.dateFinished = `${data.dateFinished}`
+		attrQuery.limit = ''
+		attrQuery.every = '5m'
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI" 
 										  or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/Fasorial" 
 									      or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/P_exp" 
 										  or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/P_imp" )
 						|> aggregateWindow(every: ${attrQuery.every}, fn: last, createEmpty: false)
 						${attrQuery.limit}`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -523,16 +465,15 @@ const getInfoGraf = async (data, influxName) => {
  * @author José Romani
  */
 const getInfoSurge = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_1" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_2" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSob_3" 
@@ -549,12 +490,9 @@ const getInfoSurge = async (data, influxName) => {
 						or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
 						or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")     
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -572,27 +510,23 @@ const getInfoSurge = async (data, influxName) => {
  * @author José Romani
  */
 const getInfoSurgeSummary = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_1" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_2" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSob_3") 
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -610,16 +544,15 @@ const getInfoSurgeSummary = async (data, influxName) => {
  * @author José Romani
  */
 const getInfoUnderVoltage = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_1" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_2" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnSub_3"
@@ -636,12 +569,9 @@ const getInfoUnderVoltage = async (data, influxName) => {
 							or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
 							or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")                    
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -659,27 +589,23 @@ const getInfoUnderVoltage = async (data, influxName) => {
  * @author José Romani
  */
 const getInfoUnderVoltageSummary = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_1" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_2" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReSub_3") 
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -697,16 +623,15 @@ const getInfoUnderVoltageSummary = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoCourt = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_1" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_2" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AnCor_3"
@@ -723,12 +648,9 @@ const getInfoCourt = async (data, influxName) => {
 							or r["_field"] == "D8_1" or r["_field"] == "D8_2" or r["_field"] == "D8_3" or r["_field"] == "D9_0" 
 							or r["_field"] == "D9_1" or r["_field"] == "D9_2" or r["_field"] == "D9_3")                    
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -746,27 +668,23 @@ const getInfoCourt = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoCourtSummary = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_1" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_2" 
 						or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReCor_3") 
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -784,16 +702,15 @@ const getInfoCourtSummary = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoInterruption = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_1" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_2" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/AntInt_3") 
@@ -804,12 +721,9 @@ const getInfoInterruption = async (data, influxName) => {
 							or r["_field"] == "D7_1" or r["_field"] == "D8_0" or r["_field"] == "D8_1"  or r["_field"] == "D9_0" 
 							or r["_field"] == "D9_1")                   
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -827,25 +741,21 @@ const getInfoInterruption = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoInterruptionSummary = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-1mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-1mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/calidad/ReInt") 
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -863,26 +773,22 @@ const getInfoInterruptionSummary = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoHistoryReset = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_1") 
 						|> filter(fn: (r) => r["_field"] == "uR_0" or r["_field"] == "uR_1" or r["_field"] == "uR_2" or r["_field"] == "uR_3")
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxData(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxData(result) : []
+	return dataReturn
 }
 
 /**
@@ -900,16 +806,15 @@ const getInfoHistoryReset = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoHistorySummary = async (data, influxName) => {
-	try {
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_5" or  r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI") 
 						|> filter(fn: (r) => r["_field"] == "FP_0" or r["_field"] == "FP_1" or r["_field"] == "FP_2" 
 							or r["_field"] == "Freq_0" or r["_field"] == "Freq_1" or r["_field"] == "Freq_2" 
@@ -917,12 +822,9 @@ const getInfoHistorySummary = async (data, influxName) => {
 							or r["_field"] == "Temp_2" or r["_field"] == "Temp_3" or r["_field"] == "Op_1")
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxData(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxData(result) : []
+	return dataReturn
 }
 
 /**
@@ -940,28 +842,24 @@ const getInfoHistorySummary = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoEnergyTarifa = async (data, influxName) => {
-	try {
-		const fechaActual = new Date()
-		const attrQuery = {
-			dateStart: '-3mo',
-			dateFinished: `${fechaActual.getFullYear()}-${(fechaActual.getMonth() + 1).toString().padStart(2, '0')}-02`,
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	const fechaActual = new Date()
+	const attrQuery = {
+		dateStart: '-3mo',
+		dateFinished: `${fechaActual.getFullYear()}-${(fechaActual.getMonth() + 1).toString().padStart(2, '0')}-02`,
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_4") 
 						|> filter(fn: (r) => r["_field"] == "RTE_0" or r["_field"] == "RTE_1" or r["_field"] == "RTE_2")  
 						|> aggregateWindow(every: 1mo, fn: last, createEmpty: false)
 						|> sort(columns: ["_time"], desc: true)
 						|> limit(n: 2)`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxDataArray(result) : []
+	return dataReturn
 }
 
 /**
@@ -979,17 +877,16 @@ const getInfoEnergyTarifa = async (data, influxName) => {
  * @author José Romani <jose.romani@hotmail.com>
  */
 const getInfoEnergyTotal = async (data, influxName) => {
-	try {
-		const fechaActual = new Date()
-		const attrQuery = {
-			dateStart: '-2mo',
-			dateFinished: 'now()',
-		}
-		if (data.dateStart) {
-			attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
-			attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
-		}
-		const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
+	// const fechaActual = new Date()
+	const attrQuery = {
+		dateStart: '-2mo',
+		dateFinished: 'now()',
+	}
+	if (data.dateStart) {
+		attrQuery.dateStart = `${data.dateStart}T00:00:00Z`
+		attrQuery.dateFinished = `${data.dateFinished}T23:59:59Z`
+	}
+	const query = `	|> range(start: ${attrQuery.dateStart}, stop: ${attrQuery.dateFinished})
 						|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_1" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_2" 
 							or r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/historical/Table_3" 
@@ -1014,12 +911,9 @@ const getInfoEnergyTotal = async (data, influxName) => {
 							or r["_field"] == "IET_6" or r["_field"] == "IET_8" or r["_field"] == "IET_7" or r["_field"] == "IET_9")  
 						|> aggregateWindow(every: 10m, fn: last, createEmpty: false)
 						|> last()`
-		const result = await ConsultaInflux(query, influxName)
-		const dataReturn = result.length > 0 ? await processInfluxData(result) : []
-		return dataReturn
-	} catch (error) {
-		throw error
-	}
+	const result = await ConsultaInflux(query, influxName)
+	const dataReturn = result.length > 0 ? await processInfluxData(result) : []
+	return dataReturn
 }
 
 module.exports = {

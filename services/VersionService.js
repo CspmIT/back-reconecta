@@ -10,38 +10,30 @@
  * @author
  */
 const getListVersions = async (db) => {
-	try {
-		const versions = await db.Brand.findAll({
-			where: {
-				status: 1,
-			},
-			attributes: ['id', 'name', 'type_device'],
-			include: {
-				association: 'version',
-				attributes: ['id', 'name'],
-			},
-		})
-		return versions
-	} catch (error) {
-		throw error
-	}
+	const versions = await db.Brand.findAll({
+		where: {
+			status: 1,
+		},
+		attributes: ['id', 'name', 'type_device'],
+		include: {
+			association: 'version',
+			attributes: ['id', 'name'],
+		},
+	})
+	return versions
 }
 const getersionxName = async (db, name) => {
-	try {
-		const versions = await db.Version.findOne({
-			where: {
-				name: name,
-			},
-			attributes: ['id', 'name', 'type_device'],
-			include: {
-				association: 'brand',
-				attributes: ['id', 'name'],
-			},
-		})
-		return versions
-	} catch (error) {
-		throw error
-	}
+	const versions = await db.Version.findOne({
+		where: {
+			name: name,
+		},
+		attributes: ['id', 'name', 'type_device'],
+		include: {
+			association: 'brand',
+			attributes: ['id', 'name'],
+		},
+	})
+	return versions
 }
 module.exports = {
 	getListVersions,

@@ -8,12 +8,8 @@
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 const getListMaps = async (db) => {
-	try {
-		const dataResult = await db.MapLocation.findAll()
-		return dataResult
-	} catch (error) {
-		throw error
-	}
+	const dataResult = await db.MapLocation.findAll()
+	return dataResult
 }
 
 module.exports = {

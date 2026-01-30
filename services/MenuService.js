@@ -9,16 +9,12 @@ const { Op } = require('sequelize')
  *
  */
 const getMenus = async (db) => {
-	try {
-		const Menus = await db.Menu.findAll({
-			order: [['order']],
-			where: { status: 1 },
-		})
-		if (!Menus) throw new Error('No existe ningun reconectador')
-		return Menus.map((menu) => menu.get({ plain: true }))
-	} catch (error) {
-		throw error
-	}
+	const Menus = await db.Menu.findAll({
+		order: [['order']],
+		where: { status: 1 },
+	})
+	if (!Menus) throw new Error('No existe ningun reconectador')
+	return Menus.map((menu) => menu.get({ plain: true }))
 }
 
 /**
@@ -32,19 +28,15 @@ const getMenus = async (db) => {
  *
  */
 const saveMenu = async (db, dataMenu, transaction) => {
-	try {
-		const [Menu, created] = await db.Menu.findOrCreate({
-			where: { id: dataMenu.id },
-			defaults: { ...dataMenu },
-			transaction,
-		})
-		if (!created) {
-			await Menu.update(dataMenu, { transaction })
-		}
-		return Menu
-	} catch (error) {
-		throw error
+	const [Menu, created] = await db.Menu.findOrCreate({
+		where: { id: dataMenu.id },
+		defaults: { ...dataMenu },
+		transaction,
+	})
+	if (!created) {
+		await Menu.update(dataMenu, { transaction })
 	}
+	return Menu
 }
 
 /**
@@ -58,17 +50,13 @@ const saveMenu = async (db, dataMenu, transaction) => {
  *
  */
 const listPermissionUser = async (db, data) => {
-	try {
-		const filters =
-			data.type == 'id_user'
-				? { [Op.or]: [{ [`${data.type}`]: data.id }, { id_profile: data.profile }] }
-				: { [`${data.type}`]: data.profile }
-		const Menus = await db.Menu_selected.findAll({ where: filters })
-		if (!Menus) throw new Error('No existe ningun reconectador')
-		return Menus.map((menu) => menu.get({ plain: true }))
-	} catch (error) {
-		throw error
-	}
+	const filters =
+		data.type == 'id_user'
+			? { [Op.or]: [{ [`${data.type}`]: data.id }, { id_profile: data.profile }] }
+			: { [`${data.type}`]: data.profile }
+	const Menus = await db.Menu_selected.findAll({ where: filters })
+	if (!Menus) throw new Error('No existe ningun reconectador')
+	return Menus.map((menu) => menu.get({ plain: true }))
 }
 
 /**
@@ -82,19 +70,15 @@ const listPermissionUser = async (db, data) => {
  *
  */
 const saveMenu_Selected = async (db, dataMenu, transaction) => {
-	try {
-		const [Menu_selected, created] = await db.Menu_selected.findOrCreate({
-			where: { id: dataMenu.id },
-			defaults: { ...dataMenu },
-			transaction,
-		})
-		if (!created) {
-			await Menu_selected.update(dataMenu, { transaction })
-		}
-		return Menu_selected
-	} catch (error) {
-		throw error
+	const [Menu_selected, created] = await db.Menu_selected.findOrCreate({
+		where: { id: dataMenu.id },
+		defaults: { ...dataMenu },
+		transaction,
+	})
+	if (!created) {
+		await Menu_selected.update(dataMenu, { transaction })
 	}
+	return Menu_selected
 }
 
 module.exports = {

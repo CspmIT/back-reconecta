@@ -5,12 +5,19 @@ const { saveAlarm, discordCredentials } = require('../services/AlarmService')
 const { listClients } = require('../utils/js/clients')
 const { getTenantDb } = require('../models')
 const https = require('https')
-const PQueue = require('p-queue').default
-const discordQueue = new PQueue({
-	concurrency: 1,
-	interval: 1000,
-	intervalCap: 3,
-})
+
+let discordQueue = null
+
+const initDiscordQueue = async () => {
+	if (!discordQueue) {
+		const { default: PQueue } = await import('p-queue')
+		discordQueue = new PQueue({
+			concurrency: 1,
+			interval: 1000,
+			intervalCap: 3,
+		})
+	}
+}
 
 const httpsAgent = new https.Agent({
 	keepAlive: true,
@@ -48,6 +55,7 @@ const influxAlarm = async (req, res) => {
 
 		const title = `Alerta reconectador ${recloser[0].observation}`
 		const content = alarmDef.name
+		await initDiscordQueue()
 		await discordQueue.add(() => discord(dbTenant, title, content))
 
 		return res.json({ message: 'OK' })
@@ -64,6 +72,7 @@ const influxAlarmDeadman = async (req, res) => {
 		const { dbTenant } = await dataSchema(scheme, topic)
 		const title = `Haciendo moco`
 		const webhook = '1464248365465211004/X8QLDMKj0s-BcWyJNtdqYDfQu0btZvNDZRJoaA248CmZZCNHGKSmRmzW2bO2B_PxS3kl'
+		await initDiscordQueue()
 		await discordQueue.add(() => discord(dbTenant, title, topic, webhook))
 
 		return res.json({ message: 'OK' })

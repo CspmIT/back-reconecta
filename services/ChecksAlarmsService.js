@@ -8,15 +8,11 @@
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 const getDateCheck = async (db, id, typeDevice) => {
-	try {
-		const dataResult = await db.Logs_check_alarms.findOne({
-			where: { type: typeDevice, id_device: id },
-			order: [['createdAt', 'DESC']],
-		})
-		return dataResult
-	} catch (error) {
-		throw error
-	}
+	const dataResult = await db.Logs_check_alarms.findOne({
+		where: { type: typeDevice, id_device: id },
+		order: [['createdAt', 'DESC']],
+	})
+	return dataResult
 }
 /**
  * Guarda múltiples registros de verificación de alarmas en la base de datos.
@@ -27,12 +23,8 @@ const getDateCheck = async (db, id, typeDevice) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 const addLogsChecks = async (db, logs) => {
-	try {
-		const dataResult = await db.Logs_check_alarms.bulkCreate(logs, { validate: true })
-		return dataResult
-	} catch (error) {
-		throw error
-	}
+	const dataResult = await db.Logs_check_alarms.bulkCreate(logs, { validate: true })
+	return dataResult
 }
 
 module.exports = {

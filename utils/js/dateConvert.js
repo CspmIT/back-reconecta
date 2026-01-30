@@ -6,7 +6,7 @@ const convertIsoToDate = async (isoString) => {
 	const dia = String(fecha.getDate()).padStart(2, '0')
 	const horas = String(fecha.getHours()).padStart(2, '0')
 	const minutos = String(fecha.getMinutes()).padStart(2, '0')
-	const segundos = String(fecha.getSeconds()).padStart(2, '0')
+	//const segundos = String(fecha.getSeconds()).padStart(2, '0')
 
 	return `${dia}/${mes}/${año} ${horas}:${minutos}`
 }

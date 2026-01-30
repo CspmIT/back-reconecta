@@ -7,12 +7,8 @@
  * @author José Romani <jose.romani@hotmail.com>
  */
 const saveSendActionMQTT = async (db, data) => {
-	try {
-		const ActionMqtt = await db.RecloserSendMqtt.create(data)
-		return ActionMqtt
-	} catch (error) {
-		throw error
-	}
+	const ActionMqtt = await db.RecloserSendMqtt.create(data)
+	return ActionMqtt
 }
 
 module.exports = {
