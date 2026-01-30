@@ -53,10 +53,8 @@ const sendConfigMQTT = async (req, res) => {
 			// Publicar en el tópico
 			client.publish(`${req.body.topic}`, JSON.stringify(req.body.data), async (err) => {
 				if (!err) {
-					console.log('lo envio')
 					res.status(200).json(true)
 				} else {
-					console.log('no envio')
 					return res.status(403).json({ message: err.message })
 				}
 			})
@@ -66,7 +64,6 @@ const sendConfigMQTT = async (req, res) => {
 			return res.status(401).json({ message: err.message })
 		})
 		client.on('close', () => {
-			console.log('Cliente desconectado del broker')
 			return
 		})
 	} catch (error) {
@@ -211,7 +208,6 @@ const conectionMqtt = async (data, db) => {
 				client.end()
 
 				if (err) {
-					console.error('Error al publicar:', err.message)
 					return reject(err)
 				}
 
