@@ -20,6 +20,8 @@ const Meter = require('./routes/Meter.routes')
 const ElementRoutes = require('./routes/Element.routes')
 const analyzerRoutes = require('./routes/Analyzer.routes')
 const graphicRoutes = require('./routes/Graphic.routes')
+const BinnacleRoutes = require('./routes/Binnacle.routes')
+
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -41,6 +43,7 @@ app.use('/api', Meter)
 app.use('/api', ElementRoutes)
 app.use('/api', analyzerRoutes)
 app.use('/api', graphicRoutes)
+app.use('/api', BinnacleRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
