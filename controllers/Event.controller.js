@@ -10,7 +10,7 @@ const {
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
-const { getRecloserId, getEventRecloserOld } = require('../services/RecloserServices')
+const { getEventRecloserOld } = require('../services/RecloserServices')
 const { getEquipment } = require('../services/ElementService')
 const { uploadFile } = require('../services/SshServices')
 const { saveSendActionMQTT } = require('../services/SendMqttServices')
@@ -18,7 +18,7 @@ const config_ssh = require(__dirname + '/../config/config_ssh.js')
 
 const getConfigNotify = async (req, res) => {
 	try {
-		const Events = await getAllEvents()
+		const Events = await getAllEvents(req.db)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {
@@ -30,7 +30,7 @@ const getConfigNotify = async (req, res) => {
 }
 const saveConfigNotify = async (req, res) => {
 	try {
-		const Events = await saveEvent(req.body)
+		const Events = await saveEvent(req.db, req.body)
 		return res.status(200).json(Events)
 	} catch (error) {
 		if (error.errors) {
@@ -47,16 +47,14 @@ const sendConfigMQTT = async (req, res) => {
 		}
 		// console.log(`${req.body.topic}`, JSON.stringify(req.body.data))
 		// return res.json(true)
-		const configMqtt = await getConectionMqtt()
+		const configMqtt = await getConectionMqtt(req.db)
 		const client = mqtt.connect(configMqtt)
 		client.on('connect', () => {
 			// Publicar en el tópico
 			client.publish(`${req.body.topic}`, JSON.stringify(req.body.data), async (err) => {
 				if (!err) {
-					console.log('lo envio')
 					res.status(200).json(true)
 				} else {
-					console.log('no envio')
 					return res.status(403).json({ message: err.message })
 				}
 			})
@@ -66,7 +64,6 @@ const sendConfigMQTT = async (req, res) => {
 			return res.status(401).json({ message: err.message })
 		})
 		client.on('close', () => {
-			console.log('Cliente desconectado del broker')
 			return
 		})
 	} catch (error) {
@@ -80,8 +77,8 @@ const sendConfigMQTT = async (req, res) => {
 
 const AllEvents = async (req, res) => {
 	try {
-		const Events = await getEventsActive()
-		const eventsInflux = await getEventsInflux(req.user.influx_name, Events)
+		const Events = await getEventsActive(req.db)
+		const eventsInflux = await getEventsInflux(req.db, req.user.influx_name, Events)
 		const returnData = eventsInflux
 			.reduce((acc, value) => {
 				acc.push(...value)
@@ -111,8 +108,8 @@ const eventsDevices = async (req, res) => {
 			return res.status(400).json({ message: 'Debe enviar todo los parametros necesarios tanto id como type' })
 		}
 		//const recloser = await getRecloserId(id)
-		const recloser = await getEquipment({ id })
-		const Events = await getEventsDevice(recloser[0].equipmentmodels.id, 'Reconectador')
+		const recloser = await getEquipment(req.db, { id })
+		const Events = await getEventsDevice(req.db, recloser[0].equipmentmodels.id, 'Reconectador')
 		const eventActiveReco = Events.map((item) => {
 			return {
 				id: item.id,
@@ -121,6 +118,7 @@ const eventsDevices = async (req, res) => {
 				priority: item.priority,
 				type_var: item.type_var,
 				custom: item.customizable,
+				id_file: item.index_file,
 			}
 		})
 		const eventsInflux = await getEventRecloserOld(
@@ -148,7 +146,7 @@ const saveLogsChecks = async (req, res) => {
 			item.id_user = req.user.id
 			return item
 		})
-		const Logs = await addLogsChecks(data)
+		const Logs = await addLogsChecks(req.db, data)
 		return res.status(200).json(Logs)
 	} catch (error) {
 		if (error.errors) {
@@ -162,12 +160,13 @@ const saveLogsChecks = async (req, res) => {
 const updateConfigIndex = async (req, res) => {
 	try {
 		const data = req.body
-		const response = await updateEventIndex(data)
+		const response = await updateEventIndex(req.db, data)
 		// Para el archivo que envio por ssh utilizo la hora unix
 		const name = '/perfiles_' + new Date().getTime() + '.json'
 		await uploadFile(data, name)
 
 		// Envio la configuración a mqtt para que impacte en los recos
+		const reclosers = await getEquipment(req.db, { type: 2 })
 		const promises = reclosers.map(async (item) => {
 			const path = config_ssh['mqtt_morteros'].SSH_PATH + name
 			const data = {
@@ -177,7 +176,7 @@ const updateConfigIndex = async (req, res) => {
 				serial: item.serial,
 				brand: item.equipmentmodels.name,
 			}
-			await conectionMqtt(data)
+			await conectionMqtt(data, req.db)
 		})
 		await Promise.all(promises)
 		return res.status(200).json(response)
@@ -189,15 +188,15 @@ const updateConfigIndex = async (req, res) => {
 const updateConfigNotify = async (req, res) => {
 	try {
 		const data = req.body
-		const response = await updateEvents(data)
+		const response = await updateEvents(req.db, data)
 		return res.status(200).json(response)
 	} catch (e) {
 		return res.status(500).json(e)
 	}
 }
 
-const conectionMqtt = async (data) => {
-	const configMqtt = await getConectionMqtt()
+const conectionMqtt = async (data, db) => {
+	const configMqtt = await getConectionMqtt(db)
 
 	return new Promise((resolve, reject) => {
 		const client = mqtt.connect(configMqtt)
@@ -209,12 +208,11 @@ const conectionMqtt = async (data) => {
 				client.end()
 
 				if (err) {
-					console.error('Error al publicar:', err.message)
 					return reject(err)
 				}
 
 				try {
-					await saveSendActionMQTT(data)
+					await saveSendActionMQTT(db, data)
 					resolve(true)
 				} catch (saveError) {
 					reject(saveError)

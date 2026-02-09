@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-	async up(queryInterface, Sequelize) {
+	async up(queryInterface) {
 		const date = new Date()
 		const nojarc01 = [1, 2, 3, 4, 6, 5, 11, 14, 17]
 		const nojarc10 = [
@@ -51,7 +51,7 @@ module.exports = {
 		await queryInterface.bulkInsert('ControlsModels', dataInsert)
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.bulkDelete('ControlsModels', null, {})
 	},
 }

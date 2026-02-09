@@ -17,6 +17,4 @@ module.exports = {
 			comment: '(1 = monofasica, 2 = trifasica)',
 		})
 	},
-
-	async down(queryInterface, Sequelize) {},
 }

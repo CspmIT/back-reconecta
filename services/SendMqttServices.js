@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Guarda una acción enviada a través de MQTT en la base de datos.
  *
@@ -8,13 +6,9 @@ const { db } = require('../models')
  * @throws {Error} Si ocurre algún problema durante la operación de guardado.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const saveSendActionMQTT = async (data) => {
-	try {
-		const ActionMqtt = await db.RecloserSendMqtt.create(data)
-		return ActionMqtt
-	} catch (error) {
-		throw error
-	}
+const saveSendActionMQTT = async (db, data) => {
+	const ActionMqtt = await db.RecloserSendMqtt.create(data)
+	return ActionMqtt
 }
 
 module.exports = {

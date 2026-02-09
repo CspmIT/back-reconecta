@@ -2,46 +2,40 @@ const { InfluxDB } = require('@influxdata/influxdb-client')
 const crypto = require('crypto')
 require('dotenv').config()
 const axios = require('axios')
-const { TasksAPI } = require('@influxdata/influxdb-client-apis')
-const { db } = require('../models')
 const config_influx = require(__dirname + '/../config/config_influx.js')
 
 const ConsultaInflux = async (query, influxName) => {
-	try {
-		const url = config_influx[influxName].INFLUX_URL
-		const token = config_influx[influxName].INFLUXDB_TOKEN
-		const org = config_influx[influxName].INFLUX_ORG
-		const bucket = config_influx[influxName].INFLUX_BUCKET
+	const url = config_influx[influxName].INFLUX_URL
+	const token = config_influx[influxName].INFLUXDB_TOKEN
+	const org = config_influx[influxName].INFLUX_ORG
+	const bucket = config_influx[influxName].INFLUX_BUCKET
 
-		// Crea una instancia del cliente
-		const influxDB = new InfluxDB({ url, token })
+	// Crea una instancia del cliente
+	const influxDB = new InfluxDB({ url, token })
 
-		// Crea una consulta
-		const queryApi = influxDB.getQueryApi(org)
-		// Escribe tu consulta en Flux
-		const fluxQuery = `from(bucket: "${bucket}")
+	// Crea una consulta
+	const queryApi = influxDB.getQueryApi(org)
+	// Escribe tu consulta en Flux
+	const fluxQuery = `from(bucket: "${bucket}")
 							${query}`
 
-		// Ejecuta la consulta
-		return new Promise((resolve, reject) => {
-			const results = []
-			queryApi.queryRows(fluxQuery, {
-				next(row, tableMeta) {
-					// Convertir la fila a un objeto
-					const record = tableMeta.toObject(row)
-					results.push(record)
-				},
-				error(error) {
-					reject(error)
-				},
-				complete() {
-					resolve(results)
-				},
-			})
+	// Ejecuta la consulta
+	return new Promise((resolve, reject) => {
+		const results = []
+		queryApi.queryRows(fluxQuery, {
+			next(row, tableMeta) {
+				// Convertir la fila a un objeto
+				const record = tableMeta.toObject(row)
+				results.push(record)
+			},
+			error(error) {
+				reject(error)
+			},
+			complete() {
+				resolve(results)
+			},
 		})
-	} catch (error) {
-		throw new Error(error)
-	}
+	})
 }
 
 async function createTask(url, token, org, telegramEndpoint) {
@@ -66,18 +60,13 @@ crit = (r) => r["t_fall"] > 0`
 		description: 'task for testing',
 	}
 
-	try {
-		const response = await axios.post(url, TaskData, {
-			headers: {
-				Authorization: `Token ${token}`,
-				'Content-Type': 'application/json',
-			},
-		})
-		return response.data
-	} catch (error) {
-		console.error('Error creando la task:', error.response ? error.response.data : error.message)
-		return error
-	}
+	const response = await axios.post(url, TaskData, {
+		headers: {
+			Authorization: `Token ${token}`,
+			'Content-Type': 'application/json',
+		},
+	})
+	return response.data
 }
 
 // Función para crear la consulta de Flux
@@ -122,29 +111,25 @@ function createFluxTask(name, every, check_id, field, parameters, endpoint, type
 
 	return consult
 }
-const formaterDataAlarm = async (body, query) => {
-	try {
-		const arrayOfObjects = body.data.map((item) => {
-			const cleanedItem = item.replace(/\n\s*/g, '').replace(/[{}]/g, '')
-			const keyValuePairs = cleanedItem.split(',')
-			const jsonString = item
-			const obj = {}
-			keyValuePairs.forEach((pair) => {
-				const [key, ...rest] = pair.split(':')
-				const value = rest.join(':').trim()
-				const cleanedKey = key.trim().replace(/['"]+/g, '')
-				let cleanedValue = value
-				if (isNaN(value) && !value.includes('"')) {
-					cleanedValue = `"${value}"`
-				}
-				obj[cleanedKey] = JSON.parse(cleanedValue)
-			})
-			return obj
+const formaterDataAlarm = async (body) => {
+	const arrayOfObjects = body.data.map((item) => {
+		const cleanedItem = item.replace(/\n\s*/g, '').replace(/[{}]/g, '')
+		const keyValuePairs = cleanedItem.split(',')
+		//const jsonString = item
+		const obj = {}
+		keyValuePairs.forEach((pair) => {
+			const [key, ...rest] = pair.split(':')
+			const value = rest.join(':').trim()
+			const cleanedKey = key.trim().replace(/['"]+/g, '')
+			let cleanedValue = value
+			if (isNaN(value) && !value.includes('"')) {
+				cleanedValue = `"${value}"`
+			}
+			obj[cleanedKey] = JSON.parse(cleanedValue)
 		})
-		return arrayOfObjects
-	} catch (error) {
-		throw error
-	}
+		return obj
+	})
+	return arrayOfObjects
 }
 
 async function crearTaskAlerta() {
@@ -177,12 +162,8 @@ async function crearTaskAlerta() {
 	console.log(headers)
 	console.log(data)
 
-	try {
-		const response = await axios.post(`${INFLUX_URL}api/v2/tasks`, data, { headers })
-		console.log('✅ Task creada con éxito:', response.data)
-	} catch (error) {
-		console.error('❌ Error al crear la tarea:', error.response ? error.response.data : error.message)
-	}
+	const response = await axios.post(`${INFLUX_URL}api/v2/tasks`, data, { headers })
+	console.log('✅ Task creada con éxito:', response.data)
 }
 
 module.exports = {

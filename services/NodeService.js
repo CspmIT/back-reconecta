@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Busca un nodo por su ID en la base de datos, junto con su historial asociado.
  *
@@ -9,25 +7,21 @@ const { db } = require('../models')
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const searchNode = async (id, required = false) => {
-	try {
-		const Nodes = await db.Node.findOne({
-			where: { id: id },
-			include: [
-				{
-					association: 'node_history',
-					required: required,
-					where: { status: 1 },
-				},
-				{
-					association: 'maps',
-				},
-			],
-		})
-		return Nodes
-	} catch (error) {
-		throw error
-	}
+const searchNode = async (db, id, required = false) => {
+	const Nodes = await db.Node.findOne({
+		where: { id: id },
+		include: [
+			{
+				association: 'node_history',
+				required: required,
+				where: { status: 1 },
+			},
+			{
+				association: 'maps',
+			},
+		],
+	})
+	return Nodes
 }
 
 /**
@@ -37,22 +31,18 @@ const searchNode = async (id, required = false) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const ListNode = async () => {
-	try {
-		const Nodes = await db.Node.findAll({
-			where: { status: 1 },
-			include: [
-				{
-					association: 'node_history',
-					required: false,
-					where: { status: 1 },
-				},
-			],
-		})
-		return Nodes
-	} catch (error) {
-		throw error
-	}
+const ListNode = async (db) => {
+	const Nodes = await db.Node.findAll({
+		where: { status: 1 },
+		include: [
+			{
+				association: 'node_history',
+				required: false,
+				where: { status: 1 },
+			},
+		],
+	})
+	return Nodes
 }
 
 /**
@@ -63,15 +53,11 @@ const ListNode = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const ListNode_history = async (id) => {
-	try {
-		const Nodes = await db.Node_History.findAll({
-			where: [{ id_node: id }, { status: 1 }],
-		})
-		return Nodes
-	} catch (error) {
-		throw error
-	}
+const ListNode_history = async (db, id) => {
+	const Nodes = await db.Node_History.findAll({
+		where: [{ id_node: id }, { status: 1 }],
+	})
+	return Nodes
 }
 
 /**
@@ -83,18 +69,14 @@ const ListNode_history = async (id) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const searchRelationActive = async (id, type) => {
-	try {
-		const Nodes = await db.Node_History.findOne({
-			where: [{ id_device: id }, { type_device: type }, { status: 1 }],
-			include: {
-				association: 'nodes',
-			},
-		})
-		return Nodes
-	} catch (error) {
-		throw error
-	}
+const searchRelationActive = async (db, id, type) => {
+	const Nodes = await db.Node_History.findOne({
+		where: [{ id_device: id }, { type_device: type }, { status: 1 }],
+		include: {
+			association: 'nodes',
+		},
+	})
+	return Nodes
 }
 
 /**
@@ -108,34 +90,30 @@ const searchRelationActive = async (id, type) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const addNode = async (dataNode, id_user, transaction) => {
-	try {
-		const data = {
-			name: dataNode.name,
-			number: dataNode.number,
-			description: dataNode.description,
-			lat_location: dataNode.lat_location,
-			lng_location: dataNode.lng_location,
-			id_map: dataNode.id_map,
-			status: dataNode.status,
-			type: dataNode.type,
-			id_user_create: id_user,
-		}
-
-		const [Node, created] = await db.Node.findOrCreate({
-			where: [{ number: data.number }],
-			defaults: { ...data },
-			transaction,
-		})
-		if (!created) {
-			delete data.id_user_create
-			data.id_user_edit = id_user
-			await Node.update(data, { transaction })
-		}
-		return Node
-	} catch (error) {
-		throw error
+const addNode = async (db, dataNode, id_user, transaction) => {
+	const data = {
+		name: dataNode.name,
+		number: dataNode.number,
+		description: dataNode.description,
+		lat_location: dataNode.lat_location,
+		lng_location: dataNode.lng_location,
+		id_map: dataNode.id_map,
+		status: dataNode.status,
+		type: dataNode.type,
+		id_user_create: id_user,
 	}
+
+	const [Node, created] = await db.Node.findOrCreate({
+		where: [{ number: data.number }],
+		defaults: { ...data },
+		transaction,
+	})
+	if (!created) {
+		delete data.id_user_create
+		data.id_user_edit = id_user
+		await Node.update(data, { transaction })
+	}
+	return Node
 }
 
 /**
@@ -149,25 +127,21 @@ const addNode = async (dataNode, id_user, transaction) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const saveRelation = async (dataRelation, transaction) => {
-	try {
-		const [Node_History, created] = await db.Node_History.findOrCreate({
-			where: [
-				{ id_node: dataRelation.id_node },
-				{ id_device: dataRelation.id_device },
-				{ type_device: dataRelation.type_device },
-				{ status: 1 },
-			],
-			defaults: { ...dataRelation },
-			transaction: transaction,
-		})
-		if (!created) {
-			await Node_History.update(dataRelation, { transaction: transaction })
-		}
-		return Node_History
-	} catch (error) {
-		throw error
+const saveRelation = async (db, dataRelation, transaction) => {
+	const [Node_History, created] = await db.Node_History.findOrCreate({
+		where: [
+			{ id_node: dataRelation.id_node },
+			{ id_device: dataRelation.id_device },
+			{ type_device: dataRelation.type_device },
+			{ status: 1 },
+		],
+		defaults: { ...dataRelation },
+		transaction: transaction,
+	})
+	if (!created) {
+		await Node_History.update(dataRelation, { transaction: transaction })
 	}
+	return Node_History
 }
 
 /**
@@ -179,24 +153,20 @@ const saveRelation = async (dataRelation, transaction) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la validación.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const validateNode = async (number, idNode) => {
-	try {
-		const Node = await db.Node.findOne({
-			where: {
-				number: number,
-			},
-		})
-		if (Node === null) {
-			return false
+const validateNode = async (db, number, idNode) => {
+	const Node = await db.Node.findOne({
+		where: {
+			number: number,
+		},
+	})
+	if (Node === null) {
+		return false
+	} else {
+		if (Node.id != idNode) {
+			return 'La matricula no esta disponible'
 		} else {
-			if (Node.id != idNode) {
-				return 'La matricula no esta disponible'
-			} else {
-				return false
-			}
+			return false
 		}
-	} catch (error) {
-		throw error
 	}
 }
 
@@ -208,22 +178,18 @@ const validateNode = async (number, idNode) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la validación.
  * @author  [José Romani] <jose.romani@hotmail.com>
  */
-const validateRelation = async (data) => {
-	try {
-		const Node_History = await db.Node_History.findOne({
-			where: [{ id_device: data.id_device }, { type_device: data.type_device }, { status: 1 }],
-		})
-		if (Node_History === null) {
+const validateRelation = async (db, data) => {
+	const Node_History = await db.Node_History.findOne({
+		where: [{ id_device: data.id_device }, { type_device: data.type_device }, { status: 1 }],
+	})
+	if (Node_History === null) {
+		return false
+	} else {
+		if (Node_History.id_node == data.id_node) {
 			return false
 		} else {
-			if (Node_History.id_node == data.id_node) {
-				return false
-			} else {
-				return 'Este Dispositivo ya esta relacionado'
-			}
+			return 'Este Dispositivo ya esta relacionado'
 		}
-	} catch (error) {
-		throw error
 	}
 }
 
@@ -236,16 +202,12 @@ const validateRelation = async (data) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  *
  */
-const unLinkNode = async (data, id_user, transaction) => {
-	try {
-		const Node_History = await db.Node_History.update(
-			{ status: 0, id_user_edit: id_user },
-			{ where: { id_node: data.id }, transaction: transaction }
-		)
-		return Node_History
-	} catch (error) {
-		throw error
-	}
+const unLinkNode = async (db, data, id_user, transaction) => {
+	const Node_History = await db.Node_History.update(
+		{ status: 0, id_user_edit: id_user },
+		{ where: { id_node: data.id }, transaction: transaction }
+	)
+	return Node_History
 }
 
 /**
@@ -257,16 +219,12 @@ const unLinkNode = async (data, id_user, transaction) => {
  * @author  [José Romani] <jose.romani@hotmail.com>
  *
  */
-const removeNode = async (id, id_user, transaction) => {
-	try {
-		const Node = await db.Node.update(
-			{ status: 0, id_user_edit: id_user },
-			{ where: { id: id }, transaction: transaction }
-		)
-		return Node
-	} catch (error) {
-		throw error
-	}
+const removeNode = async (db, id, id_user, transaction) => {
+	const Node = await db.Node.update(
+		{ status: 0, id_user_edit: id_user },
+		{ where: { id: id }, transaction: transaction }
+	)
+	return Node
 }
 
 module.exports = {

@@ -1,35 +1,29 @@
-const { db } = require('../models')
-
-const getListGraphics = async (id = false) => {
-	try {
-		const query = {
-			include: [
-				{
-					model: db.GraphicsVariables,
-					as: 'variables',
-					include: [
-						{
-							model: db.Equipment,
-							as: 'equipments',
-							include: [
-								{
-									model: db.EquipmentModel,
-									as: 'equipmentmodels',
-								},
-							],
-						},
-					],
-				},
-			],
-			order: [[{ model: db.GraphicsVariables, as: 'variables' }, 'id', 'ASC']],
-		}
-		return await db.Graphic.findAll(query)
-	} catch (e) {
-		throw e
+const getListGraphics = async (db) => {
+	const query = {
+		include: [
+			{
+				model: db.GraphicsVariables,
+				as: 'variables',
+				include: [
+					{
+						model: db.Equipment,
+						as: 'equipments',
+						include: [
+							{
+								model: db.EquipmentModel,
+								as: 'equipmentmodels',
+							},
+						],
+					},
+				],
+			},
+		],
+		order: [[{ model: db.GraphicsVariables, as: 'variables' }, 'id', 'ASC']],
 	}
+	return await db.Graphic.findAll(query)
 }
 
-const saveAllSunBurst = async (dataGraphic, data) => {
+const saveAllSunBurst = async (db, dataGraphic, data) => {
 	const t = await db.sequelize.transaction()
 	try {
 		const graphic = await db.Graphic.create(dataGraphic, { transaction: t })
@@ -67,6 +61,7 @@ const saveAllSunBurst = async (dataGraphic, data) => {
 		await t.commit()
 		return { message: 'Guardado con éxito' }
 	} catch (e) {
+		await t.rollback()
 		throw e
 	}
 }

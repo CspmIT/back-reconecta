@@ -4,6 +4,8 @@ const app = express()
 const http = require('http')
 const socketConfig = require('./config/socket')
 const cookieParser = require('cookie-parser')
+const dns = require('dns')
+dns.setDefaultResultOrder('ipv4first')
 
 // Rutas
 const publicRoutes = require('./routes/Public.routes')

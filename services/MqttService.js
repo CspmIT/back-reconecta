@@ -1,5 +1,3 @@
-const { Op } = require('sequelize')
-const { db } = require('../models')
 const { decrypt } = require('../utils/js/encrypt')
 
 /**
@@ -10,27 +8,22 @@ const { decrypt } = require('../utils/js/encrypt')
  * @author  Jose Romani <jose.romani@hotmail.com>
  */
 
-const getConectionMqtt = async () => {
-	try {
-		const parameters = await db.Parameter.findAll({
-			where: { type: 2 },
-		})
-		if (parameters.length === 0) {
-			throw new Error('No se encontraron parámetros MQTT en la base de datos')
-		}
-		const data = parameters.reduce((acc, param) => {
-			acc[param.name.toLowerCase()] = decrypt(param.value)
-			return acc
-		}, {})
-
-		const config = {
-			...data,
-		}
-		return config
-	} catch (error) {
-		console.error(`Error obteniendo la configuración MQTT: ${error.message}`)
-		throw new Error(`Error al obtener configuración MQTT: ${error.message}`)
+const getConectionMqtt = async (db) => {
+	const parameters = await db.Parameter.findAll({
+		where: { type: 2 },
+	})
+	if (parameters.length === 0) {
+		throw new Error('No se encontraron parámetros MQTT en la base de datos')
 	}
+	const data = parameters.reduce((acc, param) => {
+		acc[param.name.toLowerCase()] = decrypt(param.value)
+		return acc
+	}, {})
+
+	const config = {
+		...data,
+	}
+	return config
 }
 
 module.exports = {

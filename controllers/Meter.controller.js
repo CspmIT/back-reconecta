@@ -1,11 +1,9 @@
-const { db } = require('../models')
 const { getEquipment } = require('../services/ElementService')
 const {
 	validateEnable,
 	getList,
 	getStatus,
 	getEnabled,
-	getxID,
 	getVIinflux,
 	getMetrologyPower,
 	getMetrologyEnergy,
@@ -32,7 +30,7 @@ const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
 const getVersions = async (req, res) => {
 	try {
-		const versions = await getListVersions()
+		const versions = await getListVersions(req.db)
 		if (!versions) {
 			return res.status(404).json({ message: 'Versiones no encontrado' })
 		}
@@ -48,7 +46,7 @@ const getVersions = async (req, res) => {
 
 const listMeter = async (req, res) => {
 	try {
-		const MeterList = await getList()
+		const MeterList = await getList(req.db)
 		if (!MeterList) {
 			return res.status(404).json({ message: 'Versiones no encontrado' })
 		}
@@ -57,7 +55,7 @@ const listMeter = async (req, res) => {
 			MeterList.map(async (meter) => {
 				let relation = []
 				if (meter.id_node) {
-					const history = await searchRelationActive(meter.id, 2)
+					const history = await searchRelationActive(req.db, meter.id, 2)
 					relation = history?.nodes?.get() || []
 				}
 				const statusMeter = await getStatus(
@@ -98,7 +96,7 @@ const listMeter = async (req, res) => {
 
 const metersEnabled = async (req, res) => {
 	try {
-		const meters = await getEnabled()
+		const meters = await getEnabled(req.db)
 		const result = meters.map((item) => {
 			return {
 				id: item.id,
@@ -126,9 +124,9 @@ const addMeter = async (req, res) => {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
-		const version = await getersionxName(req.body.version)
-		const validationNode = await validateEnable(req.body.serial, version.dataValues.id, req.body.id)
+		transaction = await req.db.sequelize.transaction()
+		const version = await getersionxName(req.db, req.body.version)
+		const validationNode = await validateEnable(req.db, req.body.serial, version.dataValues.id, req.body.id)
 		if (validationNode) throw new Error(validationNode)
 		const data = {
 			...req.body,
@@ -136,7 +134,7 @@ const addMeter = async (req, res) => {
 			[req.body.id > 0 ? 'id_user_edit' : 'id_user_create']: req.user.id,
 		}
 		// Guardado de Nodo
-		const Meter = await saveMeter(data, transaction)
+		const Meter = await saveMeter(req.db, data, transaction)
 		if (!Meter) throw new Error('Error al guardar el Medidor.')
 		await transaction.commit()
 		res.status(200).json(Meter)
@@ -229,7 +227,7 @@ const dataMeter = async (req, res) => {
 			return res.status(400).json({ message: 'El ID es requerido' })
 		}
 		const filter = { id: id }
-		const meterFilter = await getEquipment(filter)
+		const meterFilter = await getEquipment(req.db, filter)
 		const meter = meterFilter[0]
 		if (!meter) {
 			throw new Error('Medidor no encontrado')

@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Obtiene todos los reconectadores de la base de datos de Desarrollo.
  *
@@ -7,14 +5,10 @@ const { db } = require('../models')
  * @author  [Jose Romani] <jose.romani@hotmail.com>
  *
  */
-const getListVariables = async () => {
-	try {
-		const Variables = await db.Variables.findAll({ where: { status: 1 } })
-		if (!Variables) throw new Error('No existe ningun reconectador')
-		return Variables.map((variable) => variable.get({ plain: true }))
-	} catch (error) {
-		throw error
-	}
+const getListVariables = async (db) => {
+	const Variables = await db.Variables.findAll({ where: { status: 1 } })
+	if (!Variables) throw new Error('No existe ningun reconectador')
+	return Variables.map((variable) => variable.get({ plain: true }))
 }
 
 module.exports = {

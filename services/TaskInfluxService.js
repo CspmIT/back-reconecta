@@ -1,5 +1,3 @@
-const { db } = require('../models')
-
 /**
  * Guarda una acción enviada a través de MQTT en la base de datos.
  *
@@ -8,13 +6,9 @@ const { db } = require('../models')
  * @throws {Error} Si ocurre algún problema durante la operación de guardado.
  * @author José Romani <jose.romani@hotmail.com>
  */
-const getTask = async (id) => {
-	try {
-		const Task_Influx_Recloser = await db.Task_Influx_Recloser.findOne({ where: { id_recloser: id } })
-		return Task_Influx_Recloser
-	} catch (error) {
-		throw error
-	}
+const getTask = async (db, id) => {
+	const Task_Influx_Recloser = await db.Task_Influx_Recloser.findOne({ where: { id_recloser: id } })
+	return Task_Influx_Recloser
 }
 
 module.exports = {

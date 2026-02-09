@@ -21,7 +21,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('Elements', 'id_user')
 		await queryInterface.removeColumn('Elements', 'id_user_edit')
 	},

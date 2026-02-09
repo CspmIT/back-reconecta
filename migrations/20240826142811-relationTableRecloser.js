@@ -85,7 +85,7 @@ module.exports = {
 		})
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.removeColumn('Controls', 'id_version')
 		await queryInterface.removeColumn('Users_Controls', 'id_control')
 		await queryInterface.removeColumn('Users_Controls', 'id_user')

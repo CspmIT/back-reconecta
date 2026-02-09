@@ -1,4 +1,3 @@
-const { db } = require('../models')
 const { getListMaps } = require('../services/MapLocationService')
 const { saveMeter } = require('../services/MeterService')
 const {
@@ -16,7 +15,7 @@ const { saveRecloser } = require('../services/RecloserServices')
 
 const getListNode = async (req, res) => {
 	try {
-		const result = await ListNode()
+		const result = await ListNode(req.db)
 		return res.status(200).json(result)
 	} catch (error) {
 		if (error.errors) {
@@ -31,7 +30,7 @@ const getNodexId = async (req, res) => {
 		if (!req.query.id) {
 			throw new Error('Se solicita enviar el id.')
 		}
-		const result = await searchNode(req.query.id)
+		const result = await searchNode(req.db, req.query.id)
 		return res.status(200).json(result)
 	} catch (error) {
 		if (error.errors) {
@@ -44,11 +43,11 @@ const getNodexId = async (req, res) => {
 
 const unlinkRelationNode = async (req, res) => {
 	try {
-		transaction = await db.sequelize.transaction()
+		const transaction = await req.db.sequelize.transaction()
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}
-		const saveUnLink = await unLinkNode(req.body.id, req.user.id, transaction)
+		const saveUnLink = await unLinkNode(req.db, req.body.id, req.user.id, transaction)
 		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
 		await transaction.commit()
 		res.status(200).json(saveUnLink)
@@ -62,13 +61,13 @@ const unlinkRelationNode = async (req, res) => {
 }
 const deleteNode = async (req, res) => {
 	try {
-		transaction = await db.sequelize.transaction()
+		const transaction = await req.db.sequelize.transaction()
 		if (!req.body.id) {
 			return res.status(400).json({ message: 'Se solicita enviar el id del nodo.' })
 		}
-		const saveUnLink = await unLinkNode(req.body.id, req.user.id, transaction)
+		const saveUnLink = await unLinkNode(req.db, req.body.id, req.user.id, transaction)
 		if (!saveUnLink) throw new Error('Error al eliminar las relaciones.')
-		const saveDelete = await removeNode(req.body.id, req.user.id, transaction)
+		const saveDelete = await removeNode(req.db, req.body.id, req.user.id, transaction)
 		if (!saveDelete) throw new Error('Error al eliminar el Nodo.')
 		await transaction.commit()
 		res.status(200).json(saveDelete)
@@ -88,17 +87,17 @@ const saveNode = async (req, res) => {
 			return res.status(400).json({ message: 'Se solicita completar todos los campos.' })
 		}
 		// Inicia la transacción
-		transaction = await db.sequelize.transaction()
+		transaction = await req.db.sequelize.transaction()
 		// Valido la matricula del Nodo
-		const validationNode = await validateNode(req.body.number, req.body.id)
+		const validationNode = await validateNode(req.db, req.body.number, req.body.id)
 		if (validationNode) throw new Error(validationNode)
 
 		// Guardado de Nodo
-		const Nodo = await addNode(req.body, req.user.id, transaction)
+		const Nodo = await addNode(req.db, req.body, req.user.id, transaction)
 		if (!Nodo) throw new Error('Error al guardar el Nodo.')
 
 		// Cancelar todas las relaciones no utilizadas
-		const realtionsHistory = await ListNode_history(Nodo.id)
+		const realtionsHistory = await ListNode_history(req.db, Nodo.id)
 
 		// Relacionar dispositivos existentes y cambiar status de los que no están en req.body.devices
 		const existingDeviceIds = req.body.devices?.map((device) => device.id) || []
@@ -113,7 +112,7 @@ const saveNode = async (req, res) => {
 					id_user_edit: req.user.id,
 					status: 0,
 				}
-				await saveRelation(dataRelation, transaction)
+				await saveRelation(req.db, dataRelation, transaction)
 			}
 		}
 		// Se guardan dispositivos relacionados
@@ -125,7 +124,7 @@ const saveNode = async (req, res) => {
 					id_device: device.id,
 					type_device: device.type_element,
 				}
-				const validation = await validateRelation(dataValidation, transaction)
+				const validation = await validateRelation(req.db, dataValidation, transaction)
 				if (validation) throw new Error(validation)
 				const dataRelation = {
 					id_device: device.id,
@@ -134,14 +133,14 @@ const saveNode = async (req, res) => {
 					id_user_create: req.user.id,
 					status: 1,
 				}
-				const Relation = await saveRelation(dataRelation, transaction)
+				const Relation = await saveRelation(req.db, dataRelation, transaction)
 				if (!Relation) throw new Error('Error al guardar el Nodo.')
 				switch (device.type_element) {
 					case 1:
-						await saveRecloser({ ...device, id_node: Nodo.id }, transaction)
+						await saveRecloser(req.db, { ...device, id_node: Nodo.id }, transaction)
 						break
 					case 2:
-						await saveMeter({ ...device, id_node: Nodo.id }, transaction)
+						await saveMeter(req.db, { ...device, id_node: Nodo.id }, transaction)
 						break
 					// FALTA AGREGAR LOS DEMAS DISPOSITIVOS
 					default:
@@ -166,7 +165,7 @@ const saveNode = async (req, res) => {
 
 const getMaps = async (req, res) => {
 	try {
-		const listMap = await getListMaps()
+		const listMap = await getListMaps(req.db)
 		if (!listMap) throw new Error('Error al eliminar las relaciones.')
 		res.status(200).json(listMap)
 	} catch (error) {

@@ -1,4 +1,3 @@
-const { db } = require('../models')
 /**
  * Migra las tablas proporcionadas a la base de datos, creando nuevas entradas si no existen
  * o actualizando las existentes.
@@ -9,13 +8,9 @@ const { db } = require('../models')
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getIdTable = async (TableName) => {
-	try {
-		const Table = await db.Table.findOne({ where: { name: TableName } })
-		return Table
-	} catch (error) {
-		throw error
-	}
+const getIdTable = async (db, TableName) => {
+	const Table = await db.Table.findOne({ where: { name: TableName } })
+	return Table
 }
 
 /**
@@ -28,13 +23,9 @@ const getIdTable = async (TableName) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getIdColumn = async (table_id, column_name) => {
-	try {
-		const Column = await db.ColumnsTable.findOne({ where: { name: column_name, id_table: table_id } })
-		return Column
-	} catch (error) {
-		throw error
-	}
+const getIdColumn = async (db, table_id, column_name) => {
+	const Column = await db.ColumnsTable.findOne({ where: { name: column_name, id_table: table_id } })
+	return Column
 }
 
 /**
@@ -47,25 +38,21 @@ const getIdColumn = async (table_id, column_name) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const saveColumnUser = async (Columns) => {
+const saveColumnUser = async (db, Columns) => {
 	return db.sequelize.transaction(async (t) => {
-		try {
-			const savedColumns = []
-			for (const item of Columns) {
-				const [Column, created] = await db.User_Column.findOrCreate({
-					where: { id_columnsTable: item.id_columnsTable, id_user: item.id_user },
-					defaults: { ...item },
-					transaction: t,
-				})
-				if (!created) {
-					await Column.update(item, { transaction: t })
-				}
-				savedColumns.push(Column)
+		const savedColumns = []
+		for (const item of Columns) {
+			const [Column, created] = await db.User_Column.findOrCreate({
+				where: { id_columnsTable: item.id_columnsTable, id_user: item.id_user },
+				defaults: { ...item },
+				transaction: t,
+			})
+			if (!created) {
+				await Column.update(item, { transaction: t })
 			}
-			return savedColumns
-		} catch (error) {
-			throw error
+			savedColumns.push(Column)
 		}
+		return savedColumns
 	})
 }
 
@@ -79,83 +66,67 @@ const saveColumnUser = async (Columns) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  *
  */
-const getColumnsUser = async (id_table, id_user) => {
-	try {
-		const Columns = await db.User_Column.findAll({
-			where: { id_user: id_user },
-			include: [
-				{
-					association: 'columnsTable',
-					where: { id_table: id_table },
-				},
-			],
-		})
-		return Columns
-	} catch (error) {
-		throw error
-	}
-}
-
-const getControlsRecloser = async (version) => {
-	try {
-		const idVersion = await db.Version.findOne({
-			where: {
-				name: version,
+const getColumnsUser = async (db, id_table, id_user) => {
+	const Columns = await db.User_Column.findAll({
+		where: { id_user: id_user },
+		include: [
+			{
+				association: 'columnsTable',
+				where: { id_table: id_table },
 			},
-		})
-		const Controls = await db.Control.findAll({
-			attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
-			where: { id_version: idVersion.id },
-		})
-		return Controls
-	} catch (error) {
-		throw error
-	}
+		],
+	})
+	return Columns
 }
 
-const getControlsRecloserNew = async (version) => {
-	try {
-		const controls = await db.ControlsModel.findAll({
-			attributes: ['id', 'status'],
-			where: { id_model: version },
-			include: [
-				{
-					association: 'model',
-					attributes: ['id', 'name', 'brand'],
-				},
-				{
-					association: 'control',
-					attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
-				},
-			],
-		})
-		return controls
-	} catch (e) {
-		throw e
-	}
+const getControlsRecloser = async (db, version) => {
+	const idVersion = await db.Version.findOne({
+		where: {
+			name: version,
+		},
+	})
+	const Controls = await db.Control.findAll({
+		attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
+		where: { id_version: idVersion.id },
+	})
+	return Controls
 }
 
-const getControlsUserConfig = async (user, version) => {
-	try {
-		const idVersion = await db.Version.findOne({
-			where: {
-				name: version,
+const getControlsRecloserNew = async (db, version) => {
+	const controls = await db.ControlsModel.findAll({
+		attributes: ['id', 'status'],
+		where: { id_model: version },
+		include: [
+			{
+				association: 'model',
+				attributes: ['id', 'name', 'brand'],
 			},
-		})
-		const Controls = await db.Users_Control.findAll({
-			where: { id_user: user },
-			include: [
-				{
-					association: 'control',
-					attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
-					where: { id_version: idVersion.id },
-				},
-			],
-		})
-		return Controls
-	} catch (error) {
-		throw error
-	}
+			{
+				association: 'control',
+				attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
+			},
+		],
+	})
+	return controls
+}
+
+const getControlsUserConfig = async (db, user, version) => {
+	const idVersion = await db.Version.findOne({
+		where: {
+			name: version,
+		},
+	})
+	const Controls = await db.Users_Control.findAll({
+		where: { id_user: user },
+		include: [
+			{
+				association: 'control',
+				attributes: ['id', 'field', 'title', 'level', 'enabled', 'type_input'],
+				where: { id_version: idVersion.id },
+			},
+		],
+	})
+	return Controls
 }
 
 /**
@@ -168,25 +139,21 @@ const getControlsUserConfig = async (user, version) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const saveCrontrolsUser = async (Controls) => {
+const saveCrontrolsUser = async (db, Controls) => {
 	return db.sequelize.transaction(async (t) => {
-		try {
-			const savedControls = []
-			for (const item of Controls) {
-				const [Control, created] = await db.Users_Control.findOrCreate({
-					where: { id_control: item.id_control, id_user: item.id_user },
-					defaults: { ...item },
-					transaction: t,
-				})
-				if (!created) {
-					await Control.update(item, { transaction: t })
-				}
-				savedControls.push(Control)
+		const savedControls = []
+		for (const item of Controls) {
+			const [Control, created] = await db.Users_Control.findOrCreate({
+				where: { id_control: item.id_control, id_user: item.id_user },
+				defaults: { ...item },
+				transaction: t,
+			})
+			if (!created) {
+				await Control.update(item, { transaction: t })
 			}
-			return savedControls
-		} catch (error) {
-			throw error
+			savedControls.push(Control)
 		}
+		return savedControls
 	})
 }
 module.exports = {

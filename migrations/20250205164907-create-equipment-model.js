@@ -35,7 +35,8 @@ module.exports = {
 			},
 		})
 	},
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
+		await queryInterface.removeConstraint('ControlsModels', 'ControlsModels_ibfk_1')
 		await queryInterface.dropTable('EquipmentModels')
 	},
 }

@@ -1,7 +1,5 @@
 const { Op } = require('sequelize')
-const { db } = require('../models')
-const { getAllRecloser, getEventCheckRecloserOld } = require('./RecloserServices')
-const { searchRelationActive } = require('./NodeService')
+const { getEventCheckRecloserOld } = require('./RecloserServices')
 const { getDateCheck } = require('./ChecksAlarmsService')
 const { getEquipment } = require('./ElementService')
 
@@ -18,45 +16,40 @@ const typeDeviceInflux = {
  * @throws {Error} Si ocurre un error al obtener la información o procesar el evento.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const searchEnableAlarm = async (event) => {
-	try {
-		const nroSerie = event.topic.split('/')[4]
-		const brand = event.topic.split('/')[3]
-		const typeDevice = typeDeviceInflux[event.topic.split('/')[2]]
-		// FALTA AGREGAR EL STATUS :1
-		const Recloser = await getDevicexSerieBrand(nroSerie, brand)
-		if (!Recloser[0]) {
-			return false
-		}
-		// OBTENGO EL EVENTO SEGUN LA VERSION Y EL TIPO DE DISPOSITIVO
-		const Event = await db.Event.findOne({
-			where: { id_event_influx: event.id, id_version: Recloser[0].version.id, type_device: typeDevice, alarm: 1 },
-		})
-		if (!Event) {
-			return false
-		}
-		// BUSCO LA ALARMA Y SU ULTIMA FECHA DE EJECUCION PARA SABER SI PASO EL TIEMPO Y VOLVER A ENVIARLA.
-		const Alarm_sent = await db.Alarms_sents.findOne({
-			where: { id_device: Recloser[0].id, id_event: Event.id, type: typeDevice },
-			order: [['createdAt', 'DESC']],
-			limit: 1,
-		})
-		if (Alarm_sent) {
-			const hourAgo = new Date(new Date() - 60 * 60 * 1000)
-			if (Alarm_sent.updatedAt >= hourAgo) {
-				return false
-			}
-		}
-		const datareturn = {
-			device: Recloser,
-			event: Event,
-			typeDevice: typeDevice,
-		}
-		return datareturn
-	} catch (error) {
-		console.error(`Error obteniendo la configuración MQTT: ${error.message}`)
-		throw new Error(`Error al obtener configuración MQTT: ${error.message}`)
+const searchEnableAlarm = async (db, event) => {
+	const nroSerie = event.topic.split('/')[4]
+	const brand = event.topic.split('/')[3]
+	const typeDevice = typeDeviceInflux[event.topic.split('/')[2]]
+	// FALTA AGREGAR EL STATUS :1
+	const Recloser = await getDevicexSerieBrand(nroSerie, brand)
+	if (!Recloser[0]) {
+		return false
 	}
+	// OBTENGO EL EVENTO SEGUN LA VERSION Y EL TIPO DE DISPOSITIVO
+	const Event = await db.Event.findOne({
+		where: { id_event_influx: event.id, id_version: Recloser[0].version.id, type_device: typeDevice, alarm: 1 },
+	})
+	if (!Event) {
+		return false
+	}
+	// BUSCO LA ALARMA Y SU ULTIMA FECHA DE EJECUCION PARA SABER SI PASO EL TIEMPO Y VOLVER A ENVIARLA.
+	const Alarm_sent = await db.Alarms_sents.findOne({
+		where: { id_device: Recloser[0].id, id_event: Event.id, type: typeDevice },
+		order: [['createdAt', 'DESC']],
+		limit: 1,
+	})
+	if (Alarm_sent) {
+		const hourAgo = new Date(new Date() - 60 * 60 * 1000)
+		if (Alarm_sent.updatedAt >= hourAgo) {
+			return false
+		}
+	}
+	const datareturn = {
+		device: Recloser,
+		event: Event,
+		typeDevice: typeDevice,
+	}
+	return datareturn
 }
 
 /**
@@ -68,7 +61,7 @@ const searchEnableAlarm = async (event) => {
  * @throws {Error} Si ocurre un error al buscar el dispositivo en la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getDevicexSerieBrand = async (nroSerie, brand) => {
+const getDevicexSerieBrand = async (db, nroSerie, brand) => {
 	const Recloser = await db.Recloser.findAll({
 		where: [{ serial: nroSerie }],
 		include: [
@@ -101,21 +94,17 @@ const getDevicexSerieBrand = async (nroSerie, brand) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 
-const saveAlertSend = async (data) => {
+const saveAlertSend = async (db, data) => {
 	return db.sequelize.transaction(async (t) => {
-		try {
-			const [Alarms_sents, created] = await db.Alarms_sents.findOrCreate({
-				where: { id_device: data.id_device, type: data.type, id_event: data.id_event },
-				defaults: { ...data },
-				transaction: t,
-			})
-			if (!created) {
-				await Alarms_sents.update({ status: 1 }, { transaction: t })
-			}
-			return Alarms_sents
-		} catch (error) {
-			throw error
+		const [Alarms_sents, created] = await db.Alarms_sents.findOrCreate({
+			where: { id_device: data.id_device, type: data.type, id_event: data.id_event },
+			defaults: { ...data },
+			transaction: t,
+		})
+		if (!created) {
+			await Alarms_sents.update({ status: 1 }, { transaction: t })
 		}
+		return Alarms_sents
 	})
 }
 
@@ -128,13 +117,9 @@ const saveAlertSend = async (data) => {
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 
-const saveLogAlert = async (data) => {
-	try {
-		const Logs_Alarm = await db.Logs_Alarm.create(data)
-		return Logs_Alarm
-	} catch (error) {
-		throw error
-	}
+const saveLogAlert = async (db, data) => {
+	const Logs_Alarm = await db.Logs_Alarm.create(data)
+	return Logs_Alarm
 }
 /**
  * Obtiene todos los eventos activos y los organiza por tipo, marca y versión.
@@ -146,33 +131,29 @@ const saveLogAlert = async (data) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getAllEvents = async () => {
-	try {
-		const [Events, versions] = await Promise.all([
-			db.Event.findAll({ where: { status: 1 } }),
-			db.EquipmentModel.findAll({
-				where: { status: 1 },
-			}),
-		])
+const getAllEvents = async (db) => {
+	const [Events, versions] = await Promise.all([
+		db.Event.findAll({ where: { status: 1 } }),
+		db.EquipmentModel.findAll({
+			where: { status: 1 },
+		}),
+	])
 
-		const dataResult = Events.reduce((acc, current) => {
-			const version = versions.find((item) => item.id === current.id_version)
-			const brandName = version?.brand
-			const versionName = version?.name
-			const eventType = current.type_device
+	const dataResult = Events.reduce((acc, current) => {
+		const version = versions.find((item) => item.id === current.id_version)
+		const brandName = version?.brand
+		const versionName = version?.name
+		const eventType = current.type_device
 
-			acc[eventType] ??= {}
-			acc[eventType][brandName] ??= {}
-			acc[eventType][brandName][versionName] ??= []
+		if (!acc[eventType]) acc[eventType] = {}
+		if (!acc[eventType][brandName]) acc[eventType][brandName] = {}
+		if (!acc[eventType][brandName][versionName]) acc[eventType][brandName][versionName] = []
 
-			acc[eventType][brandName][versionName].push(current.get({ plain: true }))
+		acc[eventType][brandName][versionName].push(current.get({ plain: true }))
 
-			return acc
-		}, {})
-		return dataResult
-	} catch (error) {
-		throw error
-	}
+		return acc
+	}, {})
+	return dataResult
 }
 /**
  * Obtiene todos los eventos activos con prioridad igual o menor a 2.
@@ -181,18 +162,14 @@ const getAllEvents = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsActive = async () => {
-	try {
-		const Events = await db.Event.findAll({
-			where: {
-				status: 1,
-				priority: { [Op.lte]: 2 },
-			},
-		})
-		return Events
-	} catch (error) {
-		throw error
-	}
+const getEventsActive = async (db) => {
+	const Events = await db.Event.findAll({
+		where: {
+			status: 1,
+			priority: { [Op.lte]: 2 },
+		},
+	})
+	return Events
 }
 /**
  * Obtiene eventos activos específicos para un dispositivo según el ID de versión y el tipo.
@@ -203,19 +180,15 @@ const getEventsActive = async () => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsDevice = async (id_version, type_device) => {
-	try {
-		const Events = await db.Event.findAll({
-			where: {
-				status: 1,
-				id_version,
-				type_device,
-			},
-		})
-		return Events
-	} catch (error) {
-		throw error
-	}
+const getEventsDevice = async (db, id_version, type_device) => {
+	const Events = await db.Event.findAll({
+		where: {
+			status: 1,
+			id_version,
+			type_device,
+		},
+	})
+	return Events
 }
 /**
  * Obtiene el estado de eventos activos de reconectadores desde InfluxDB.
@@ -226,42 +199,36 @@ const getEventsDevice = async (id_version, type_device) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante las consultas.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const getEventsInflux = async (influx_name, Events, id = false) => {
-	try {
-		const reclosers = await getEquipment(id)
-		const result = await Promise.all(
-			reclosers.map(async (recloser) => {
-				if (Events.some((item) => item.id_version === recloser.id_model)) {
-					const eventActiveReco = Events.filter((item) => item.id_version === recloser.id_model).map(
-						(item) => ({
-							id: item.id_event_influx,
-							name: item.name,
-							priority: item.priority,
-							description: item.description,
-						})
-					)
-					const dateCheck = await getDateCheck(recloser.id, 'Reconectador')
-					return await getEventCheckRecloserOld(
-						{
-							brand: recloser.equipmentmodels.name,
-							serial: recloser.serial,
-							name: recloser.elements.name || '-',
-							number: recloser.serial || '-',
-							id_device: recloser.id,
-							typeDevice: 'Reconectador',
-							event: eventActiveReco,
-							dateCheck: dateCheck?.date_check || null,
-						},
-						influx_name
-					)
-				}
-				return null
-			})
-		)
-		return result.filter(Boolean)
-	} catch (error) {
-		throw error
-	}
+const getEventsInflux = async (db, influx_name, Events, id = false) => {
+	const reclosers = await getEquipment(db, id)
+	const result = await Promise.all(
+		reclosers.map(async (recloser) => {
+			if (Events.some((item) => item.id_version === recloser.id_model)) {
+				const eventActiveReco = Events.filter((item) => item.id_version === recloser.id_model).map((item) => ({
+					id: item.id_event_influx,
+					name: item.name,
+					priority: item.priority,
+					description: item.description,
+				}))
+				const dateCheck = await getDateCheck(db, recloser.id, 'Reconectador')
+				return await getEventCheckRecloserOld(
+					{
+						brand: recloser.equipmentmodels.name,
+						serial: recloser.serial,
+						name: recloser.elements.name || '-',
+						number: recloser.serial || '-',
+						id_device: recloser.id,
+						typeDevice: 'Reconectador',
+						event: eventActiveReco,
+						dateCheck: dateCheck?.date_check || null,
+					},
+					influx_name
+				)
+			}
+			return null
+		})
+	)
+	return result.filter(Boolean)
 }
 /**
  * Guarda o actualiza múltiples notificaciones de eventos en la base de datos.
@@ -272,95 +239,71 @@ const getEventsInflux = async (influx_name, Events, id = false) => {
  * @throws {Error} Lanza un error si ocurre algún problema durante la transacción.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
-const saveNotify = async (data) => {
-	try {
-		const dataResult = await db.Event.bulkCreate(data, {
-			updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
-		})
-		return dataResult
-	} catch (error) {
-		throw error
-	}
+const saveNotify = async (db, data) => {
+	const dataResult = await db.Event.bulkCreate(data, {
+		updateOnDuplicate: ['priority', 'alarm', 'flash_screen'],
+	})
+	return dataResult
 }
 
-const EventsCustom = async (filter) => {
-	try {
-		const query = {
-			where: filter,
+const EventsCustom = async (db, filter) => {
+	const query = {
+		where: filter,
+	}
+	return await db.Event.findAll(query)
+}
+
+const saveEvent = async (db, data) => {
+	if (data.id) {
+		const event = await db.Event.findByPk(data.id)
+		if (event) {
+			await event.update(data)
+			return await event
 		}
-		return await db.Event.findAll(query)
-	} catch (e) {
-		throw e
 	}
+	return await db.Event.create(data)
 }
 
-const saveEvent = async (data) => {
-	try {
-		if (data.id) {
-			const event = await db.Event.findByPk(data.id)
-			if (event) {
-				await event.update(data)
-				return await event
-			}
-		}
-		return await db.Event.create(data)
-	} catch (e) {
-		throw e
-	}
-}
-
-const updateEventIndex = async (data) => {
-	try {
-		const updatePromises = data.map((entry) => {
-			return db.Event.update(
-				{ index_file: entry[0] },
-				{
-					where: {
-						id_event_influx: {
-							[Op.or]: [entry[1], entry[1] + 1],
-						},
-						id_version: 2,
+const updateEventIndex = async (db, data) => {
+	const updatePromises = data.map((entry) => {
+		return db.Event.update(
+			{ index_file: entry[0] },
+			{
+				where: {
+					id_event_influx: {
+						[Op.or]: [entry[1], entry[1] + 1],
 					},
-				}
-			)
-		})
-		const promises = await Promise.all(updatePromises)
-		return promises
-	} catch (e) {
-		throw e
-	}
+					id_version: 2,
+				},
+			}
+		)
+	})
+	const promises = await Promise.all(updatePromises)
+	return promises
 }
 
-const updateEvents = async (events) => {
-	try {
-		if (!Array.isArray(events)) throw new Error('Invalid input')
+const updateEvents = async (db, events) => {
+	if (!Array.isArray(events)) throw new Error('Invalid input')
 
-		const updatePromises = events
-			.filter((data) => data?.id != null)
-			.map((data) => db.Event.update(data, { where: { id: data.id } }))
+	const updatePromises = events
+		.filter((data) => data?.id != null)
+		.map((data) => db.Event.update(data, { where: { id: data.id } }))
 
-		const results = await Promise.all(updatePromises)
-		const updatedCount = results.reduce((acc, [count]) => acc + count, 0)
+	const results = await Promise.all(updatePromises)
+	const updatedCount = results.reduce((acc, [count]) => acc + count, 0)
 
-		return updatedCount
-	} catch (e) {
-		throw e
-	}
+	return updatedCount
 }
 
-const checkIsAlarm = async (data) => {
-	try {
-		const alarm = await db.Event.findOne({
-			where: {
-				alarm: 1,
-				id_version: data.version,
-				id_event_influx: data.eventId,
-			},
-		})
-		return alarm
-	} catch (e) {
-		throw e
-	}
+const checkIsAlarm = async (db, data) => {
+	const alarm = await db.Event.findOne({
+		where: {
+			alarm: 1,
+			id_version: data.version,
+			id_event_influx: data.eventId,
+		},
+	})
+	return alarm
 }
 
 module.exports = {

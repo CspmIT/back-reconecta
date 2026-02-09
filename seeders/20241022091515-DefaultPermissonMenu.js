@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-	async up(queryInterface, Sequelize) {
+	async up(queryInterface) {
 		const date = new Date()
 		await queryInterface.bulkInsert(
 			'Menu_selecteds',
@@ -51,7 +51,7 @@ module.exports = {
 		)
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.bulkDelete('Menu_selecteds', null, {})
 	},
 }
