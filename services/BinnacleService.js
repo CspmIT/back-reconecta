@@ -1,68 +1,64 @@
-const { db } = require('../models')
+const getAllBinnacles = async (db, filter = null) => {
+	try {
+		const query = {
+			include: [
+				{
+					model: db.Element,
+					as: 'element',
+				},
+			],
+			where: {
+				status: { [db.Sequelize.Op.ne]: 'deleted' },
+			},
+		}
 
-const getAllBinnacles = async (filter = null) => {
-    try {
-        const query = {
-            include: [
-                {
-                    model: db.Element,
-                    as: 'element',
-                },
-            ],
-            where: {
-                status: { [db.Sequelize.Op.ne]: 'deleted' },
-            },
-        };
+		if (filter?.id) {
+			query.where.id = filter.id
+		}
 
-        if (filter?.id) {
-            query.where.id = filter.id;
-        }
+		return await db.Binnacle.findAll(query)
+	} catch (e) {
+		console.error('Error al obtener las bitácoras:', e)
+		throw new Error(e)
+	}
+}
 
-        return await db.Binnacle.findAll(query);
-    } catch (e) {
-        console.error('Error al obtener las bitácoras:', e);
-        throw new Error(e);
-    }
-};
+const saveBinnacle = async (db, data) => {
+	try {
+		const maxOrder = await db.Binnacle.max('order')
+		const nextOrder = maxOrder ? maxOrder + 1 : 1
+		data.order = nextOrder
 
+		return await db.Binnacle.create(data)
+	} catch (e) {
+		console.log(e)
+		throw e
+	}
+}
 
-const saveBinnacle = async (data) => {
-    try {
-        const maxOrder = await db.Binnacle.max('order');
-        const nextOrder = maxOrder ? maxOrder + 1 : 1;
-        data.order = nextOrder;
+const updateStatusToDeleted = async (db, id) => {
+	try {
+		const currentDate = new Date().toISOString()
 
-        return await db.Binnacle.create(data);
-    } catch (e) {
-        console.log(e);
-        throw e;
-    }
-};
+		const binnacle = await db.Binnacle.findByPk(id)
+		if (!binnacle) {
+			throw new Error('Registro no encontrado')
+		}
 
-const updateStatusToDeleted = async (id) => {
-    try {
-        const currentDate = new Date().toISOString();
+		await binnacle.update({
+			status: 'deleted',
+			updatedAt: currentDate,
+		})
 
-        const binnacle = await db.Binnacle.findByPk(id);
-        if (!binnacle) {
-            throw new Error('Registro no encontrado');
-        }
-
-        await binnacle.update({
-            status: 'deleted',
-            updatedAt: currentDate,
-        });
-
-        return binnacle;
-    } catch (e) {
-        console.error("Error al actualizar el estado de la bitácora:", e);
-        throw new Error(e);
-    }
-};
-
+		return binnacle
+	} catch (e) {
+		console.error('Error al actualizar el estado de la bitácora:', e)
+		throw new Error(e)
+	}
+}
 
 module.exports = {
-    getAllBinnacles,
-    saveBinnacle,
-    updateStatusToDeleted,
+	getAllBinnacles,
+	saveBinnacle,
+	updateStatusToDeleted,
 }
