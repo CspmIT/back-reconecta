@@ -56,7 +56,7 @@ const influxAlarm = async (req, res) => {
 		const title = `Alerta reconectador ${recloser[0].observation}`
 		const content = alarmDef.name
 		await initDiscordQueue()
-		await discordQueue.add(() => discord(dbTenant, title, content))
+		await discordQueue.add(() => discord(dbTenant, title, content, 1))
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
@@ -69,11 +69,10 @@ const influxAlarmDeadman = async (req, res) => {
 		const { topic } = req.body
 		const { scheme } = req.params
 		if (!topic) return res.status(400).json({ error: 'Faltan campos obligatorios' })
-		const { dbTenant } = await dataSchema(scheme, topic)
-		const title = `Haciendo moco`
-		const webhook = '1464248365465211004/X8QLDMKj0s-BcWyJNtdqYDfQu0btZvNDZRJoaA248CmZZCNHGKSmRmzW2bO2B_PxS3kl'
+		const { dbTenant, recloser } = await dataSchema(scheme, topic)
+		const title = `Error en comunicación con equipo IOT en ${recloser[0].equipmentmodels.description} ${recloser[0].observation} (${recloser[0].serial})`
 		await initDiscordQueue()
-		await discordQueue.add(() => discord(dbTenant, title, topic, webhook))
+		await discordQueue.add(() => discord(dbTenant, title, 'Alerta Deadman', 2))
 
 		return res.json({ message: 'OK' })
 	} catch (e) {
@@ -81,20 +80,20 @@ const influxAlarmDeadman = async (req, res) => {
 	}
 }
 
-async function discord(db, title, content, webhook = false, retries = 3) {
+async function discord(db, title, content, type, retries = 3) {
 	try {
 		const credentials = await discordCredentials(db)
-		const urlWebhook = webhook || credentials.webhook
+		const urlWebhook = credentials.webhook
 		const webhookURL = `https://discord.com/api/webhooks/${urlWebhook}`
-
+		const icon = type === 1 ? 'warning' : 'interrobang'
 		await axiosInstance.post(webhookURL, {
 			username: credentials.username,
 			avatar_url: 'https://reconecta.cooptech.com.ar/assets/img/Logo/Logo.png',
 			content: title,
 			embeds: [
 				{
-					title: `:warning: ${content}`,
-					color: 15007526,
+					title: `:${icon}: ${content}`,
+					color: type === 1 ? 15007526 : 16734502,
 					url: 'https://reconecta.cooptech.com.ar/',
 				},
 			],
@@ -104,7 +103,7 @@ async function discord(db, title, content, webhook = false, retries = 3) {
 
 		if (retryable && retries > 0) {
 			await new Promise((r) => setTimeout(r, 1000))
-			return discord(db, title, content, webhook, retries - 1)
+			return discord(db, title, content, type, retries - 1)
 		}
 
 		throw error
@@ -114,7 +113,8 @@ async function discord(db, title, content, webhook = false, retries = 3) {
 async function dataSchema(scheme, topic) {
 	let dbTenant = null
 	let recloser = []
-	const serial = topic.split('/')[4]
+	const index = topic.includes('Reconectadores') ? 4 : 5
+	const serial = topic.split('/')[index]
 
 	// Caso 1 — buscar SOLO en un tenant
 	if (scheme !== 'externo') {
