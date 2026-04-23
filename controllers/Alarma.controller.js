@@ -72,7 +72,7 @@ const influxAlarmDeadman = async (req, res) => {
 		const { dbTenant, recloser } = await dataSchema(scheme, topic)
 		const title = `Error en comunicación con equipo IOT en ${recloser[0].equipmentmodels.description} ${recloser[0].observation} (${recloser[0].serial})`
 		await initDiscordQueue()
-		await discordQueue.add(() => discord(dbTenant, title, 'Alerta Deadman', 2))
+		await discordQueue.add(() => discord(dbTenant, title, 'Alerta equipo sin conexión', 2))
 
 		return res.json({ message: 'OK' })
 	} catch (e) {

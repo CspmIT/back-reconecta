@@ -73,9 +73,9 @@ const loginCooptechExternal = async (req, res) => {
 	}
 }
 
-const loginGoogle = async (req, res) => {
-	const client = new OAuth2Client('841713891026-pg3r31kjodplsid3nmcpav7hamgs9pv1.apps.googleusercontent.com')
-}
+// const loginGoogle = async (req, res) => {
+// 	const client = new OAuth2Client('841713891026-pg3r31kjodplsid3nmcpav7hamgs9pv1.apps.googleusercontent.com')
+// }
 module.exports = {
 	relationUserCooptech,
 	loginCooptech,
