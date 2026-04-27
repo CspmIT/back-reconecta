@@ -306,6 +306,45 @@ const checkIsAlarm = async (db, data) => {
 	return alarm
 }
 
+const getEventsDeadman = async (db) => {
+	const logs = await db.Logs_Alarm.findAll({
+		where: { type_alarm: 'Deadman' },
+		include: [
+			{
+				model: db.Equipment,
+				as: 'equipment',
+				include: [
+					{
+						model: db.Element,
+						as: 'elements',
+					},
+				],
+			},
+		],
+	})
+	const eventsReturn = []
+	for (const log of logs) {
+		const regCheck = await getDateCheck(db, log.id_device, log.type)
+		const dateCheck = regCheck?.date_check || null
+		console.log(dateCheck)
+		console.log(log.createdAt)
+		eventsReturn.push({
+			event: `Sin comunicación con el ${log.type}`,
+			priority: 3,
+			description: 'Se dejaron de recibir valores del equipo seleccionado',
+			name: log.equipment.elements.name,
+			nro_recloser: log.equipment.serial,
+			typeDevice: log.type,
+			id_device: log.id_device,
+			id: 0,
+			dateAlert: log.createdAt,
+			dateEvent: log.createdAt,
+			statusAlert: dateCheck < log.createdAt ? 1 : 0,
+			infoAdd: '-',
+		})
+	}
+	return eventsReturn
+}
 module.exports = {
 	searchEnableAlarm,
 	getDevicexSerieBrand,
@@ -321,4 +360,5 @@ module.exports = {
 	updateEvents,
 	EventsCustom,
 	checkIsAlarm,
+	getEventsDeadman,
 }

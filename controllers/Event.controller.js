@@ -7,6 +7,7 @@ const {
 	saveEvent,
 	updateEventIndex,
 	updateEvents,
+	getEventsDeadman,
 } = require('../services/EventService')
 const { getConectionMqtt } = require('../services/MqttService')
 const { addLogsChecks } = require('../services/ChecksAlarmsService')
@@ -79,7 +80,9 @@ const AllEvents = async (req, res) => {
 	try {
 		const Events = await getEventsActive(req.db)
 		const eventsInflux = await getEventsInflux(req.db, req.user.influx_name, Events)
-		const returnData = eventsInflux
+		const deadmanLogs = await getEventsDeadman(req.db)
+		const combined = [...eventsInflux, deadmanLogs]
+		const returnData = combined
 			.reduce((acc, value) => {
 				acc.push(...value)
 				return acc
