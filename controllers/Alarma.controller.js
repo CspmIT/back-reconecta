@@ -46,6 +46,7 @@ const influxAlarm = async (req, res) => {
 		if (!alarmDef) return res.json({ message: 'No es alarma' })
 
 		const body = {
+			type_alarm: 'Evento',
 			id_device: recloser[0].id,
 			type: 'Reconectador',
 			id_event: alarmDef.id,
@@ -74,6 +75,13 @@ const influxAlarmDeadman = async (req, res) => {
 		await initDiscordQueue()
 		await discordQueue.add(() => discord(dbTenant, title, 'Alerta equipo sin conexión', 2))
 
+		const body = {
+			type_alarm: 'Deadman',
+			id_device: recloser[0].id,
+			type: 'Reconectador',
+		}
+
+		await saveAlarm(dbTenant, body)
 		return res.json({ message: 'OK' })
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
