@@ -665,6 +665,7 @@ const getEventCheckRecloserOld = async (data, influxName) => {
 				priority: eventData.priority,
 				description: eventData.description,
 				name: data.name,
+				observation: data.observation,
 				nro_recloser: data.number,
 				typeDevice: data.typeDevice,
 				id_device: data.id_device,

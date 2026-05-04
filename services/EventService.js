@@ -217,6 +217,7 @@ const getEventsInflux = async (db, influx_name, Events, id = false) => {
 						serial: recloser.serial,
 						name: recloser.elements.name || '-',
 						number: recloser.serial || '-',
+						observation: recloser.observation || '-',
 						id_device: recloser.id,
 						typeDevice: 'Reconectador',
 						event: eventActiveReco,
@@ -326,14 +327,13 @@ const getEventsDeadman = async (db) => {
 	for (const log of logs) {
 		const regCheck = await getDateCheck(db, log.id_device, log.type)
 		const dateCheck = regCheck?.date_check || null
-		console.log(dateCheck)
-		console.log(log.createdAt)
 		eventsReturn.push({
 			event: `Sin comunicación con el ${log.type}`,
 			priority: 3,
 			description: 'Se dejaron de recibir valores del equipo seleccionado',
 			name: log.equipment.elements.name,
 			nro_recloser: log.equipment.serial,
+			observation: log.equipment.observation,
 			typeDevice: log.type,
 			id_device: log.id_device,
 			id: 0,
