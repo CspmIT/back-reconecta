@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
 		{
 			sequelize,
 			modelName: 'Binnacle_personal',
+			tableName: 'Binnacle_personal',
 		}
 	)
 	return Binnacle_personal
