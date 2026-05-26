@@ -12,6 +12,7 @@
  */
 require('dotenv').config()
 const { getTenantDb } = require('../models')
+const { capitalizeNombre } = require('../services/PersonalService')
 
 const dbNames = (process.env.DB_NAMES || process.env.DB_NAME || '')
 	.split(',')
@@ -37,8 +38,8 @@ const seedPersonalFromUsers = async (dbName) => {
 	let skipped = 0
 
 	for (const u of users) {
-		const first_name = (u.first_name || '').trim()
-		const last_name = (u.last_name || '').trim()
+		const first_name = capitalizeNombre(u.first_name)
+		const last_name = capitalizeNombre(u.last_name)
 		if (!first_name || !last_name) {
 			console.warn(`  · skip user id=${u.id}: faltan nombre y/o apellido`)
 			skipped++
