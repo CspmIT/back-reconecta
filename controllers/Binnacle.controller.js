@@ -3,6 +3,7 @@ const {
 	saveBinnacle,
 	updateBinnacle: updateBinnacleService,
 	deleteBinnacle: deleteBinnacleService,
+	getBinnacleEquipos,
 } = require('../services/BinnacleService')
 
 const listBinnacle = async (req, res) => {
@@ -50,9 +51,19 @@ const deleteBinnacle = async (req, res) => {
 	}
 }
 
+const listEquipos = async (req, res) => {
+	try {
+		const data = await getBinnacleEquipos(req.db)
+		return res.status(200).json(data)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
 	listBinnacle,
 	addBinnacle,
 	updateBinnacle,
 	deleteBinnacle,
+	listEquipos,
 }

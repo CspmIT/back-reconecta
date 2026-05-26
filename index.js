@@ -21,6 +21,7 @@ const ElementRoutes = require('./routes/Element.routes')
 const analyzerRoutes = require('./routes/Analyzer.routes')
 const graphicRoutes = require('./routes/Graphic.routes')
 const BinnacleRoutes = require('./routes/Binnacle.routes')
+const PersonalRoutes = require('./routes/Personal.routes')
 
 
 // Configuracion para los cors
@@ -44,6 +45,7 @@ app.use('/api', ElementRoutes)
 app.use('/api', analyzerRoutes)
 app.use('/api', graphicRoutes)
 app.use('/api', BinnacleRoutes)
+app.use('/api', PersonalRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

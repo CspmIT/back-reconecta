@@ -6,8 +6,8 @@ const getAllBinnacles = async (db, filter = null) => {
 				{ model: db.Equipment, as: 'equipment' },
 				{ model: db.Binnacle_pictures, as: 'pictures' },
 				{
-					model: db.User,
-					as: 'users',
+					model: db.Personal,
+					as: 'personal',
 					through: { attributes: [] },
 				},
 			],
@@ -41,16 +41,16 @@ const getAllBinnacles = async (db, filter = null) => {
 const saveBinnacle = async (db, data) => {
 	const t = await db.sequelize.transaction()
 	try {
-		const { users = [], pictures = [], ...binnacleData } = data
+		const { personal = [], pictures = [], ...binnacleData } = data
 
 		const binnacle = await db.Binnacle.create(binnacleData, { transaction: t })
 
-		if (users.length) {
-			const userRows = users.map((id_user) => ({
+		if (personal.length) {
+			const personalRows = personal.map((id_personal) => ({
 				id_binnacle: binnacle.id,
-				id_user,
+				id_personal,
 			}))
-			await db.Binnacle_users.bulkCreate(userRows, { transaction: t })
+			await db.Binnacle_personal.bulkCreate(personalRows, { transaction: t })
 		}
 
 		if (pictures.length) {
@@ -79,20 +79,20 @@ const updateBinnacle = async (db, id, data) => {
 			throw new Error('Registro no encontrado')
 		}
 
-		const { users, pictures, ...binnacleData } = data
+		const { personal, pictures, ...binnacleData } = data
 		await binnacle.update(binnacleData, { transaction: t })
 
-		if (Array.isArray(users)) {
-			await db.Binnacle_users.destroy({
+		if (Array.isArray(personal)) {
+			await db.Binnacle_personal.destroy({
 				where: { id_binnacle: id },
 				transaction: t,
 			})
-			if (users.length) {
-				const userRows = users.map((id_user) => ({
+			if (personal.length) {
+				const personalRows = personal.map((id_personal) => ({
 					id_binnacle: id,
-					id_user,
+					id_personal,
 				}))
-				await db.Binnacle_users.bulkCreate(userRows, { transaction: t })
+				await db.Binnacle_personal.bulkCreate(personalRows, { transaction: t })
 			}
 		}
 
@@ -128,7 +128,7 @@ const deleteBinnacle = async (db, id) => {
 			throw new Error('Registro no encontrado')
 		}
 
-		await db.Binnacle_users.destroy({
+		await db.Binnacle_personal.destroy({
 			where: { id_binnacle: id },
 			transaction: t,
 		})
@@ -147,9 +147,57 @@ const deleteBinnacle = async (db, id) => {
 	}
 }
 
+// Catálogo unificado para el selector "Equipo vinculado" de Binnacle.
+// Devuelve los Equipments + los Elements tipo subestación rural (Element.type === 3),
+// que viven sólo como Element y no tienen un Equipment asociado.
+const getBinnacleEquipos = async (db) => {
+	const equipments = await db.Equipment.findAll({
+		include: [
+			{ model: db.Element, as: 'elements' },
+			{ model: db.EquipmentModel, as: 'equipmentmodels' },
+		],
+	})
+	const subestaciones = await db.Element.findAll({
+		where: { type: 3 },
+	})
+
+	const equipmentItems = equipments.map((eq) => {
+		const json = eq.toJSON ? eq.toJSON() : eq
+		const elemento = json.elements
+		const modelo = json.equipmentmodels
+		const nombre = [elemento?.name, json.observation].filter(Boolean).join(' - ')
+		return {
+			kind: 'equipment',
+			id: json.id,
+			id_element: json.id_element ?? null,
+			nombre: nombre || `Equipo ${json.id}`,
+			type: modelo?.type ?? null,
+			ubicacion: elemento?.description || json.serial || '',
+			serial: json.serial ?? null,
+		}
+	})
+
+	const elementItems = subestaciones.map((el) => {
+		const json = el.toJSON ? el.toJSON() : el
+		return {
+			kind: 'element',
+			id: json.id,
+			id_element: json.id,
+			nombre: json.name || `Subestación ${json.id}`,
+			// 0 = subestación rural en EQUIPMENT_TYPE_LABEL del frontend.
+			type: 0,
+			ubicacion: json.description || '',
+			serial: null,
+		}
+	})
+
+	return [...equipmentItems, ...elementItems]
+}
+
 module.exports = {
 	getAllBinnacles,
 	saveBinnacle,
 	updateBinnacle,
 	deleteBinnacle,
+	getBinnacleEquipos,
 }

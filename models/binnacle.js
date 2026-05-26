@@ -6,12 +6,15 @@ module.exports = (sequelize, DataTypes) => {
 			Binnacle.belongsTo(models.Element, { foreignKey: 'id_element', as: 'element' })
 			Binnacle.belongsTo(models.Equipment, { foreignKey: 'id_equipment', as: 'equipment' })
 			Binnacle.hasMany(models.Binnacle_pictures, { foreignKey: 'id_binnacle', as: 'pictures' })
-			Binnacle.hasMany(models.Binnacle_users, { foreignKey: 'id_binnacle', as: 'binnacle_users' })
-			Binnacle.belongsToMany(models.User, {
-				through: models.Binnacle_users,
+			Binnacle.hasMany(models.Binnacle_personal, {
 				foreignKey: 'id_binnacle',
-				otherKey: 'id_user',
-				as: 'users',
+				as: 'binnacle_personal',
+			})
+			Binnacle.belongsToMany(models.Personal, {
+				through: models.Binnacle_personal,
+				foreignKey: 'id_binnacle',
+				otherKey: 'id_personal',
+				as: 'personal',
 			})
 		}
 	}
@@ -27,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 				comment:
-					'1) Mantenimiento preventivo - 2) Mantenimiento correctivo - 3) Inspección - 4) Instalación / Puesta en servicio - 5) Cambio / Reemplazo de equipo - 6) Reparación - 7) Otro',
+					'1) Mantenimiento preventivo - 2) Mantenimiento correctivo - 3) Inspección - 4) Instalación / Puesta en servicio - 5) Cambio / Reemplazo de equipo - 6) Reparación - 7) Media Tensión - 8) Baja Tensión - 9) Transformador - 10) Medidor - 11) Otro',
 			},
 			date_task: {
 				type: DataTypes.DATE,
