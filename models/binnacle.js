@@ -1,27 +1,58 @@
 'use strict'
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
-    class Binnacle extends Model {
-        static associate(models) {
-            Binnacle.belongsTo(models.Element, { foreignKey: 'id_element', as: 'element' });
-        }
-    }
-    Binnacle.init(
-        {
-            id_element: DataTypes.INTEGER,
-            name_element: DataTypes.STRING,
-            lat: DataTypes.DECIMAL,
-            lon: DataTypes.DECIMAL,
-            task: DataTypes.STRING,
-            type_task: DataTypes.ENUM('Media Tensión'),
-            order: DataTypes.INTEGER,
-            status: DataTypes.ENUM('En Servicio', 'Fuera de Servicio', 'deleted'),
-        },
-        {
-            sequelize,
-            modelName: 'Binnacle',
-            tableName: 'Binnacle',
-        }
-    )
-    return Binnacle
+	class Binnacle extends Model {
+		static associate(models) {
+			Binnacle.belongsTo(models.Element, { foreignKey: 'id_element', as: 'element' })
+			Binnacle.belongsTo(models.Equipment, { foreignKey: 'id_equipment', as: 'equipment' })
+			Binnacle.hasMany(models.Binnacle_pictures, { foreignKey: 'id_binnacle', as: 'pictures' })
+			Binnacle.hasMany(models.Binnacle_users, { foreignKey: 'id_binnacle', as: 'binnacle_users' })
+			Binnacle.belongsToMany(models.User, {
+				through: models.Binnacle_users,
+				foreignKey: 'id_binnacle',
+				otherKey: 'id_user',
+				as: 'users',
+			})
+		}
+	}
+	Binnacle.init(
+		{
+			id_element: DataTypes.INTEGER,
+			id_equipment: DataTypes.INTEGER,
+			name_element: DataTypes.STRING,
+			order: {
+				type: DataTypes.STRING,
+			},
+			type_task: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				comment:
+					'1) Mantenimiento preventivo - 2) Mantenimiento correctivo - 3) Inspección - 4) Instalación / Puesta en servicio - 5) Cambio / Reemplazo de equipo - 6) Reparación - 7) Otro',
+			},
+			date_task: {
+				type: DataTypes.DATE,
+				allowNull: false,
+			},
+			status_task: {
+				type: DataTypes.ENUM('Programada', 'En curso', 'Completada', 'Cancelada', 'Vencida'),
+				allowNull: false,
+			},
+			day_task: DataTypes.INTEGER,
+			hours_task: DataTypes.INTEGER,
+			minutes_task: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+			},
+			description: {
+				type: DataTypes.STRING,
+				allowNull: false,
+			},
+		},
+		{
+			sequelize,
+			modelName: 'Binnacle',
+			tableName: 'Binnacle',
+		}
+	)
+	return Binnacle
 }

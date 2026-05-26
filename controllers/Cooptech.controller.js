@@ -1,4 +1,4 @@
-const { OAuth2Client } = require('google-auth-library')
+//const { OAuth2Client } = require('google-auth-library')
 const { signTokenCooptech, getEnabledUser, signTokenCooptechExternal } = require('../services/AuthService')
 const { addUserCooptech } = require('../services/CooptechService')
 
@@ -29,7 +29,7 @@ const loginCooptech = async (req, res) => {
 			throw new Error('El usuario no tiene Permisos para ingresar')
 		}
 		if (user.token_app !== tokenApp) {
-			throw new Error('El usuario o la contraseña son incorrectas2')
+			throw new Error('El usuario o la contraseña son incorrectas')
 		}
 		const token = await signTokenCooptech(user, tokenApp, schemaName, influx_name)
 		return res.status(200).json({ token })

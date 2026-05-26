@@ -1,8 +1,13 @@
-const { getAllBinnacles, saveBinnacle, updateStatusToDeleted } = require('../services/BinnacleService')
+const {
+	getAllBinnacles,
+	saveBinnacle,
+	updateBinnacle: updateBinnacleService,
+	deleteBinnacle: deleteBinnacleService,
+} = require('../services/BinnacleService')
 
 const listBinnacle = async (req, res) => {
 	try {
-		const filters = req.params
+		const filters = { ...req.query, ...req.params }
 		const binnacles = await getAllBinnacles(req.db, filters)
 		return res.status(200).json(binnacles)
 	} catch (e) {
@@ -12,9 +17,8 @@ const listBinnacle = async (req, res) => {
 
 const addBinnacle = async (req, res) => {
 	try {
-		const binnacle = req.body
-		const data = await saveBinnacle(req.db, binnacle)
-		return res.status(200).json({ message: 'Equipo creado correctamente', data })
+		const data = await saveBinnacle(req.db, req.body)
+		return res.status(200).json({ message: 'Bitácora creada correctamente', data })
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
 	}
@@ -23,18 +27,12 @@ const addBinnacle = async (req, res) => {
 const updateBinnacle = async (req, res) => {
 	try {
 		const { id } = req.params
-		const binnacleData = req.body
-
-		const binnacles = await getAllBinnacles(req.db, { id })
-		const binnacle = binnacles.length ? binnacles[0] : null
-
-		if (!binnacle) {
-			return res.status(404).json({ message: 'Registro no encontrado' })
-		}
-		delete binnacleData.order
-		await binnacle.update(binnacleData)
-		return res.status(200).json({ message: 'Registro actualizado correctamente', data: binnacle })
+		const data = await updateBinnacleService(req.db, id, req.body)
+		return res.status(200).json({ message: 'Bitácora actualizada correctamente', data })
 	} catch (e) {
+		if (e.message === 'Registro no encontrado') {
+			return res.status(404).json({ message: e.message })
+		}
 		return res.status(500).json({ message: e.message })
 	}
 }
@@ -42,13 +40,12 @@ const updateBinnacle = async (req, res) => {
 const deleteBinnacle = async (req, res) => {
 	try {
 		const { id } = req.params
-		const updatedBinnacle = await updateStatusToDeleted(req.db, id)
-
-		return res.status(200).json({
-			message: 'Registro marcado como eliminado',
-			data: updatedBinnacle,
-		})
+		const data = await deleteBinnacleService(req.db, id)
+		return res.status(200).json({ message: 'Bitácora eliminada correctamente', data })
 	} catch (e) {
+		if (e.message === 'Registro no encontrado') {
+			return res.status(404).json({ message: e.message })
+		}
 		return res.status(500).json({ message: e.message })
 	}
 }
