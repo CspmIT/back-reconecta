@@ -135,6 +135,7 @@ const getDataInfluxRecloser = async (req, res) => {
 			id_version: recloser.equipmentmodels.id,
 			brand: recloser.equipmentmodels.name,
 			element: recloser.elements.name,
+			id_element: recloser.elements.id,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await dataRecloseInflux(

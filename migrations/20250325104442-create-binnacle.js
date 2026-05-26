@@ -20,27 +20,36 @@ module.exports = {
 			name_element: {
 				type: Sequelize.STRING,
 			},
-			lat: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			lon: {
-				type: Sequelize.DECIMAL(17, 14),
-			},
-			task: {
-				allowNull: false,
+			order: {
 				type: Sequelize.STRING,
 			},
 			type_task: {
 				allowNull: false,
-				type: Sequelize.ENUM('Media Tensión'),
+				type: Sequelize.INTEGER,
+				comment:
+					'1) Mantenimiento preventivo - 2) Mantenimiento correctivo - 3) Inspección - 4) Instalación / Puesta en servicio - 5) Cambio / Reemplazo de equipo - 6) Reparación - 7) Otro',
 			},
-			order: {
+			date_task: {
+				allowNull: false,
+				type: Sequelize.DATE,
+			},
+			status_task: {
+				allowNull: false,
+				type: Sequelize.ENUM('Programada', 'En curso', 'Completada', 'Cancelada', 'Vencida'),
+			},
+			day_task: {
+				type: Sequelize.INTEGER,
+			},
+			hours_task: {
+				type: Sequelize.INTEGER,
+			},
+			minutes_task: {
 				allowNull: false,
 				type: Sequelize.INTEGER,
 			},
-			status: {
+			description: {
 				allowNull: false,
-				type: Sequelize.ENUM('En Servicio', 'Fuera de Servicio', 'deleted'),
+				type: Sequelize.STRING,
 			},
 			createdAt: {
 				allowNull: false,
@@ -51,5 +60,8 @@ module.exports = {
 				type: Sequelize.DATE,
 			},
 		})
+	},
+	async down(queryInterface) {
+		await queryInterface.dropTable('Binnacle')
 	},
 }
