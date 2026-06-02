@@ -10,6 +10,8 @@ const {
 	addSubstationPat,
 	listSubstationPat,
 	editSubstationClient,
+	addSubstationClient,
+	deleteSubstationClient,
 	addImageElement,
 } = require('../controllers/Element.controller')
 const router = express.Router()
@@ -26,6 +28,8 @@ router.post('/Equipment', verifyToken, addEquipment)
 router.patch('/Equipment', verifyToken, addEquipment)
 //SUBESTACIONES
 router.patch('/SubstationClient', verifyToken, editSubstationClient)
+router.post('/SubstationClient', verifyToken, addSubstationClient)
+router.delete('/SubstationClient', verifyToken, deleteSubstationClient)
 router.post('/SubstationPat', verifyToken, addSubstationPat)
 router.post('/SubstationPatFilter', verifyToken, listSubstationPat)
 

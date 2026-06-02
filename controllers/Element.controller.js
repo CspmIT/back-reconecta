@@ -9,6 +9,8 @@ const {
 	saveSubstationPat,
 	historySubstationPat,
 	updateSubstationClient,
+	saveSubstationClient,
+	removeSubstationClient,
 	saveImage,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
@@ -154,6 +156,31 @@ const editSubstationClient = async (req, res) => {
 	}
 }
 
+const addSubstationClient = async (req, res) => {
+	try {
+		if (!req.body.name || !req.body.id_element) {
+			return res.status(500).json({ message: 'Faltan datos' })
+		}
+		const data = await saveSubstationClient(req.db, req.body)
+		return res.status(200).json({ message: 'Cliente agregado correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const deleteSubstationClient = async (req, res) => {
+	try {
+		const { id } = req.body
+		if (!id) {
+			return res.status(500).json({ message: 'Faltan datos' })
+		}
+		await removeSubstationClient(req.db, id)
+		return res.status(200).json({ message: 'Cliente eliminado correctamente' })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 const listSubstationPat = async (req, res) => {
 	try {
 		const data = await historySubstationPat(req.db, req.body)
@@ -198,6 +225,8 @@ module.exports = {
 	editElement,
 	addEquipment,
 	editSubstationClient,
+	addSubstationClient,
+	deleteSubstationClient,
 	listSubstationPat,
 	addSubstationPat,
 	addImageElement,

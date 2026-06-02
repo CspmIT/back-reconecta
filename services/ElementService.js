@@ -180,6 +180,20 @@ const updateSubstationClient = async (db, data) => {
 	return db.SubstationRuralClient.update(data, { where: { id: data.id } })
 }
 
+const saveSubstationClient = async (db, data) => {
+	return db.SubstationRuralClient.create({
+		name: data.name,
+		meter: data.meter || null,
+		account: data.account || null,
+		id_element: data.id_element,
+		status: 1,
+	})
+}
+
+const removeSubstationClient = async (db, id) => {
+	return db.SubstationRuralClient.destroy({ where: { id } })
+}
+
 const historySubstationPat = async (db, data) => {
 	const query = {
 		where: {
@@ -226,6 +240,8 @@ module.exports = {
 	saveEquipment,
 	updateElement,
 	updateSubstationClient,
+	saveSubstationClient,
+	removeSubstationClient,
 	historySubstationPat,
 	saveSubstationPat,
 	saveImage,
