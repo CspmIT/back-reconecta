@@ -7,7 +7,10 @@
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"start": "nodemon index.js",
 		"dev": "eslint --config eslint.config.js && node --env-file .env --watch index.js",
-		"lint": "eslint ."
+		"lint": "eslint .",
+		"seed:all": "node scripts/seed-all.js",
+		"seed:undo:all": "node scripts/seed-undo-all.js",
+		"seed:backfill": "node scripts/seed-backfill.js"
 	},
 	"author": "",
 	"license": "ISC",

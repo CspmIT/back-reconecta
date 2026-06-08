@@ -98,6 +98,7 @@ const saveElement = async (db, element, equipment = [], client = []) => {
 				client.map((cli) => {
 					cli.id_element = data.id
 					cli.meter = cli.meter || null
+					cli.account = cli.account || null
 					cli.status = 1
 					delete cli.id
 				})
@@ -166,6 +167,7 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 					...cli,
 					id_element: data.id,
 					meter: cli.meter || null,
+					account: cli.account || null,
 					status: 1,
 				}
 				delete cleanClient.id
