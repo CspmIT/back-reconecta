@@ -26,6 +26,10 @@ module.exports = {
 		port: process.env.DB_PORT || 3306,
 		dialect: 'mysql',
 		timezone: 'America/Argentina/Buenos_Aires',
+		// Trackea qué seeders ya corrieron (tabla SequelizeData) para que
+		// db:seed:all sea idempotente y no reinserte datos.
+		seederStorage: 'sequelize',
+		seederStorageTableName: 'SequelizeData',
 	},
 	reconecta_desarrollo: {
 		username: process.env.DB_USER,
@@ -35,6 +39,8 @@ module.exports = {
 		port: process.env.DB_PORT || 3306,
 		dialect: 'mysql',
 		timezone: 'America/Argentina/Buenos_Aires',
+		seederStorage: 'sequelize',
+		seederStorageTableName: 'SequelizeData',
 	},
 	procoop: {
 		database: 'PR_MT_NUEVA_DEMO',

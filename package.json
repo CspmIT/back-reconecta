@@ -9,7 +9,10 @@
 		"dev": "eslint --config eslint.config.mjs && node --env-file .env --watch index.js",
 		"lint": "eslint .",
 		"migrate:all": "node scripts/migrate-all.js",
-		"migrate:undo:all": "node scripts/migrate-undo-all.js"
+		"migrate:undo:all": "node scripts/migrate-undo-all.js",
+		"seed:all": "node scripts/seed-all.js",
+		"seed:undo:all": "node scripts/seed-undo-all.js",
+		"seed:backfill": "node scripts/seed-backfill.js"
 	},
 	"author": "",
 	"license": "ISC",

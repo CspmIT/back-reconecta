@@ -87,6 +87,7 @@ const saveElement = async (db, element, equipment = [], client = []) => {
 				client.map((cli) => {
 					cli.id_element = data.id
 					cli.meter = cli.meter || null
+					cli.account = cli.account || null
 					cli.status = 1
 					delete cli.id
 				})
@@ -150,6 +151,7 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 					...cli,
 					id_element: data.id,
 					meter: cli.meter || null,
+					account: cli.account || null,
 					status: 1,
 				}
 				delete cleanClient.id
@@ -178,6 +180,20 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 
 const updateSubstationClient = async (db, data) => {
 	return db.SubstationRuralClient.update(data, { where: { id: data.id } })
+}
+
+const saveSubstationClient = async (db, data) => {
+	return db.SubstationRuralClient.create({
+		name: data.name,
+		meter: data.meter || null,
+		account: data.account || null,
+		id_element: data.id_element,
+		status: 1,
+	})
+}
+
+const removeSubstationClient = async (db, id) => {
+	return db.SubstationRuralClient.destroy({ where: { id } })
 }
 
 const historySubstationPat = async (db, data) => {
@@ -226,6 +242,8 @@ module.exports = {
 	saveEquipment,
 	updateElement,
 	updateSubstationClient,
+	saveSubstationClient,
+	removeSubstationClient,
 	historySubstationPat,
 	saveSubstationPat,
 	saveImage,
