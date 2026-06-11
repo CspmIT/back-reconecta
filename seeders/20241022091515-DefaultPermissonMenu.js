@@ -46,6 +46,12 @@ module.exports = {
 				{ id_menu: 7, id_profile: 4, id_user: null, status: 1, createdAt: date, updatedAt: date },
 				{ id_menu: 8, id_profile: 4, id_user: null, status: 1, createdAt: date, updatedAt: date },
 				{ id_menu: 9, id_profile: 4, id_user: null, status: 1, createdAt: date, updatedAt: date },
+
+				// Infraestructuras (menú id 10): misma visibilidad que Accesos (id 5).
+				{ id_menu: 10, id_profile: 1, id_user: null, status: 1, createdAt: date, updatedAt: date },
+				{ id_menu: 10, id_profile: 2, id_user: null, status: 0, createdAt: date, updatedAt: date },
+				{ id_menu: 10, id_profile: 3, id_user: null, status: 0, createdAt: date, updatedAt: date },
+				{ id_menu: 10, id_profile: 4, id_user: null, status: 1, createdAt: date, updatedAt: date },
 			],
 			{}
 		)

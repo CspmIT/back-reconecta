@@ -36,7 +36,7 @@ const listElements = async (req, res) => {
 						const data = {
 							serial: jsonEquipment.serial,
 							brand: jsonEquipment.equipmentmodels.name,
-							version: jsonEquipment.equipmentmodels.name,
+							version: jsonEquipment.equipmentmodels.brand,
 						}
 
 						switch (jsonEquipment.equipmentmodels.type) {
@@ -55,7 +55,7 @@ const listElements = async (req, res) => {
 
 							case 2: {
 								dc = await getStatus(data, influxName)
-								jsonEquipment.influxData = { 'd/c': dc === 2 }
+								jsonEquipment.influxData = { 'd/c': dc === 1 }
 								break
 							}
 
