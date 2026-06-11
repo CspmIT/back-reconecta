@@ -84,8 +84,8 @@ const getxID = async (db, id) => {
  */
 const getStatus = async (data, influxName) => {
 	const query = `|> range(start: -30m, stop: now())
-		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/status/VI")
-        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
+		|> filter(fn: (r) => r["topic"] == "coop/energia/Medidor/${data.brand}/${data.version}/${data.serial}/SCADA")
+        |> aggregateWindow(every: 30ms, fn: last, createEmpty: false)
 		|> last()`
 
 	let dataInflux = await ConsultaInflux(query, influxName)
@@ -104,7 +104,6 @@ const getStatus = async (data, influxName) => {
 	})
 
 	const v_0Value = dataReturn.get('V_0')?.[0]?.value
-
 	return v_0Value === undefined || !v_0Value ? 2 : 1
 }
 
