@@ -152,6 +152,36 @@ const saveMeter = async (db, data, transaction) => {
 }
 
 /**
+ * Obtiene la relacion de transformacion manual (override) de un medidor por id de equipment.
+ * Si no hay registro o status=false, el front usa la relacion leida del equipo.
+ */
+const getTransformRatio = async (db, id_equipment) => {
+	return db.MeterTransformRatio.findOne({ where: { id_equipment } })
+}
+
+/**
+ * Crea o actualiza el override manual de relacion de transformacion de un medidor.
+ */
+const saveTransformRatio = async (db, data) => {
+	const [ratio, created] = await db.MeterTransformRatio.findOrCreate({
+		where: { id_equipment: data.id_equipment },
+		defaults: { ...data, status: true },
+	})
+	if (!created) {
+		await ratio.update({ ...data, status: true })
+	}
+	return ratio
+}
+
+/**
+ * Desactiva el override manual (vuelve a usarse la relacion leida del equipo).
+ * Se conservan los ultimos valores manuales para poder reactivarlos.
+ */
+const disableTransformRatio = async (db, id_equipment) => {
+	return db.MeterTransformRatio.update({ status: false }, { where: { id_equipment } })
+}
+
+/**
  * Obtiene una lista de dispositivos habilitados según el historial de sus relaciones.
  *
  * @returns {Promise<Object[]>} Devuelve una lista de dispositivos habilitados.
@@ -942,4 +972,7 @@ module.exports = {
 	getInfoHistorySummary,
 	getInfoEnergyTarifa,
 	getInfoEnergyTotal,
+	getTransformRatio,
+	saveTransformRatio,
+	disableTransformRatio,
 }

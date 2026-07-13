@@ -26,6 +26,8 @@ const {
 	dataHistorySummary,
 	dataHistoryEnergyTarifa,
 	dataHistoryEnergyTotal,
+	meterTxRatio,
+	saveMeterTxRatio,
 } = require('../controllers/Meter.controller')
 const router = express.Router()
 
@@ -34,6 +36,9 @@ router.get('/getListMeter', verifyToken, listMeter)
 router.get('/getMetersEnabled', verifyToken, metersEnabled)
 router.post('/addMeter', verifyToken, addMeter)
 router.get('/getDataMeter', verifyToken, dataMeter)
+// RELACION DE TRANSFORMACION (override manual CT/VT)
+router.get('/getMeterTxRatio', verifyToken, meterTxRatio)
+router.post('/saveMeterTxRatio', verifyToken, saveMeterTxRatio)
 // METROLOGIA INSTANTANEA
 router.get('/getMetrologyVI', verifyToken, dataMetrologyVI)
 router.get('/getMetrologyInsta', verifyToken, dataMetrologyBasic)

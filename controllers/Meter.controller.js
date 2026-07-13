@@ -25,6 +25,9 @@ const {
 	getInfoEnergyTarifa,
 	getInfoEnergyTotal,
 	saveMeter,
+	getTransformRatio,
+	saveTransformRatio,
+	disableTransformRatio,
 } = require('../services/MeterService')
 const { searchRelationActive } = require('../services/NodeService')
 const { getListVersions, getersionxName } = require('../services/VersionService')
@@ -709,6 +712,60 @@ const dataHistoryEnergyTotal = async (req, res) => {
 	}
 }
 
+const meterTxRatio = async (req, res) => {
+	try {
+		const { id } = req.query
+		if (!id) {
+			return res.status(400).json({ message: 'El ID es requerido' })
+		}
+		const ratio = await getTransformRatio(req.db, id)
+		if (!ratio || !ratio.status) {
+			// Sin override activo: el front usa la relacion leida del equipo.
+			// Se devuelven igual los ultimos valores manuales guardados (si existen).
+			return res.status(200).json({ source: 'equipment', ratio: ratio ? ratio.get() : null })
+		}
+		res.status(200).json({ source: 'manual', ratio: ratio.get() })
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
+const saveMeterTxRatio = async (req, res) => {
+	try {
+		const { id_equipment, source, vt_primary, vt_secondary, ct_primary, ct_secondary } = req.body
+		if (!id_equipment || !source) {
+			return res.status(400).json({ message: 'Faltan parametros...' })
+		}
+		if (source === 'equipment') {
+			await disableTransformRatio(req.db, id_equipment)
+			return res.status(200).json({ source: 'equipment', ratio: null })
+		}
+		const values = [vt_primary, vt_secondary, ct_primary, ct_secondary].map(parseFloat)
+		if (values.some(isNaN) || !values[1] || !values[3]) {
+			return res.status(400).json({ message: 'Valores de relación inválidos' })
+		}
+		const ratio = await saveTransformRatio(req.db, {
+			id_equipment,
+			vt_primary: values[0],
+			vt_secondary: values[1],
+			ct_primary: values[2],
+			ct_secondary: values[3],
+			id_user: req.user.id,
+		})
+		res.status(200).json({ source: 'manual', ratio: ratio.get() })
+	} catch (error) {
+		if (error.errors) {
+			return res.status(500).json({ errors: error.errors })
+		} else {
+			return res.status(400).json({ message: error.message })
+		}
+	}
+}
+
 module.exports = {
 	getVersions,
 	listMeter,
@@ -735,4 +792,6 @@ module.exports = {
 	dataHistorySummary,
 	dataHistoryEnergyTarifa,
 	dataHistoryEnergyTotal,
+	meterTxRatio,
+	saveMeterTxRatio,
 }
