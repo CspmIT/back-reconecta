@@ -9,9 +9,6 @@ const {
 	getMetrologyEnergy,
 	getMetrologyBasic,
 	getCurva,
-	getVoltageCurrent,
-	getCosenoFi,
-	getInfoGraf,
 	getInfoSurge,
 	getInfoUnderVoltage,
 	getInfoSurgeSummary,
@@ -20,10 +17,9 @@ const {
 	getInfoCourtSummary,
 	getInfoInterruption,
 	getInfoInterruptionSummary,
-	getInfoHistoryReset,
-	getInfoHistorySummary,
-	getInfoEnergyTarifa,
-	getInfoEnergyTotal,
+	getEobSummary,
+	getEobInvoice,
+	getEobEnergyTotal,
 	saveMeter,
 	getTransformRatio,
 	saveTransformRatio,
@@ -303,120 +299,14 @@ const dataCurva = async (req, res) => {
 		const influxName = req.user.influx_name
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
+		// Los valores se devuelven tal cual publica el medidor (topic /status/curva).
+		// La conversion CT/VT de las tensiones la aplica el front con la relacion
+		// configurada (toggle Medido/Convertido).
 		const dataInflux = await getCurva(
 			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
 			influxName
 		)
-		const calculateValues = (fieldKey) => {
-			if (!dataInflux[fieldKey]) return []
-			return dataInflux[fieldKey].map((item, index) => {
-				const value = (
-					(parseFloat(item.value) * dataInflux.VT_0[index].value) /
-					dataInflux.VT_1[index].value
-				).toFixed(0)
-				return { ...item, value }
-			})
-		}
-		dataInflux.V_0 = calculateValues('V_0')
-		dataInflux.V_1 = calculateValues('V_1')
-		dataInflux.V_2 = calculateValues('V_2')
-		delete dataInflux.VT_0
-		delete dataInflux.VT_1
 		return res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
-const dataVoltageCurrent = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getVoltageCurrent(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-		const calculateCorriente = (fieldKey) => {
-			return dataInflux[fieldKey].map((item, index) => {
-				const value = (
-					(parseFloat(item.value) * dataInflux.VT_0[index].value) /
-					dataInflux.VT_1[index].value
-				).toFixed(0)
-				return { ...item, value }
-			})
-		}
-		const calculateTension = (fieldKey) => {
-			return dataInflux[fieldKey].map((item, index) => {
-				const value = (
-					(parseFloat(item.value) * dataInflux.CT_0[index].value) /
-					dataInflux.CT_1[index].value
-				).toFixed(0)
-				return { ...item, value }
-			})
-		}
-		dataInflux.V_0 = calculateCorriente('V_0')
-		dataInflux.V_1 = calculateCorriente('V_1')
-		dataInflux.V_2 = calculateCorriente('V_2')
-		dataInflux.I_0 = calculateTension('I_0')
-		dataInflux.I_1 = calculateTension('I_1')
-		dataInflux.I_2 = calculateTension('I_2')
-		delete dataInflux.VT_0
-		delete dataInflux.VT_1
-		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
-
-const dataCosenoFi = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getCosenoFi(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
-
-const dataInfoGraf = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getInfoGraf(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-		res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })
@@ -617,7 +507,8 @@ const dataInterruptionSummary = async (req, res) => {
 	}
 }
 
-const dataHistoryReset = async (req, res) => {
+// ENERGIA (EOB) - un controller por seccion de la pestaña
+const makeEobController = (serviceFn) => async (req, res) => {
 	try {
 		const { version, brand, serial } = req.body
 		if ((!version, !brand, !serial)) {
@@ -626,12 +517,11 @@ const dataHistoryReset = async (req, res) => {
 		const influxName = req.user.influx_name
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getInfoHistoryReset(
+		const dataInflux = await serviceFn(
 			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
 			influxName
 		)
-
-		res.status(200).json(dataInflux)
+		return res.status(200).json(dataInflux)
 	} catch (error) {
 		if (error.errors) {
 			return res.status(500).json({ errors: error.errors })
@@ -640,77 +530,9 @@ const dataHistoryReset = async (req, res) => {
 		}
 	}
 }
-
-const dataHistorySummary = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getInfoHistorySummary(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-
-		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
-
-const dataHistoryEnergyTarifa = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getInfoEnergyTarifa(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-
-		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
-const dataHistoryEnergyTotal = async (req, res) => {
-	try {
-		const { version, brand, serial } = req.body
-		if ((!version, !brand, !serial)) {
-			return res.status(400).json({ message: 'Faltan parametros...' })
-		}
-		const influxName = req.user.influx_name
-		const dateStart = req.body.dateStart ?? null
-		const dateFinished = req.body.dateFinished ?? null
-		const dataInflux = await getInfoEnergyTotal(
-			{ serial: serial, brand: brand, version: version, dateStart, dateFinished },
-			influxName
-		)
-
-		res.status(200).json(dataInflux)
-	} catch (error) {
-		if (error.errors) {
-			return res.status(500).json({ errors: error.errors })
-		} else {
-			return res.status(400).json({ message: error.message })
-		}
-	}
-}
+const dataEobSummary = makeEobController(getEobSummary)
+const dataEobInvoice = makeEobController(getEobInvoice)
+const dataEobEnergyTotal = makeEobController(getEobEnergyTotal)
 
 const meterTxRatio = async (req, res) => {
 	try {
@@ -777,9 +599,6 @@ module.exports = {
 	dataMetrologyEnergy,
 	dataMetrologyVI,
 	dataCurva,
-	dataVoltageCurrent,
-	dataCosenoFi,
-	dataInfoGraf,
 	dataSurge,
 	dataUnderVoltage,
 	dataSurgeSummary,
@@ -788,10 +607,9 @@ module.exports = {
 	dataCourtSummary,
 	dataInterruption,
 	dataInterruptionSummary,
-	dataHistoryReset,
-	dataHistorySummary,
-	dataHistoryEnergyTarifa,
-	dataHistoryEnergyTotal,
+	dataEobSummary,
+	dataEobInvoice,
+	dataEobEnergyTotal,
 	meterTxRatio,
 	saveMeterTxRatio,
 }
