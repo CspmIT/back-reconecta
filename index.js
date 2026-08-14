@@ -23,6 +23,7 @@ const analyzerRoutes = require('./routes/Analyzer.routes')
 const graphicRoutes = require('./routes/Graphic.routes')
 const BinnacleRoutes = require('./routes/Binnacle.routes')
 const PersonalRoutes = require('./routes/Personal.routes')
+const UnifilarRoutes = require('./routes/Unifilar.routes')
 
 
 // Configuracion para los cors
@@ -31,7 +32,8 @@ app.use(corsConfig)
 app.use(cookieParser())
 
 // Configuracion para el body parser
-app.use(express.json())
+// Límite alto: los documentos del módulo unifilar pesan varios MB
+app.use(express.json({ limit: '30mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use('/api', publicRoutes)
 app.use('/api', recloserRoutes)
@@ -48,6 +50,7 @@ app.use('/api', analyzerRoutes)
 app.use('/api', graphicRoutes)
 app.use('/api', BinnacleRoutes)
 app.use('/api', PersonalRoutes)
+app.use('/api', UnifilarRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

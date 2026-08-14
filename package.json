@@ -30,6 +30,7 @@
 		"google-auth-library": "^10.5.0",
 		"jsonwebtoken": "^9.0.2",
 		"mqtt": "^5.10.1",
+		"multer": "^2.2.0",
 		"mysql2": "^3.9.7",
 		"p-queue": "^9.1.0",
 		"passport": "^0.7.0",
