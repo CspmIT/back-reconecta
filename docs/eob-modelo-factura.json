@@ -1,0 +1,77 @@
+{
+	"_instrucciones": "Completar cada '???' con el nombre EXACTO del _field en Influx. Corregir los 'topic' (sufijo despues del serial) si no coinciden. Si un dato NO se publica, poner null y el front lo muestra como 'pendiente'. Borrar las claves _nota si molestan.",
+
+	"cierres": {
+		"_nota": "Cards de meses cerrados (ultimo cierre + selector de mes). Publican una vez por mes, se identifica cada cierre por su registro.",
+		"fecha_del_cierre": {
+			"topic": "EOB/main",
+			"field": "rst",
+			"_nota": "Se usa para titular la card con el mes (ej. ENERO). Confirmar si conviene rst u otro field/ts."
+		},
+		"energia_activa_por_tarifa": {
+			"topic": "EOB/main",
+			"resto": "ai_t1",
+			"pico": "ai_t2",
+			"valle": "ai_t3",
+			"_nota": "El mockup los llama ai_t1 / ai_t2 / ai_t3"
+		},
+		"energia_reactiva_total": {
+			"topic": "EOB/react",
+			"field": "ri_tot",
+			"_nota": "El mockup lo llama ri_tot"
+		},
+		"demanda_maxima_por_tarifa": {
+			"topic": "EOB/maxdemand",
+			"resto_valor": "dmax_t1_valor",
+			"resto_fecha": "dmax_t1_fecha",
+			"pico_valor": "dmax_t2_valor",
+			"pico_fecha": "dmax_t2_fecha",
+			"valle_valor": "dmax_t3_valor",
+			"valle_fecha": "dmax_t3_fecha",
+			"_nota": "El mockup los llama dmax_t1.valor / dmax_t1.fecha etc. Poner el nombre YA APLANADO como figura en Influx (ej. dmax_t1_valor)"
+		},
+		"factor_potencia_periodo": {
+			"topic": null,
+			"field": null,
+			"_nota": "En el mockup figura pendiente (OBIS 1.1.13.4.0.255). Completar si existe."
+		}
+	},
+
+	"mes_en_curso": {
+		"_nota": "Card EN CURSO: registros vivos. Estos topics publican seguido -> el backend les hace last().",
+		"energia_activa_por_tarifa": {
+			"topic": "status/E_tar",
+			"resto": "IAcE_Tar_0",
+			"pico": "IAcE_Tar_2",
+			"valle": "IAcE_Tar_4",
+			"_nota": "El mockup usa IAcE_Tar[0] / [2] / [4] (indices pares = valor). Poner el nombre aplanado (ej. IAcE_Tar_0)"
+		},
+		"energia_reactiva_total": {
+			"topic": "status/E_imp",
+			"field": "IReE_3",
+			"_nota": "El mockup usa IReE[3]"
+		},
+		"demanda_maxima_por_tarifa": {
+			"topic": "status/P_imp",
+			"resto_valor": "DeM_Ta_0",
+			"resto_fecha": "DeM_Ta_1",
+			"pico_valor": "DeM_Ta_2",
+			"pico_fecha": "DeM_Ta_3",
+			"valle_valor": "DeM_Ta_4",
+			"valle_fecha": "DeM_Ta_5",
+			"_nota": "El mockup usa DeM_Ta[0..5] (par = valor, impar = fecha). Ya lo consumimos como DeM_Ta_0..5 en los KPIs de la card principal - confirmar"
+		},
+		"factor_potencia": {
+			"topic": "status/VI",
+			"field": "CFi_3",
+			"_nota": "El mockup usa CFi[3] (ya lo consumimos como CFi_3 en metrologia) - confirmar"
+		}
+	},
+
+	"unidades": {
+		"_nota": "Confirmar en que unidad llegan los valores de cada seccion para etiquetar bien.",
+		"energia_cierres": "kWh",
+		"energia_mes_en_curso": "kWh Wh",
+		"demanda": "kW W"
+	}
+}

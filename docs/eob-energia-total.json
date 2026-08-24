@@ -1,0 +1,66 @@
+{
+	"_instrucciones": "Sub-tab 'Energía total'. A diferencia de la factura, el mockup YA trae topic y field para casi todo, así que los dejé precargados. Verificar en Influx que cada field exista con ese nombre EXACTO; corregir los que difieran. Si un dato NO se publica, poner null y el front lo muestra como 'pendiente'. Los topics EOB publican una vez por mes al cierre -> el backend toma el último registro (last).",
+
+	"mini_cards_totales": {
+		"_nota": "4 mini-cards de arriba. Salen de los mismos fields de las tablas de abajo (totales del último cierre).",
+		"activa_importada_total": { "topic": "EOB/main", "field": "ai_tot" },
+		"activa_exportada_total": { "topic": "EOB/main", "field": "ae_tot" },
+		"reactiva_importada": { "topic": "EOB/react", "field": "ri_tot" },
+		"aparente_acumulada": { "topic": "EOB/main", "field": "ap_i_tot" }
+	},
+
+	"energia_por_tarifa": {
+		"_nota": "Acumulado VIVO por tarifa (status/E_tar, igual que la card EN CURSO de factura). La columna 'Diferencia del período' NO viene de un field: el front la calcula como (acumulado vivo) - (acumulado al último cierre ai_tN de EOB/main). Confirmar que ambos estén en la misma unidad (kWh).",
+		"acumulado_vivo": {
+			"topic": "status/E_tar",
+			"resto": "IAcE_Tar_0",
+			"pico": "IAcE_Tar_2",
+			"valle": "IAcE_Tar_4"
+		},
+		"acumulado_al_cierre": {
+			"topic": "EOB/main",
+			"resto": "ai_t1",
+			"pico": "ai_t2",
+			"valle": "ai_t3"
+		}
+	},
+
+	"energia_por_fase": {
+		"_nota": "Tabla Importada/Exportada. Fields del mockup, verificar en Influx.",
+		"activa": {
+			"topic": "EOB/main",
+			"importada": { "l1": "ai_l1", "l2": "ai_l2", "l3": "ai_l3", "total": "ai_tot" },
+			"exportada": { "l1": "ae_l1", "l2": "ae_l2", "l3": "ae_l3", "total": "ae_tot" }
+		},
+		"aparente": {
+			"topic": "EOB/main",
+			"importada": { "l1": "ap_i_l1", "l2": "ap_i_l2", "l3": "ap_i_l3", "total": "ap_i_tot" },
+			"exportada": { "l1": "ap_e_l1", "l2": "ap_e_l2", "l3": "ap_e_l3", "total": "ap_e_tot" }
+		},
+		"reactiva": {
+			"topic": "EOB/react",
+			"importada": { "l1": "ri_l1", "l2": "ri_l2", "l3": "ri_l3", "total": "ri_tot" },
+			"exportada": { "l1": "re_l1", "l2": "re_l2", "l3": "re_l3", "total": "re_tot" }
+		}
+	},
+
+	"reactiva_por_cuadrante": {
+		"_nota": "Tabla Q1..Q4. Fields del mockup: qN_l1 / qN_l2 / qN_l3 / qN_tot en EOB/react.",
+		"topic": "EOB/react",
+		"q1": { "l1": "q1_l1", "l2": "q1_l2", "l3": "q1_l3", "total": "q1_tot" },
+		"q2": { "l1": "q2_l1", "l2": "q2_l2", "l3": "q2_l3", "total": "q2_tot" },
+		"q3": { "l1": "q3_l1", "l2": "q3_l2", "l3": "q3_l3", "total": "q3_tot" },
+		"q4": { "l1": "q4_l1", "l2": "q4_l2", "l3": "q4_l3", "total": "q4_tot" }
+	},
+
+	"validador_cruzado": {
+		"_nota": "No consume fields nuevos: el front compara suma(ai_t1+ai_t2+ai_t3) del cierre vs ai_tot del MISMO cierre (misma publicación, así no hay corrimiento temporal). OK si queda entre 99% y 101%."
+	},
+
+	"unidades": {
+		"_nota": "Confirmar en qué unidad llegan. El selector de submúltiplo (k/M/G/Auto) escala en el front.",
+		"activa": "kWh",
+		"aparente": "kVAh",
+		"reactiva": "kVArh"
+	}
+}
