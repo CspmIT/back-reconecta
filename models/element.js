@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
 			this.hasMany(models.SubstationRuralClient, { foreignKey: 'id_element', as: 'clients' })
 			this.hasMany(models.SubstationRuralPat, { foreignKey: 'id_element', as: 'pat' })
 			this.hasMany(models.MapLineVertex, { foreignKey: 'id_element', as: 'lineVertices' })
+			this.hasMany(models.Equipment, { foreignKey: 'id_element', as: 'binnacles' })
 		}
 	}
 	Element.init(

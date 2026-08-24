@@ -9,6 +9,8 @@ const {
 	saveSubstationPat,
 	historySubstationPat,
 	updateSubstationClient,
+	saveSubstationClient,
+	removeSubstationClient,
 	saveImage,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
@@ -21,50 +23,70 @@ const listElements = async (req, res) => {
 		const elements = await getElements(req.db, filters)
 		const activeEvents = await EventsCustom(req.db, { flash_screen: 1 })
 		const influxName = req.user.influx_name
+
 		const elementsWithInflux = await Promise.all(
 			elements.map(async (element) => {
 				const jsonElement = element.toJSON ? element.toJSON() : element
+
 				jsonElement.equipments = await Promise.all(
 					jsonElement.equipments.map(async (equipment) => {
 						let dc
 						const jsonEquipment = equipment.toJSON ? equipment.toJSON() : equipment
+
 						const data = {
 							serial: jsonEquipment.serial,
 							brand: jsonEquipment.equipmentmodels.name,
-							version: jsonEquipment.equipmentmodels.name,
+							version: jsonEquipment.equipmentmodels.brand,
 						}
+
 						switch (jsonEquipment.equipmentmodels.type) {
-							case 1:
+							case 1: {
 								jsonEquipment.influxData = await dataRecloseInflux(data, influxName)
+
 								const flashAlarm = await getEventsInflux(req.db, influxName, activeEvents, {
 									id: jsonEquipment.id,
 								})
+
 								jsonEquipment.flashAlarm =
 									flashAlarm.length > 0 && flashAlarm[0].some((a) => a.statusAlert === 1)
+
 								break
-							case 2:
+							}
+
+							case 2: {
 								dc = await getStatus(data, influxName)
-								jsonEquipment.influxData = { 'd/c': dc === 2 }
+								jsonEquipment.influxData = { 'd/c': dc === 1 }
 								break
-							case 3:
+							}
+
+							case 3: {
 								const dataAnalyzer = {
 									serial: jsonEquipment.serial,
 									brand: jsonEquipment.equipmentmodels.name.toLowerCase(),
 									version: jsonEquipment.equipmentmodels.brand.toLowerCase(),
 								}
+
 								dc = await getDataAnalyzer(dataAnalyzer, influxName)
-								jsonEquipment.influxData = { 'd/c': dc instanceof Map && dc.size > 0 }
+								jsonEquipment.influxData = {
+									'd/c': dc instanceof Map && dc.size > 0,
+								}
 								break
-							default:
+							}
+
+							default: {
 								jsonEquipment.influxData = { 'd/c': true }
 								break
+							}
 						}
+
 						return jsonEquipment
 					})
 				)
+
 				return jsonElement
 			})
 		)
+
 		return res.status(200).json(elementsWithInflux)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
@@ -134,6 +156,31 @@ const editSubstationClient = async (req, res) => {
 	}
 }
 
+const addSubstationClient = async (req, res) => {
+	try {
+		if (!req.body.name || !req.body.id_element) {
+			return res.status(500).json({ message: 'Faltan datos' })
+		}
+		const data = await saveSubstationClient(req.db, req.body)
+		return res.status(200).json({ message: 'Cliente agregado correctamente', data })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const deleteSubstationClient = async (req, res) => {
+	try {
+		const { id } = req.body
+		if (!id) {
+			return res.status(500).json({ message: 'Faltan datos' })
+		}
+		await removeSubstationClient(req.db, id)
+		return res.status(200).json({ message: 'Cliente eliminado correctamente' })
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 const listSubstationPat = async (req, res) => {
 	try {
 		const data = await historySubstationPat(req.db, req.body)
@@ -178,6 +225,8 @@ module.exports = {
 	editElement,
 	addEquipment,
 	editSubstationClient,
+	addSubstationClient,
+	deleteSubstationClient,
 	listSubstationPat,
 	addSubstationPat,
 	addImageElement,

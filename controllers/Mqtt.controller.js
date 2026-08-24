@@ -17,7 +17,7 @@ const sendMQTT = async (req, res) => {
 				async (err) => {
 					if (!err) {
 						const data = { ...req.body, id_user: req.user.id, status: 1 }
-						const result = await saveSendActionMQTT(req.db, data)
+						await saveSendActionMQTT(req.db, data)
 						res.status(200).json({ message: 'Se envio correctamente la accion' })
 					} else {
 						return res.status(403).json({ message: err.message })

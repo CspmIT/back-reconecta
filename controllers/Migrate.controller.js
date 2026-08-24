@@ -1,8 +1,8 @@
-const { getIdTable } = require('../services/ConfigUserService')
-const { migrationTables, migrationColumns } = require('../services/MigrationServices')
-const { columnsTables } = require('../utils/js/columsTables')
-const { tables } = require('../utils/js/tables')
-// AMBAS MIGRACIONES SE REALIZAN MEDIANTE SEEDER
+// const { getIdTable } = require('../services/ConfigUserService')
+// const { migrationTables, migrationColumns } = require('../services/MigrationServices')
+// const { columnsTables } = require('../utils/js/columsTables')
+// const { tables } = require('../utils/js/tables')
+// // AMBAS MIGRACIONES SE REALIZAN MEDIANTE SEEDER
 // const generateTable = async (req, res) => {
 // 	try {
 // 		const result = await migrationTables(tables)
@@ -37,7 +37,7 @@ const { tables } = require('../utils/js/tables')
 // 	}
 // }
 
-module.exports = {
-	// generateTable,
-	// generateColumns,
-}
+// module.exports = {
+// 	 generateTable,
+// 	 generateColumns,
+// }

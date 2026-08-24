@@ -1,9 +1,7 @@
-const { getDateCheck } = require('../services/ChecksAlarmsService')
 const { getEquipment } = require('../services/ElementService')
-const { getEventsDevice, getEventsActive, getEventsInflux } = require('../services/EventService')
-const { saveRelation, searchRelationActive } = require('../services/NodeService')
+const { getEventsActive, getEventsInflux } = require('../services/EventService')
+const { saveRelation } = require('../services/NodeService')
 const {
-	getAllRecloser,
 	getRecloserId,
 	dataRecloseInflux,
 	getMetrologiaIntantanea,
@@ -17,8 +15,6 @@ const {
 	getInfoMap,
 	getStatusRecloser,
 	controlChange,
-	getStatusAlarm,
-	acRecloser,
 	getManauver,
 	getReclosersxVersion,
 	acReclosers,
@@ -139,6 +135,7 @@ const getDataInfluxRecloser = async (req, res) => {
 			id_version: recloser.equipmentmodels.id,
 			brand: recloser.equipmentmodels.name,
 			element: recloser.elements.name,
+			id_element: recloser.elements.id,
 		}
 		const influxName = req.user.influx_name
 		const dataInflux = await dataRecloseInflux(

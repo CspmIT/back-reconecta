@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-	async up(queryInterface, Sequelize) {
+	async up(queryInterface) {
 		const date = new Date()
 		await queryInterface.bulkInsert(
 			'Menus',
@@ -58,7 +58,7 @@ module.exports = {
 				{
 					name: 'Accesos',
 					link: 'config/menu',
-					icon: 'BsFillMenuButtonWideFill',
+					icon: 'FaUserLock',
 					level: '2',
 					group_menu: '4',
 					sub_menu: '4',
@@ -115,12 +115,24 @@ module.exports = {
 					createdAt: date,
 					updatedAt: date,
 				},
+				{
+					name: 'Infraestructuras',
+					link: 'config/elementTypes',
+					icon: 'FaClipboardList',
+					level: '2',
+					group_menu: '4',
+					sub_menu: '4',
+					status: '1',
+					order: 8,
+					createdAt: date,
+					updatedAt: date,
+				},
 			],
 			{}
 		)
 	},
 
-	async down(queryInterface, Sequelize) {
+	async down(queryInterface) {
 		await queryInterface.bulkDelete('Menus', null, {})
 	},
 }

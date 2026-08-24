@@ -4,6 +4,8 @@ const app = express()
 const http = require('http')
 const socketConfig = require('./config/socket')
 const cookieParser = require('cookie-parser')
+const dns = require('dns')
+dns.setDefaultResultOrder('ipv4first')
 
 // Rutas
 const publicRoutes = require('./routes/Public.routes')
@@ -20,6 +22,9 @@ const ElementTypeRoutes = require('./routes/ElementType.routes')
 const analyzerRoutes = require('./routes/Analyzer.routes')
 const graphicRoutes = require('./routes/Graphic.routes')
 const MapRoutes = require('./routes/Map.routes')
+const BinnacleRoutes = require('./routes/Binnacle.routes')
+const PersonalRoutes = require('./routes/Personal.routes')
+
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -43,6 +48,8 @@ app.use('/api', ElementTypeRoutes)
 app.use('/api', analyzerRoutes)
 app.use('/api', graphicRoutes)
 app.use('/api', MapRoutes)
+app.use('/api', BinnacleRoutes)
+app.use('/api', PersonalRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

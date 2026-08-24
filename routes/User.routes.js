@@ -2,7 +2,6 @@ const express = require('express')
 const {
 	saveConfigTable,
 	getColumnsUserTable,
-	getControlsRecloserUser,
 	saveControlsRecloser,
 	getControlsRecloserNewData,
 } = require('../controllers/ConfigUser.controller')
