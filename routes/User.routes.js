@@ -19,6 +19,8 @@ const {
 	savePermission,
 	getProfiles,
 	getChecksHome,
+	getUserPrefs,
+	updateUserPrefs,
 	updateChecksHome,
 	getUser,
 } = require('../controllers/User.controller')
@@ -49,5 +51,9 @@ router.get('/UserChecksHome/:type', verifyToken, getChecksHome)
 router.post('/UserChecksHome', verifyToken, updateChecksHome)
 router.get('/UserChecksMap', verifyToken, getChecksHome)
 router.post('/UserChecksMap', verifyToken, updateChecksHome)
+
+// Preferencias de UI por usuario y modulo (layout, capa base, etc.)
+router.get('/userPref/:module', verifyToken, getUserPrefs)
+router.put('/userPref/:module', verifyToken, updateUserPrefs)
 
 module.exports = router
