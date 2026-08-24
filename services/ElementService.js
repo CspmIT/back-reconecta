@@ -137,8 +137,10 @@ const saveEquipment = async (db, data) => {
 				return await equipment
 			}
 		}
+		return await db.Equipment.create(data)
+	} catch (e) {
+		throw e
 	}
-	return await db.Equipment.create(data)
 }
 
 const updateElement = async (db, element, equipment = [], client = []) => {
