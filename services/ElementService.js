@@ -75,10 +75,14 @@ const saveElement = async (db, element, equipment = [], client = []) => {
 		const data = await db.Element.create(element, { transaction })
 		if (data.id) {
 			if (equipment.length > 0 && data.type !== 3) {
-				equipment.map((equip) => {
+				// Un solo principal, y el resto NULL y no false: dos ceros en el
+				// mismo elemento chocarian contra el indice unico
+				const primerPrincipal = equipment.findIndex((equip) => equip.is_main)
+				equipment.map((equip, i) => {
 					equip.id_element = data.id
 					equip.id_user = data.id_user
 					equip.observation = equip.observation || null
+					equip.is_main = i === primerPrincipal ? true : null
 					delete equip.id
 				})
 				await db.Equipment.bulkCreate(equipment, { transaction })
@@ -103,12 +107,35 @@ const saveElement = async (db, element, equipment = [], client = []) => {
 	}
 }
 
+/**
+ * Deja un solo equipo principal en el elemento. Hay que limpiar ANTES de marcar
+ * y no despues: el indice unico (id_element, is_main) rechaza dos principales,
+ * asi que marcar primero fallaria.
+ *
+ * @param {number|null} idEquipment equipo a marcar; null solo limpia
+ */
+const setMainEquipment = async (db, idElement, idEquipment, transaction) => {
+	await db.Equipment.update({ is_main: null }, { where: { id_element: idElement }, transaction })
+	if (!idEquipment) return
+	const [filas] = await db.Equipment.update(
+		{ is_main: true },
+		{ where: { id: idEquipment, id_element: idElement }, transaction }
+	)
+	if (!filas) throw new Error('El equipo principal no pertenece al elemento')
+}
+
 const saveEquipment = async (db, data) => {
-	if (data.id) {
-		const equipment = await db.Equipment.findByPk(data.id)
-		if (equipment) {
-			await equipment.update(data)
-			return await equipment
+	// El principal se decide en updateElement, que puede limpiar el anterior en
+	// la misma transaccion. Por aca pasaria un segundo principal y lo rechazaria
+	// el indice unico con un error de base sin sentido para el usuario.
+	delete data.is_main
+	try {
+		if (data.id) {
+			const equipment = await db.Equipment.findByPk(data.id)
+			if (equipment) {
+				await equipment.update(data)
+				return await equipment
+			}
 		}
 	}
 	return await db.Equipment.create(data)
@@ -121,6 +148,13 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 		if (!data) throw new Error('Elemento no encontrado')
 		await data.update(element, { transaction })
 		if (equipment.length > 0) {
+			/*
+			 * El principal se aplica aparte, despues de guardar los equipos: un
+			 * equipo nuevo todavia no tiene id, y si se dejara viajar `is_main` en
+			 * los updates dos filas podrian quedar en 1 a la vez y el indice unico
+			 * tiraria un error de base incomprensible.
+			 */
+			const marcado = equipment.find((equip) => equip.is_main)
 			const operations = equipment.map((equip) => {
 				const cleanEquip = {
 					...equip,
@@ -129,6 +163,7 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 					observation: equip.observation || null,
 				}
 				delete cleanEquip.id
+				delete cleanEquip.is_main
 
 				if (cleanEquip.bd_id) {
 					const bdId = cleanEquip.bd_id
@@ -144,6 +179,18 @@ const updateElement = async (db, element, equipment = [], client = []) => {
 			})
 
 			await Promise.all(operations)
+
+			// Se resuelve por serial y no por id: si el principal es un equipo
+			// recien creado en este mismo guardado, el id lo genero la base ahora.
+			let idPrincipal = marcado?.bd_id || null
+			if (marcado && !idPrincipal) {
+				const creado = await db.Equipment.findOne({
+					where: { id_element: data.id, serial: marcado.serial },
+					transaction,
+				})
+				idPrincipal = creado?.id || null
+			}
+			await setMainEquipment(db, data.id, idPrincipal, transaction)
 		}
 		if (data.type === 3 && client.length > 0) {
 			const operations = client.map((cli) => {
