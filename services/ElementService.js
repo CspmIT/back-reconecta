@@ -129,18 +129,14 @@ const saveEquipment = async (db, data) => {
 	// la misma transaccion. Por aca pasaria un segundo principal y lo rechazaria
 	// el indice unico con un error de base sin sentido para el usuario.
 	delete data.is_main
-	try {
-		if (data.id) {
-			const equipment = await db.Equipment.findByPk(data.id)
-			if (equipment) {
-				await equipment.update(data)
-				return await equipment
-			}
+	if (data.id) {
+		const equipment = await db.Equipment.findByPk(data.id)
+		if (equipment) {
+			await equipment.update(data)
+			return await equipment
 		}
-		return await db.Equipment.create(data)
-	} catch (e) {
-		throw e
 	}
+	return await db.Equipment.create(data)
 }
 
 const updateElement = async (db, element, equipment = [], client = []) => {
