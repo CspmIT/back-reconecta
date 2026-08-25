@@ -2,24 +2,94 @@
  * Datos en vivo del mapa, agregados.
  *
  * A diferencia de /Elements, que consulta Influx una vez por equipo, aca se
- * arma UN filtro multi-topic por canal y se resuelve todo en dos consultas
- * (estado + metrologia), siguiendo el patron que ya usa getAcReclosers.
+ * arma UN filtro multi-topic por familia y canal, asi que el total de consultas
+ * no depende de cuantos equipos haya. Sigue el patron que ya usa getAcReclosers.
  *
  * El estado y la alarma se devuelven como dos dimensiones separadas
  * (`st` + `alarm`) en lugar del valor 0-7 mezclado que arma hoy el front.
+ *
+ * Cada elemento trae ademas TODOS sus equipos con la medicion de cada uno
+ * (`equipments`), para que la tabla del panel pueda desplegarlos: ET1 y CE01
+ * tienen 7 medidores cada uno y antes de esto la tabla los mostraba vacios.
+ * Los campos del elemento en si (st/v/i) siguen saliendo del reconectador
+ * principal y NO cambiaron: son los que pintan el marcador del mapa.
  *
  * @author fgonzalez <fgonzalez@coopmorteros.coop>
  */
 const { ConsultaInflux } = require('./InfluxServices')
 const { getEventsInflux, EventsCustom } = require('./EventService')
 
-const TOPIC_BASE = 'coop/energia/Reconectadores'
 const FIELDS_STATE = ['ac', 'd/c']
-const FIELDS_METER = ['I_f_0', 'I_f_1', 'I_f_2', 'V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2']
 
 // Los seriales y marcas se interpolan dentro de una query Flux. Cualquier cosa
 // fuera de este set podria romper o inyectar la consulta, asi que se descarta.
 const SAFE_TOPIC_PART = /^[A-Za-z0-9._-]+$/
+
+/*
+ * Las tres familias de equipos, cada una con su topic, sus campos y su unidad.
+ *
+ * Las unidades NO son homogeneas y no se normalizan aca, porque no hay con que:
+ *  - el reconectador publica la primaria real (13000 = 13 kV);
+ *  - el medidor publica el SECUNDARIO del transformador de medicion (~65 V).
+ *    La relacion de transformacion vendria de los campos VT_0/VT_1, pero los
+ *    ITRON instalados no los publican (verificado en los tres seriales: solo
+ *    llegan V_n e I_n), y la unica fila cargada a mano en MeterTransformRatios
+ *    esta desactivada. Convertir con un factor inventado seria peor que no
+ *    convertir;
+ *  - el analizador publica baja tension real (~227 V), consumo interno.
+ * Por eso cada equipo viaja con su `unit` y el front muestra el valor tal como
+ * lo publica el equipo, que es lo que ya hacen el tablero del medidor y el del
+ * analizador.
+ */
+const FAMILIES = {
+	// Reconectador
+	1: {
+		kind: 'recloser',
+		unit: 'kV',
+		fields: ['I_f_0', 'I_f_1', 'I_f_2', 'V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2'],
+		v: ['V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2'],
+		i: ['I_f_0', 'I_f_1', 'I_f_2'],
+		// El topic del reconectador NO lleva el modelo: 'Form 5' tiene un espacio
+		// y exigirle el formato de un topic descartaba al COOPER de RE02.
+		parts: (model, serial) => [model.name, serial],
+		topics: (model, serial) => {
+			const prefix = `coop/energia/Reconectadores/${model.name}/${serial}/status`
+			return { state: [`${prefix}/channel_bin`], meter: [`${prefix}/channel_ain`, `${prefix}/channel_ain_2`] }
+		},
+	},
+	// Medidor
+	2: {
+		kind: 'meter',
+		unit: 'V',
+		fields: ['V_0', 'V_1', 'V_2', 'I_0', 'I_1', 'I_2'],
+		v: ['V_0', 'V_1', 'V_2'],
+		i: ['I_0', 'I_1', 'I_2'],
+		parts: (model, serial) => [model.name, model.brand, serial],
+		topics: (model, serial) => ({
+			state: [],
+			meter: [`coop/energia/Medidor/${model.name}/${model.brand}/${serial}/SCADA`],
+		}),
+	},
+	// Analizador de red
+	3: {
+		kind: 'analyzer',
+		unit: 'V',
+		fields: ['f_0_v', 'f_1_v', 'f_2_v', 'f_0_i', 'f_1_i', 'f_2_i'],
+		v: ['f_0_v', 'f_1_v', 'f_2_v'],
+		i: ['f_0_i', 'f_1_i', 'f_2_i'],
+		/*
+		 * El analizador es el unico que publica marca y modelo en MINUSCULAS.
+		 * Verificado contra Influx: POWERMETER/SMART no devuelve nada y
+		 * powermeter/smart devuelve las 14 metricas. Es la misma conversion que
+		 * hace getDataAnalyzer desde Element.controller.
+		 */
+		parts: (model, serial) => [model.name, model.brand, serial],
+		topics: (model, serial) => ({
+			state: [],
+			meter: [`coop/energia/Analizador/${model.name.toLowerCase()}/${model.brand.toLowerCase()}/${serial}/inst`],
+		}),
+	},
+}
 
 const num = (v) => (v === null || v === undefined ? null : parseFloat(v))
 
@@ -29,7 +99,7 @@ const num = (v) => (v === null || v === undefined ? null : parseFloat(v))
  * 10ms sobre el rango completo.
  */
 const lastByTopic = async (topics, fields, influxName, range = '-3m') => {
-	if (!topics.length) return []
+	if (!topics.length || !fields.length) return []
 	const topicFilter = topics.map((t) => `r["topic"] == "${t}"`).join(' or ')
 	const fieldFilter = fields.map((f) => `r["_field"] == "${f}"`).join(' or ')
 	const query = `|> range(start: ${range}, stop: now())
@@ -50,10 +120,11 @@ const reclosersOf = (element) => (element.equipments || []).filter((eq) => eq.eq
  *
  * Un elemento puede tener mas de uno publicando a la vez — caso real: RE02
  * tiene el COOPER/002 instalado y un ABB de prueba, con estados y mediciones
- * distintos. El mapa muestra un solo estado y una sola medicion por elemento,
- * asi que hay que elegir uno y tomar TODO de ese: mezclar campos de equipos
- * distintos daba filas imposibles (estado del instalado con las tensiones en
- * cero del de prueba) y encima cambiantes segun quien publico ultimo.
+ * distintos. El MARCADOR muestra un solo estado y una sola medicion, asi que
+ * hay que elegir uno y tomar TODO de ese: mezclar campos de equipos distintos
+ * daba filas imposibles (estado del instalado con las tensiones en cero del de
+ * prueba) y encima cambiantes segun quien publico ultimo. La tabla si los
+ * muestra a los dos, cada uno con lo suyo (ver `equipments`).
  *
  * El principal se marca en la base (`Equipment.is_main`, ver el ABM del
  * elemento). Sin marca se usa el mas viejo, que es el criterio menos malo para
@@ -73,56 +144,66 @@ const mainRecloser = (element) => {
 }
 
 /**
- * Arma el mapa topic -> elemento, con el reconectador principal de cada uno.
+ * Arma el mapa topic -> equipo para TODAS las familias.
+ *
+ * Los pedidos se agrupan por (familia, canal) porque cada familia publica sus
+ * propios campos: pedir la union de los campos de las tres a todos los topics
+ * traeria filas vacias y encarece la consulta al balde.
  */
 const buildTopicIndex = (elements) => {
 	const byTopic = new Map()
-	const topicsState = []
-	const topicsMeter = []
+	// clave `${type}:${canal}` -> lista de topics
+	const grupos = new Map()
 	const descartados = []
 
+	const agregar = (clave, topics, ref) => {
+		if (!grupos.has(clave)) grupos.set(clave, [])
+		topics.forEach((t) => {
+			grupos.get(clave).push(t)
+			byTopic.set(t, ref)
+		})
+	}
+
 	elements.forEach((element) => {
-		const equipment = mainRecloser(element)
-		if (equipment) {
-			const brand = equipment.equipmentmodels.name
+		;(element.equipments || []).forEach((equipment) => {
+			const model = equipment.equipmentmodels
+			const family = FAMILIES[model?.type]
+			if (!family) return
+
 			const serial = equipment.serial
-			if (!brand || !serial || !SAFE_TOPIC_PART.test(brand) || !SAFE_TOPIC_PART.test(serial)) {
-				descartados.push({ id_equipment: equipment.id, brand, serial })
+			// Se validan SOLO las partes que esta familia interpola en su topic
+			const partes = family.parts(model, serial)
+			const invalidas = partes.filter((p) => !p || !SAFE_TOPIC_PART.test(p))
+			if (invalidas.length) {
+				descartados.push({ id_equipment: equipment.id, model: model.name, serial, invalidas })
 				return
 			}
-			const prefix = `${TOPIC_BASE}/${brand}/${serial}/status`
-			const ref = { id_element: element.id, id_equipment: equipment.id }
 
-			const stateTopic = `${prefix}/channel_bin`
-			topicsState.push(stateTopic)
-			byTopic.set(stateTopic, ref)
-			;[`${prefix}/channel_ain`, `${prefix}/channel_ain_2`].forEach((t) => {
-				topicsMeter.push(t)
-				byTopic.set(t, ref)
-			})
-		}
+			const ref = { id_element: element.id, id_equipment: equipment.id }
+			const { state, meter } = family.topics(model, serial)
+			agregar(`${model.type}:state`, state, ref)
+			agregar(`${model.type}:meter`, meter, ref)
+		})
 	})
 
-	return { byTopic, topicsState, topicsMeter, descartados }
+	return { byTopic, grupos, descartados }
 }
 
 /**
- * Agrupa las filas de Influx por elemento: { [id_element]: { campo: {value, time} } }
+ * Agrupa las filas de Influx por EQUIPO: { [id_equipment]: { campo: {value, time} } }
  *
- * Solo hay un equipo por elemento en `byTopic` (ver mainRecloser), asi que el
- * desempate por timestamp de abajo resuelve unicamente lo que tiene que
- * resolver: los dos canales de metrologia de ESE equipo.
+ * El desempate por timestamp resuelve los dos canales de metrologia del
+ * reconectador (channel_ain y channel_ain_2 del mismo equipo).
  */
-const groupByElement = (rows, byTopic) => {
+const groupByEquipment = (rows, byTopic) => {
 	const out = {}
 	rows.forEach((row) => {
 		const ref = byTopic.get(row.topic)
 		if (!ref) return
-		if (!out[ref.id_element]) out[ref.id_element] = {}
-		const previo = out[ref.id_element][row._field]
-		// channel_ain y channel_ain_2 del mismo equipo: gana el mas reciente
+		if (!out[ref.id_equipment]) out[ref.id_equipment] = {}
+		const previo = out[ref.id_equipment][row._field]
 		if (!previo || new Date(row._time) > new Date(previo.time)) {
-			out[ref.id_element][row._field] = { value: row._value, time: row._time }
+			out[ref.id_equipment][row._field] = { value: row._value, time: row._time }
 		}
 	})
 	return out
@@ -143,6 +224,24 @@ const resolveState = (state) => {
 	return Number(dc.value) === 1 ? 'cerrado' : 'abierto'
 }
 
+/**
+ * Estado de un medidor o un analizador.
+ *
+ * No se les inventa cerrado/abierto: un medidor no tiene polos, y derivarlo de
+ * la tension (como hace getStatus para el ABM) diria "abierto" cada vez que la
+ * medicion cae en cero por cualquier motivo. Solo dos estados honestos:
+ * `activo` si llego algo en el rango, `sincom` si no.
+ */
+const resolvePresence = (meter) => (meter && Object.keys(meter).length > 0 ? 'activo' : 'sincom')
+
+const ultimoTiempo = (...grupos) => {
+	const times = grupos
+		.filter(Boolean)
+		.flatMap((group) => Object.values(group).map((f) => f.time))
+		.filter(Boolean)
+	return times.length ? times.sort().reverse()[0] : null
+}
+
 const getMapLive = async (db, influxName) => {
 	const elements = await db.Element.findAll({
 		attributes: ['id', 'name', 'description', 'type', 'lat', 'lon'],
@@ -157,44 +256,85 @@ const getMapLive = async (db, influxName) => {
 	})
 
 	const plain = elements.map((e) => (e.toJSON ? e.toJSON() : e))
-	const { byTopic, topicsState, topicsMeter, descartados } = buildTopicIndex(plain)
+	const { byTopic, grupos, descartados } = buildTopicIndex(plain)
 
 	// Los eventos activos salen de MySQL y son la entrada de las alarmas, asi
-	// que se resuelven antes para poder disparar los tres pedidos a Influx
-	// juntos: son independientes y el total queda en el mas lento, no en la suma.
+	// que se resuelven antes para poder disparar los pedidos a Influx juntos:
+	// son independientes y el total queda en el mas lento, no en la suma.
 	const activeEvents = await EventsCustom(db, { flash_screen: 1 })
 
 	const alarmsByEquipment = new Set()
-	const [stateRows, meterRows] = await Promise.all([
-		lastByTopic(topicsState, FIELDS_STATE, influxName),
-		lastByTopic(topicsMeter, FIELDS_METER, influxName),
-		// Una sola llamada sin filtro de id: resuelve las alarmas de todos los
-		// reconectadores de una vez, en lugar de una llamada por equipo.
-		// Las alarmas no deben tumbar el mapa: si fallan, se degrada sin parpadeos.
-		getEventsInflux(db, influxName, activeEvents)
-			.then((alarms) => {
-				alarms.flat().forEach((a) => {
-					if (a?.statusAlert === 1 && a.id_device) alarmsByEquipment.add(a.id_device)
-				})
-			})
-			.catch((e) => console.error('getMapLive: alarmas no disponibles ->', e.message)),
-	])
 
-	const states = groupByElement(stateRows, byTopic)
-	const meters = groupByElement(meterRows, byTopic)
+	// Un pedido por (familia, canal). Todos en paralelo: son independientes y el
+	// total queda en el mas lento, no en la suma.
+	const pedidos = [...grupos.entries()].map(([clave, topics]) => {
+		const [type, canal] = clave.split(':')
+		const fields = canal === 'state' ? FIELDS_STATE : FAMILIES[type].fields
+		return { clave, filas: lastByTopic(topics, fields, influxName) }
+	})
+
+	const alarmas = getEventsInflux(db, influxName, activeEvents)
+		.then((alarms) => {
+			alarms.flat().forEach((a) => {
+				if (a?.statusAlert === 1 && a.id_device) alarmsByEquipment.add(a.id_device)
+			})
+		})
+		// Las alarmas no deben tumbar el mapa: si fallan, se degrada sin parpadeos.
+		.catch((e) => console.error('getMapLive: alarmas no disponibles ->', e.message))
+
+	const [resultados] = await Promise.all([Promise.all(pedidos.map((p) => p.filas)), alarmas])
+
+	// Dos indices, porque el estado solo lo publica el reconectador.
+	const states = {}
+	const meters = {}
+	pedidos.forEach((p, idx) => {
+		const destino = p.clave.endsWith(':state') ? states : meters
+		Object.assign(destino, groupByEquipment(resultados[idx], byTopic))
+	})
 
 	const data = plain.map((element) => {
-		// La alarma SI mira todos los reconectadores del elemento: si cualquiera
-		// tiene un evento activo, el elemento esta en alarma.
 		const reclosers = reclosersOf(element)
-		const state = states[element.id]
-		const meter = meters[element.id]
-		const tieneRecloser = reclosers.length > 0
+		const principal = mainRecloser(element)
 
-		const times = [state, meter]
-			.filter(Boolean)
-			.flatMap((group) => Object.values(group).map((f) => f.time))
-			.filter(Boolean)
+		/*
+		 * Todos los equipos del elemento, cada uno con SU medicion. El orden
+		 * pone el principal primero y despues por id, para que la lista no
+		 * baile entre pedidos.
+		 */
+		const equipments = (element.equipments || [])
+			.filter((eq) => FAMILIES[eq.equipmentmodels?.type])
+			.map((eq) => {
+				const family = FAMILIES[eq.equipmentmodels.type]
+				const state = states[eq.id]
+				const meter = meters[eq.id]
+				return {
+					id: eq.id,
+					serial: eq.serial,
+					model: eq.equipmentmodels.name,
+					version: eq.equipmentmodels.brand,
+					// El id del modelo lo necesita la pestana del tablero, para que
+					// abrir el mismo equipo desde el mapa y desde el Home no cree dos
+					id_model: eq.equipmentmodels.id,
+					description: eq.observation,
+					kind: family.kind,
+					type: eq.equipmentmodels.type,
+					// El marcador del mapa representa a este equipo
+					main: principal ? eq.id === principal.id : false,
+					st: family.kind === 'recloser' ? resolveState(state) : resolvePresence(meter),
+					alarm: alarmsByEquipment.has(eq.id),
+					// Unidad en la que publica ESTE equipo; no se normaliza (ver FAMILIES)
+					unit: family.unit,
+					v: family.v.map((f) => num(meter?.[f]?.value ?? null)),
+					i: family.i.map((f) => num(meter?.[f]?.value ?? null)),
+					updatedAt: ultimoTiempo(state, meter),
+				}
+			})
+			.sort((a, b) => Number(b.main) - Number(a.main) || a.id - b.id)
+
+		// Los campos del elemento salen del reconectador principal y no cambiaron:
+		// son los que pintan el marcador del mapa.
+		const state = principal ? states[principal.id] : null
+		const meter = principal ? meters[principal.id] : null
 
 		return {
 			id: element.id,
@@ -204,12 +344,15 @@ const getMapLive = async (db, influxName) => {
 			lat: num(element.lat),
 			lon: num(element.lon),
 			// Dos dimensiones separadas, no un codigo 0-7
-			st: tieneRecloser ? resolveState(state) : null,
+			st: principal ? resolveState(state) : null,
+			// La alarma SI mira todos los reconectadores del elemento: si cualquiera
+			// tiene un evento activo, el elemento esta en alarma.
 			alarm: reclosers.some((eq) => alarmsByEquipment.has(eq.id)),
 			// Unidades tal como las publica el equipo; el formateo va en el front
-			v: ['V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2'].map((f) => num(meter?.[f]?.value ?? null)),
-			i: ['I_f_0', 'I_f_1', 'I_f_2'].map((f) => num(meter?.[f]?.value ?? null)),
-			updatedAt: times.length ? times.sort().reverse()[0] : null,
+			v: FAMILIES[1].v.map((f) => num(meter?.[f]?.value ?? null)),
+			i: FAMILIES[1].i.map((f) => num(meter?.[f]?.value ?? null)),
+			updatedAt: ultimoTiempo(state, meter),
+			equipments,
 		}
 	})
 
