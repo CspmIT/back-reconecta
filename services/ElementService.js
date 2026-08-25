@@ -125,9 +125,6 @@ const setMainEquipment = async (db, idElement, idEquipment, transaction) => {
 }
 
 const saveEquipment = async (db, data) => {
-	// El principal se decide en updateElement, que puede limpiar el anterior en
-	// la misma transaccion. Por aca pasaria un segundo principal y lo rechazaria
-	// el indice unico con un error de base sin sentido para el usuario.
 	delete data.is_main
 	if (data.id) {
 		const equipment = await db.Equipment.findByPk(data.id)
