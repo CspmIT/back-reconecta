@@ -21,6 +21,14 @@ module.exports = (sequelize, DataTypes) => {
 			observation: DataTypes.STRING,
 			id_element: DataTypes.INTEGER,
 			status: DataTypes.BOOLEAN,
+			/*
+			 * Equipo que representa al elemento cuando hay mas de uno del mismo
+			 * tipo (el mapa muestra un solo estado y una sola medicion por
+			 * elemento). Principal = true, el resto = NULL y NUNCA false: el
+			 * indice unico (id_element, is_main) se apoya en que MySQL admite
+			 * NULL repetido, no un 0 repetido.
+			 */
+			is_main: DataTypes.BOOLEAN,
 			id_user: DataTypes.INTEGER,
 		},
 		{

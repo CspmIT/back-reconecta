@@ -8,6 +8,8 @@ const {
 	getChecksxUser,
 	saveChecksxUser,
 	getUserxID,
+	getPrefs,
+	savePrefs,
 } = require('../services/UserService')
 
 async function getListUser(req, res) {
@@ -246,7 +248,28 @@ const getUser = async (req, res) => {
 	}
 }
 
+const getUserPrefs = async (req, res) => {
+	try {
+		const payload = await getPrefs(req.db, req.user.id, req.params.module)
+		// Sin preferencias guardadas devuelve null: el front usa sus defaults
+		return res.status(200).json(payload)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
+const updateUserPrefs = async (req, res) => {
+	try {
+		const payload = await savePrefs(req.db, req.user.id, req.params.module, req.body ?? {})
+		return res.status(200).json(payload)
+	} catch (e) {
+		return res.status(500).json({ message: e.message })
+	}
+}
+
 module.exports = {
+	getUserPrefs,
+	updateUserPrefs,
 	getListUser,
 	getListUserPass,
 	getUserPass,

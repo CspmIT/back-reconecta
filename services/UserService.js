@@ -110,7 +110,28 @@ const getUserxID = async (db, id) => {
 	return user
 }
 
+/**
+ * Preferencias de UI por usuario y modulo. El payload es un JSON de layout sin
+ * estructura fija: es presentacion, no se consulta ni se joinea. La geometria y
+ * la topologia van en tablas (ver MapLines/MapLineVertices).
+ */
+const getPrefs = async (db, idUser, module) => {
+	const pref = await db.UserPref.findOne({ where: { id_user: idUser, module } })
+	return pref?.payload ?? null
+}
+
+const savePrefs = async (db, idUser, module, payload) => {
+	const [pref, created] = await db.UserPref.findOrCreate({
+		where: { id_user: idUser, module },
+		defaults: { id_user: idUser, module, payload },
+	})
+	if (!created) await pref.update({ payload })
+	return pref.payload
+}
+
 module.exports = {
+	getPrefs,
+	savePrefs,
 	getAllUser,
 	getAllUserPass,
 	getPassxID,
