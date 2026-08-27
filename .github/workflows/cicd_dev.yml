@@ -74,5 +74,7 @@ jobs:
                      --build-arg INFLUX_ORG=${{ secrets.INFLUX_ORG }} \
                      --build-arg INFLUX_BUCKET=${{ secrets.INFLUX_BUCKET }} \
                      --build-arg SECRET=${{ secrets.SECRET }} \
+                     --build-arg MINIO_ACCESS=${{ secrets.MINIO_ACCESS }} \
+                     --build-arg MINIO_SECRET=${{ secrets.MINIO_SECRET }} \
                     -t ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}-dev .
                   docker push ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}-dev
