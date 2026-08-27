@@ -13,6 +13,19 @@
 // MySQL devuelve DECIMAL como string. Sin esto, Leaflet recibe "-30.7" y no -30.7.
 const num = (v) => (v === null || v === undefined ? null : parseFloat(v))
 
+/**
+ * Color del trazo. Se acepta solo #rrggbb: es lo unico que emite el selector
+ * del mapa y lo unico que Leaflet dibuja igual en todos los navegadores.
+ * null/'' vuelve el tramo al color por defecto.
+ */
+const HEX = /^#[0-9a-f]{6}$/i
+const normalizeColor = (color) => {
+	if (color === null || color === '') return null
+	const valor = String(color).trim()
+	if (!HEX.test(valor)) throw new Error(`Color invalido: ${color}. Se espera #rrggbb`)
+	return valor.toLowerCase()
+}
+
 const includeVertices = (db) => ({
 	model: db.MapLineVertex,
 	as: 'vertices',
@@ -48,6 +61,7 @@ const formatLine = (line) => {
 	return {
 		id: json.id,
 		name: json.name,
+		color: json.color || null,
 		vertices,
 		// Atajos para dibujar sin recorrer vertices en el front
 		points: vertices.filter((v) => v.lat !== null && v.lon !== null).map((v) => [v.lat, v.lon]),
@@ -105,13 +119,14 @@ const normalizeVertices = async (db, vertices) => {
 	})
 }
 
-const saveLine = async (db, { name, vertices }) => {
+const saveLine = async (db, { name, vertices, color }) => {
 	if (!name || !String(name).trim()) throw new Error('El tramo necesita un nombre')
 	const rows = await normalizeVertices(db, vertices)
+	const hex = color === undefined ? null : normalizeColor(color)
 
 	const transaction = await db.sequelize.transaction()
 	try {
-		const line = await db.MapLine.create({ name: String(name).trim(), status: 1 }, { transaction })
+		const line = await db.MapLine.create({ name: String(name).trim(), color: hex, status: 1 }, { transaction })
 		await db.MapLineVertex.bulkCreate(
 			rows.map((r) => ({ ...r, id_line: line.id })),
 			{ transaction, validate: true }
@@ -129,18 +144,22 @@ const saveLine = async (db, { name, vertices }) => {
  * Con 5-15 vertices por tramo no vale la pena hacer diff ni reordenar in situ,
  * y evita colisiones con el unique (id_line, seq).
  */
-const updateLine = async (db, id, { name, vertices }) => {
+const updateLine = async (db, id, { name, vertices, color }) => {
 	const line = await db.MapLine.findOne({ where: { id, status: 1 } })
 	if (!line) throw new Error('Tramo no encontrado')
 
 	const rows = vertices === undefined ? null : await normalizeVertices(db, vertices)
+	// Los tres campos son independientes: el mapa manda solo el que toco
+	const cambios = {}
+	if (name !== undefined) {
+		if (!String(name).trim()) throw new Error('El tramo necesita un nombre')
+		cambios.name = String(name).trim()
+	}
+	if (color !== undefined) cambios.color = normalizeColor(color)
 
 	const transaction = await db.sequelize.transaction()
 	try {
-		if (name !== undefined) {
-			if (!String(name).trim()) throw new Error('El tramo necesita un nombre')
-			await line.update({ name: String(name).trim() }, { transaction })
-		}
+		if (Object.keys(cambios).length) await line.update(cambios, { transaction })
 		if (rows) {
 			await db.MapLineVertex.destroy({ where: { id_line: id }, transaction })
 			await db.MapLineVertex.bulkCreate(
