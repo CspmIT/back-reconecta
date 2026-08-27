@@ -9,6 +9,8 @@ module.exports = (sequelize, DataTypes) => {
 	MapLine.init(
 		{
 			name: DataTypes.STRING,
+			// Hexadecimal #rrggbb; NULL = color por defecto del mapa
+			color: DataTypes.STRING,
 			status: DataTypes.BOOLEAN,
 		},
 		{
