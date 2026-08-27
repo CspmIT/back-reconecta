@@ -11,9 +11,17 @@
 //   { id, type: 'text',     layer, x, y, size, anchor, baseline, lines: [] }
 //   { id, type: 'symbol',   layer, symbol, x, y, rot, scale }  (solo editor)
 
+const { num } = require('./geometry')
+
 // Los MTEXT traen códigos de formato de AutoCAD: {\fArial|b1;TC 1}, \A1;, \P…
+// Además hay dos formas de escribir caracteres que no están en el teclado:
+// \U+00B0 (MTEXT, unicode) y %%d / %%c / %%p (heredado de TEXT/DIM).
+const CONTROL_CODES = { d: '°', c: 'Ø', p: '±', '%': '%' }
+
 const cleanMtext = (raw) => {
 	let text = String(raw)
+	text = text.replace(/\\U\+([0-9A-Fa-f]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+	text = text.replace(/%%([dcp%])/gi, (_, code) => CONTROL_CODES[code.toLowerCase()])
 	text = text.replace(/\{\\[^;{}]*;([^{}]*)\}/g, '$1') // {\f...;contenido}
 	text = text.replace(/\\A\d;/g, '') // alineación
 	text = text.replace(/\\[fFcChHtTqQwW][^;\\]*;/g, '') // otros códigos con parámetro
@@ -48,8 +56,6 @@ const textBaseline = (attachment) => {
 	const row = Math.floor((attachment - 1) / 3)
 	return row === 0 ? 'hanging' : row === 1 ? 'central' : 'auto'
 }
-
-const num = (v) => Number(v.toFixed(4))
 
 const toEntity = (obj, layers) => {
 	const id = `h${obj.handle?.[2]}`
@@ -104,12 +110,50 @@ const toEntity = (obj, layers) => {
 				lines,
 			}
 		}
+		case 'HATCH': {
+			// Los rellenos macizos del plano: bornes (círculo), puntas de flecha
+			// (triángulo) y algún recuadro. Se importan como la entidad que ya
+			// corresponde con `filled`, en vez de un tipo nuevo. Sólo el contorno
+			// externo (flag & 1): los caminos internos son subdetalles asociativos.
+			if (!obj.is_solid_fill) return null
+			const path = (obj.paths || []).find((p) => p.flag & 1)
+			if (!path) return null
+			const circle = path.segs?.length === 1 && path.segs[0].curve_type === 2 ? path.segs[0] : null
+			if (circle) {
+				return {
+					id,
+					type: 'circle',
+					layer,
+					cx: num(circle.center[0]),
+					cy: num(-circle.center[1]),
+					r: num(circle.radius),
+					filled: true,
+				}
+			}
+			const points = []
+			const bulges = []
+			if (path.polyline_paths?.length) {
+				for (const p of path.polyline_paths) {
+					points.push([num(p.point[0]), num(-p.point[1])])
+					// el eje Y invertido cambia el sentido de giro del arco
+					bulges.push(-(p.bulge || 0))
+				}
+			} else {
+				for (const seg of path.segs || []) {
+					if (!seg.first_endpoint) continue
+					points.push([num(seg.first_endpoint[0]), num(-seg.first_endpoint[1])])
+					bulges.push(0)
+				}
+			}
+			if (points.length < 3) return null
+			return { id, type: 'polyline', layer, points, bulges, closed: true, filled: true }
+		}
 		default:
 			return null
 	}
 }
 
-const DRAWABLE = new Set(['LINE', 'CIRCLE', 'ARC', 'LWPOLYLINE', 'MTEXT'])
+const DRAWABLE = new Set(['LINE', 'CIRCLE', 'ARC', 'LWPOLYLINE', 'MTEXT', 'HATCH'])
 
 const dwgJsonToDocument = (dwgJson) => {
 	const objects = dwgJson?.OBJECTS || []

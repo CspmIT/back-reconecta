@@ -1,5 +1,5 @@
 const fs = require('node:fs')
-const { converterAvailable, convertDwg } = require('../services/unifilar/convertDwg')
+const { converterAvailable, convertDwg, withSymbols } = require('../services/unifilar/convertDwg')
 
 // Convierte el DWG y devuelve { svg, document, data }. Si el conversor no
 // está disponible o falla, deja el plano pendiente con el error registrado.
@@ -80,7 +80,17 @@ const reprocessPlan = async (req, res) => {
 			return res.status(500).json({ message: 'El archivo .dwg original ya no existe en el servidor' })
 		}
 		const { svg, document, data } = await processDwg(plan.dwg_path)
-		await plan.update({ svg, document, data })
+		// El mapeo entidad→equipo se conserva: los ids son los handles del DWG,
+		// así que siguen siendo válidos tras reconvertir el mismo archivo.
+		await plan.update({
+			svg,
+			document,
+			data: {
+				...data,
+				...(plan.data?.mapping ? { mapping: plan.data.mapping } : {}),
+				...(plan.data?.shapeTypes ? { shapeTypes: plan.data.shapeTypes } : {}),
+			},
+		})
 		return res.status(200).json({
 			message: data.pending ? 'La conversión sigue pendiente' : 'Plano procesado correctamente',
 			data: { id: plan.id, pending: data.pending, error: data.error || null },
@@ -106,26 +116,33 @@ const getPlanLive = async (req, res) => {
 }
 
 // Guarda las ediciones del frontend: documento (fuente de verdad) + el SVG
-// serializado por el editor (derivados), y/o el mapeo entidad→equipo que
-// vive en data.mapping ({ [entityId]: { kind, label, deviceType, deviceId } }).
+// serializado por el editor (derivados), y/o el mapeo entidad→equipo que vive
+// en data.mapping ({ [entityId]: { kind, label, deviceType, deviceId } }), y/o
+// la tipificación de formas en data.shapeTypes ({ [shapeKey]: kind }).
 const updatePlan = async (req, res) => {
 	try {
 		const plan = await req.db.UnifilarPlan.findByPk(req.params.id)
 		if (!plan || !plan.status) {
 			return res.status(404).json({ message: 'Plano no encontrado' })
 		}
-		const { document, svg, name, mapping } = req.body
+		const { document, svg, name, mapping, shapeTypes } = req.body
 		if (document && !Array.isArray(document.entities)) {
 			return res.status(400).json({ message: 'Documento inválido' })
 		}
-		if (!document && !mapping && !name) {
+		if (!document && !mapping && !name && !shapeTypes) {
 			return res.status(400).json({ message: 'Nada para actualizar' })
 		}
+		const patch = { ...(plan.data || {}) }
+		if (mapping) patch.mapping = mapping
+		if (shapeTypes) patch.shapeTypes = shapeTypes
 		await plan.update({
-			...(document ? { document } : {}),
+			// Los símbolos se derivan de la geometría: si el documento cambió hay
+			// que redetectarlos, y las claves de forma son estables así que la
+			// tipificación que ya hizo el usuario sigue valiendo.
+			...(document ? { document: withSymbols(document) } : {}),
 			...(typeof svg === 'string' && svg.startsWith('<svg') ? { svg } : {}),
 			...(name ? { name } : {}),
-			...(mapping ? { data: { ...(plan.data || {}), mapping } } : {}),
+			...(mapping || shapeTypes ? { data: patch } : {}),
 		})
 		return res.status(200).json({ message: 'Plano actualizado', data: { id: plan.id } })
 	} catch (e) {
