@@ -24,16 +24,22 @@ const graphicRoutes = require('./routes/Graphic.routes')
 const MapRoutes = require('./routes/Map.routes')
 const BinnacleRoutes = require('./routes/Binnacle.routes')
 const PersonalRoutes = require('./routes/Personal.routes')
+const AuditRoutes = require('./routes/Audit.routes')
 
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
+const { auditRequest } = require('./middleware/Audit.middleware')
 app.use(corsConfig)
 app.use(cookieParser())
 
 // Configuracion para el body parser
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// Registro de trafico para el modulo de auditoria. Va antes de las rutas, pero
+// el insert se arma al terminar la respuesta (ahi ya existen req.db y req.user).
+app.use('/api', auditRequest)
 app.use('/api', publicRoutes)
 app.use('/api', recloserRoutes)
 app.use('/api', AuthRoutes)
@@ -50,6 +56,7 @@ app.use('/api', graphicRoutes)
 app.use('/api', MapRoutes)
 app.use('/api', BinnacleRoutes)
 app.use('/api', PersonalRoutes)
+app.use('/api', AuditRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

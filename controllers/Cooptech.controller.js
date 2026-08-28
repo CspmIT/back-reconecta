@@ -1,6 +1,8 @@
 //const { OAuth2Client } = require('google-auth-library')
 const { signTokenCooptech, getEnabledUser, signTokenCooptechExternal } = require('../services/AuthService')
 const { addUserCooptech } = require('../services/CooptechService')
+const { getTenantDb } = require('../models')
+const { ACTIONS, logAction, requestInfo } = require('../services/ActionLogService')
 
 const relationUserCooptech = async (req, res) => {
 	try {
@@ -32,6 +34,12 @@ const loginCooptech = async (req, res) => {
 			throw new Error('El usuario o la contraseña son incorrectas')
 		}
 		const token = await signTokenCooptech(user, tokenApp, schemaName, influx_name)
+		const db = await getTenantDb(schemaName)
+		await logAction(db, {
+			id_user: user.id,
+			action: ACTIONS.LOGIN,
+			details: { email, schema: schemaName, origen: 'cooptech', ...requestInfo(req) },
+		})
 		return res.status(200).json({ token })
 	} catch (error) {
 		if (error.errors) {
@@ -63,6 +71,12 @@ const loginCooptechExternal = async (req, res) => {
 			id_user,
 			tokenCooptech
 		)
+		const db = await getTenantDb(schemaName)
+		await logAction(db, {
+			id_user: user.id,
+			action: ACTIONS.LOGIN,
+			details: { email, schema: schemaName, origen: 'cooptech_externo', cliente, ...requestInfo(req) },
+		})
 		return res.status(200).json({ token })
 	} catch (error) {
 		if (error.errors) {
