@@ -5,7 +5,6 @@ const fs = require('node:fs')
 const { dwgJsonToDocument } = require('./dwgToDocument')
 const { documentToSvg } = require('./documentToSvg')
 const { normalizeDocument } = require('./normalizeDocument')
-const { detectSymbols } = require('./detectSymbols')
 
 const execFileAsync = promisify(execFile)
 
@@ -97,33 +96,35 @@ const dwgToJson = async (dwgPath) => {
 }
 
 // Resumen liviano para la columna `data`: capas y textos del plano.
-// Los textos (con su id) son la ayuda para el mapeo asistido: sugieren
-// qué equipo corresponde a cada zona del dibujo.
+//
+// Los textos van con su id porque son lo que el usuario copia como rótulo al
+// colocar un equipo: el plano ya trae escrito "D1E" o "TI 400/5" al lado del
+// símbolo, y volver a tipearlo sería trabajo al pedo.
 const summarizeDocument = (document, stats) => ({
 	layers: document.layers.map((l) => l.name),
 	texts: document.entities
 		.filter((e) => e.type === 'text')
 		.map((e) => ({ id: e.id, text: e.lines.join(' ') })),
 	entities: document.entities.length,
-	symbols: document.symbols?.length || 0,
-	shapes: document.shapes?.length || 0,
 	cleanup: stats,
 })
 
-// Detección de símbolos y catálogo de formas, guardados dentro del documento.
-// Van con la geometría porque se derivan de ella: si el documento cambia hay
-// que recalcularlos, y tenerlos al lado deja ese acoplamiento a la vista.
-const withSymbols = (document) => {
-	const { symbols, shapes } = detectSymbols(document)
-	return { ...document, symbols, shapes }
-}
-
-// Conversión completa: DWG → documento limpio y tipificable + SVG + resumen.
+// Conversión: DWG → documento limpio + SVG + resumen.
+//
+// Acá NO se interpreta el dibujo, y es a propósito. Se intentó reconocer los
+// símbolos automáticamente (por cercanía, por firma de forma y por la grilla
+// de copy-paste) y funcionaba en el plano para el que se calibraba, pero se
+// caía en el siguiente: cada plano viene con su propia convención de dibujo,
+// su propia densidad y su propia escala, y lo que en uno es un seccionador en
+// otro es un trazo suelto. El que sabe qué representa cada cosa es el usuario.
+//
+// Así que el documento es SÓLO geometría, y se usa como calco: se dibuja de
+// fondo y encima el usuario arma la red con los símbolos del catálogo. Eso
+// vale igual para cualquier DWG, sin calibrar nada.
 const convertDwg = async (dwgPath) => {
 	const dwgJson = await dwgToJson(dwgPath)
-	const { document: clean, stats } = normalizeDocument(dwgJsonToDocument(dwgJson))
-	const document = withSymbols(clean)
+	const { document, stats } = normalizeDocument(dwgJsonToDocument(dwgJson))
 	return { document, svg: documentToSvg(document), summary: summarizeDocument(document, stats) }
 }
 
-module.exports = { converterAvailable, convertDwg, dwgToJson, decodeDump, withSymbols }
+module.exports = { converterAvailable, convertDwg, dwgToJson, decodeDump }

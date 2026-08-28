@@ -1,7 +1,7 @@
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { converterAvailable, convertDwg, withSymbols } = require('../services/unifilar/convertDwg')
+const { converterAvailable, convertDwg } = require('../services/unifilar/convertDwg')
 const { storageAvailable, uploadFile, downloadFile, deleteFile } = require('../services/StorageService')
 
 // Convierte el DWG y devuelve { svg, document, data }. Si el conversor no
@@ -136,17 +136,10 @@ const reprocessPlan = async (req, res) => {
 		const dwg = await resolveDwg(plan)
 		cleanup = dwg.cleanup
 		const { svg, document, data } = await processDwg(dwg.path)
-		// El mapeo entidad→equipo se conserva: los ids son los handles del DWG,
-		// así que siguen siendo válidos tras reconvertir el mismo archivo.
-		await plan.update({
-			svg,
-			document,
-			data: {
-				...data,
-				...(plan.data?.mapping ? { mapping: plan.data.mapping } : {}),
-				...(plan.data?.shapeTypes ? { shapeTypes: plan.data.shapeTypes } : {}),
-			},
-		})
+		// Sólo se rehace el calco. La red que armó el usuario (`model`) NO se
+		// toca: vive en su propio sistema de nodos y no depende de los ids del
+		// DWG, así que reconvertir el dibujo no puede romperla.
+		await plan.update({ svg, document, data })
 		return res.status(200).json({
 			message: data.pending ? 'La conversión sigue pendiente' : 'Plano procesado correctamente',
 			data: { id: plan.id, pending: data.pending, error: data.error || null },
@@ -158,7 +151,7 @@ const reprocessPlan = async (req, res) => {
 	}
 }
 
-// Snapshot de datos en vivo de todos los equipos vinculados del plano
+// Snapshot de datos en vivo de los elementos de la red vinculados a un equipo
 const getPlanLive = async (req, res) => {
 	try {
 		const plan = await req.db.UnifilarPlan.findByPk(req.params.id)
@@ -166,41 +159,35 @@ const getPlanLive = async (req, res) => {
 			return res.status(404).json({ message: 'Plano no encontrado' })
 		}
 		const { getLiveData } = require('../services/unifilar/liveData')
-		const data = await getLiveData(req.db, plan.data?.mapping, req.user.influx_name)
+		const data = await getLiveData(req.db, plan.model?.elementos, req.user.influx_name)
 		return res.status(200).json(data)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
 	}
 }
 
-// Guarda las ediciones del frontend: documento (fuente de verdad) + el SVG
-// serializado por el editor (derivados), y/o el mapeo entidad→equipo que vive
-// en data.mapping ({ [entityId]: { kind, label, deviceType, deviceId } }), y/o
-// la tipificación de formas en data.shapeTypes ({ [shapeKey]: kind }).
+// Guarda la red que armó el usuario.
+//
+// El DWG no se edita: es el calco y queda como vino. Lo único que se guarda de
+// esta vista es `model` = { nodos, elementos }, donde los elementos referencian
+// nodos por id y nunca coordenadas — por eso mover un símbolo no rompe la
+// conectividad.
 const updatePlan = async (req, res) => {
 	try {
 		const plan = await req.db.UnifilarPlan.findByPk(req.params.id)
 		if (!plan || !plan.status) {
 			return res.status(404).json({ message: 'Plano no encontrado' })
 		}
-		const { document, svg, name, mapping, shapeTypes } = req.body
-		if (document && !Array.isArray(document.entities)) {
-			return res.status(400).json({ message: 'Documento inválido' })
+		const { model, name } = req.body
+		if (model && (!model.nodos || !Array.isArray(model.elementos))) {
+			return res.status(400).json({ message: 'Modelo inválido: se esperaba { nodos, elementos }' })
 		}
-		if (!document && !mapping && !name && !shapeTypes) {
+		if (!model && !name) {
 			return res.status(400).json({ message: 'Nada para actualizar' })
 		}
-		const patch = { ...(plan.data || {}) }
-		if (mapping) patch.mapping = mapping
-		if (shapeTypes) patch.shapeTypes = shapeTypes
 		await plan.update({
-			// Los símbolos se derivan de la geometría: si el documento cambió hay
-			// que redetectarlos, y las claves de forma son estables así que la
-			// tipificación que ya hizo el usuario sigue valiendo.
-			...(document ? { document: withSymbols(document) } : {}),
-			...(typeof svg === 'string' && svg.startsWith('<svg') ? { svg } : {}),
+			...(model ? { model } : {}),
 			...(name ? { name } : {}),
-			...(mapping || shapeTypes ? { data: patch } : {}),
 		})
 		return res.status(200).json({ message: 'Plano actualizado', data: { id: plan.id } })
 	} catch (e) {

@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
 			svg: DataTypes.TEXT('long'),
 			data: DataTypes.JSON,
 			document: DataTypes.JSON,
+			model: DataTypes.JSON,
 			status: DataTypes.BOOLEAN,
 		},
 		{
