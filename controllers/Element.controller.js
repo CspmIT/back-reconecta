@@ -14,6 +14,7 @@ const {
 	saveImage,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
+const { fetchByEquipment, measuresOf } = require('../services/LiveMeasureService')
 const { getStatus } = require('../services/MeterService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
@@ -24,10 +25,25 @@ const listElements = async (req, res) => {
 		const activeEvents = await EventsCustom(req.db, { flash_screen: 1 })
 		const influxName = req.user.influx_name
 
-		const elementsWithInflux = await Promise.all(
-			elements.map(async (element) => {
-				const jsonElement = element.toJSON ? element.toJSON() : element
+		const plainElements = elements.map((element) => (element.toJSON ? element.toJSON() : element))
 
+		/*
+		 * Potencia, tension y corriente de cada equipo, para las columnas de la
+		 * tabla general del Home. Va por el motor agregado y NO por las consultas
+		 * de abajo: son un filtro multi-topic por familia, asi que agregan un
+		 * puñado de consultas y no una por equipo, que con el refresco de 10
+		 * segundos de la tabla se notaria en el balde.
+		 *
+		 * Si Influx falla, la tabla se sigue mostrando sin mediciones: son tres
+		 * columnas y no vale tumbar el listado entero por ellas.
+		 */
+		const mediciones = await fetchByEquipment(plainElements, influxName, req.db).catch((e) => {
+			console.error('listElements: mediciones no disponibles ->', e.message)
+			return { states: {}, meters: {}, powers: {}, ratios: new Map() }
+		})
+
+		const elementsWithInflux = await Promise.all(
+			plainElements.map(async (jsonElement) => {
 				jsonElement.equipments = await Promise.all(
 					jsonElement.equipments.map(async (equipment) => {
 						let dc
@@ -78,6 +94,19 @@ const listElements = async (req, res) => {
 								break
 							}
 						}
+
+						/*
+						 * Tres columnas nuevas de la tabla general: potencia, tension y
+						 * corriente por fase. En el medidor van convertidas por la
+						 * relacion de transformacion, igual que en su tablero (ver
+						 * LiveMeasureService).
+						 */
+						jsonEquipment.measures = measuresOf(
+							jsonEquipment.equipmentmodels.type,
+							mediciones.meters[jsonEquipment.id],
+							mediciones.powers[jsonEquipment.id],
+							mediciones.ratios.get(jsonEquipment.id)
+						)
 
 						return jsonEquipment
 					})
