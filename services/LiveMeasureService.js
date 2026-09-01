@@ -16,6 +16,42 @@ const { ConsultaInflux } = require('./InfluxServices')
 
 const FIELDS_STATE = ['ac', 'd/c']
 
+/*
+ * La relacion de transformacion es CONFIGURACION y no medicion: cambia cuando
+ * alguien recablea la instalacion, no cada segundo. Va con ventana larga porque
+ * su topic publica cada 15 minutos y con la ventana de las mediciones se perdia:
+ * verificado, el medidor 83660955 tenia la ultima publicacion 32 minutos atras y
+ * la tabla le mostraba la tension SIN convertir y la corriente convertida.
+ */
+const RATIO_RANGE = '-7d'
+
+/*
+ * La tension que se muestra es la COMPUESTA (de linea), que es como se habla de
+ * una red de media tension. El unico que la publica es el NOJA; el resto publica
+ * la de fase y se pasa a compuesta con raiz(3), que supone sistema equilibrado.
+ *
+ * El factor esta verificado contra el propio NOJA, que publica las dos:
+ * 12900/7433 = 1.735 y 13567/7833 = 1.732 contra raiz(3) = 1.7321. Y en tension
+ * el desequilibrio es despreciable, las tres fases difieren menos del 1% en
+ * todos los equipos.
+ */
+const RAIZ_3 = Math.sqrt(3)
+
+/*
+ * Los cuatro canales de cada familia. Se pide uno por (familia, canal) porque
+ * cada uno tiene sus topics, sus campos y su ventana.
+ */
+const CHANNELS = ['state', 'meter', 'power', 'ratio']
+
+const channelFields = (family, canal) => {
+	if (canal === 'state') return FIELDS_STATE
+	if (canal === 'power') return family.powerFields ?? family.fields
+	if (canal === 'ratio') return family.ratioFields ?? []
+	return family.fields
+}
+
+const channelRange = (family, canal) => (canal === 'ratio' ? RATIO_RANGE : family.range)
+
 // Los seriales y marcas se interpolan dentro de una query Flux. Cualquier cosa
 // fuera de este set podria romper o inyectar la consulta, asi que se descarta.
 const SAFE_TOPIC_PART = /^[A-Za-z0-9._-]+$/
@@ -25,8 +61,12 @@ const SAFE_TOPIC_PART = /^[A-Za-z0-9._-]+$/
  * Las tres familias de equipos, cada una con su topic, sus campos, su ventana y
  * sus unidades.
  *
+ * La tension es siempre la COMPUESTA, para que la columna sea comparable entre
+ * modelos: publicada donde el equipo la publica y derivada de la fase donde no
+ * (ver RAIZ_3).
+ *
  * Las unidades NO son homogeneas y no se normalizan aca, porque no hay con que:
- *  - el reconectador publica la primaria real (13000 = 13 kV);
+ *  - el reconectador publica la primaria real (13200 V de linea);
  *  - el medidor publica el SECUNDARIO del transformador de medicion (~65 V).
  *    La relacion de transformacion vendria de los campos VT_0/VT_1, pero los
  *    ITRON instalados no los publican (verificado en los tres seriales: solo
@@ -48,16 +88,43 @@ const FAMILIES = {
 	1: {
 		kind: 'recloser',
 		unit: 'kV',
-		units: { v: 'V', i: 'A', p: 'kW' },
+		units: { v: 'V', i: 'A', s: 'kVA', p: 'kW', q: 'kVAr' },
 		range: '-3m',
 		fields: [
 			'I_f_0', 'I_f_1', 'I_f_2',
-			'V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2',
 			'V_f_ABC_0', 'V_f_ABC_1', 'V_f_ABC_2',
-			'FP_f_0', 'FP_f_1', 'FP_f_2',
-			'W_1',
+			'V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2',
+			'W_0', 'W_1', 'W_2',
 		],
-		v: ['V_L_ABC_0', 'V_L_ABC_1', 'V_L_ABC_2'],
+		/*
+		 * Las dos marcas publican el MISMO nombre de campo para cosas distintas,
+		 * asi que la de linea se resuelve por lo que publica cada una. La aparente
+		 * publicada (W_0) es el juez, verificado contra los 22 reconectadores:
+		 *  - NOJA publica las dos, V_L_ABC de linea (~13400) y V_f_ABC de fase
+		 *    (~7800). En el de SETA64, raiz(3) * V_L * I = 1847 y 3 * V_f * I =
+		 *    1843, contra W_0 = 1844. Se usa V_L_ABC tal como viene;
+		 *  - COOPER publica solo V_L_ABC, y ahi manda la tension de FASE (~7800)
+		 *    aunque el campo se llame de linea: en el de RE02, 3 * V_L * I = 89
+		 *    contra W_0 = 89, mientras que raiz(3) * V_L * I daria 51. Se pasa a
+		 *    compuesta.
+		 * Tomar V_L_ABC para las dos era lo que hacia que el NOJA mostrara 12,8 kV
+		 * y el COOPER 7,8 kV en la misma columna.
+		 *
+		 * La regla es por campo publicado y no por marca, igual que en el tablero
+		 * del reconectador (ver `asPhase` en boardMetrology): si aparece un equipo
+		 * nuevo con la misma maña, sale bien sin tocar nada.
+		 */
+		voltage: (meter) =>
+			[0, 1, 2].map((n) => {
+				const linea = primerCampo(meter, `V_L_ABC_${n}`)
+				const fase = primerCampo(meter, `V_f_ABC_${n}`)
+				// Publica las dos: la de linea es de verdad de linea
+				if (linea !== null && fase !== null) return { value: linea, derived: false }
+				// Solo el campo de linea: ahi manda la de fase (COOPER)
+				if (linea !== null) return { value: linea * RAIZ_3, derived: true }
+				if (fase !== null) return { value: fase * RAIZ_3, derived: true }
+				return { value: null, derived: false }
+			}),
 		i: ['I_f_0', 'I_f_1', 'I_f_2'],
 		// El topic del reconectador NO lleva el modelo: 'Form 5' tiene un espacio
 		// y exigirle el formato de un topic descartaba al COOPER de RE02.
@@ -67,63 +134,47 @@ const FAMILIES = {
 			return {
 				state: [`${prefix}/channel_bin`],
 				meter: [`${prefix}/channel_ain`, `${prefix}/channel_ain_2`],
-				// La potencia viene en channel_ain, junto con tension y corriente
+				// Las potencias vienen en channel_ain, junto con tension y corriente
 				power: [],
+				// Mide directo, sin transformadores de medicion
+				ratio: [],
 			}
 		},
 		/*
-		 * El reconectador NO publica la potencia por fase: W_0 es la aparente
-		 * (kVA), W_1 la activa (kW) y W_2 la reactiva (kVAr), las tres TOTALES,
-		 * igual que el tablero del reconectador (ver Objects.jsx en el front).
-		 * Verificado contra Influx en el NOJA de SETA64: 12.9 kV y 82 A dan 1832
-		 * kVA contra W_0 = 1855, y con FP 0.98 dan 1818 kW contra W_1 = 1818.
+		 * Las tres potencias que publica el reconectador, TOTALES y sin cuentas de
+		 * por medio: son las mismas que muestra su tablero (ver Objects.jsx en el
+		 * front), asi que la tabla y el tablero no pueden discrepar.
 		 *
-		 * Asi que la activa por fase se DERIVA como V_fase * I * FP_fase, y la
-		 * comprobacion es que la suma de las tres de igual al W_1 publicado:
-		 * contra los 14 reconectadores instalados el desvio queda por debajo del
-		 * 1% en todos los que tienen carga (COOPER/002 426.5 contra 427.56,
-		 * NOJA/18164214001 1908.6 contra 1904). Los unicos que se van son los que
-		 * estan en cero, donde el FP publicado es ruido.
+		 * Verificado contra Influx en el COOPER de RE02: 3 * 7822.7 V * 17.79 A
+		 * dan 417.4 kVA contra W_0 = 417.39, con FP 0.84 dan 350.6 kW contra
+		 * W_1 = -349.79 y 226.5 kVAr contra W_2 = -227.73.
 		 *
-		 * La tension de fase sale de V_f_ABC cuando el equipo la publica (NOJA,
-		 * ABB) y de V_L_ABC cuando no (COOPER): ese campo del COOPER trae la
-		 * tension de FASE aunque se llame de linea, y esta verificado por la
-		 * aparente, 3 * 7822.7 V * 17.79 A = 417.4 kVA contra W_0 = 417.39.
+		 * NO se derivan las fases. Se probo con V_fase * I_fase * FP_fase y la
+		 * suma cierra contra W_1 en los equipos con carga, pero el FP por fase no
+		 * es confiable: con carga casi nula es ruido (el COOPER/001 daba -32.6 kW
+		 * derivados contra -3.0 publicados) y 4 de los 14 reconectadores publican
+		 * FP_f = 0 de forma intermitente, asi que la celda cambiaba de valor segun
+		 * la publicacion que llegara.
 		 *
-		 * El SENTIDO del flujo sale del W_1 publicado y no del signo del FP: el
-		 * COOPER de RE02 publica los tres FP en positivo y la activa total en
-		 * negativo, asi que tomar el signo por fase daba tres fases positivas
-		 * debajo de un total negativo. Los unicos equipos que publican FP
-		 * negativo son los que estan en cero, donde es ruido.
+		 * El signo de la activa y la reactiva es el sentido del flujo y se respeta
+		 * tal como lo publica el equipo.
 		 */
-		power: (meter) => {
-			const total = num(meter?.W_1?.value ?? null)
-			const sentido = total !== null && total < 0 ? -1 : 1
-			return [0, 1, 2].map((n) => {
-				const v = num(meter?.[`V_f_ABC_${n}`]?.value ?? meter?.[`V_L_ABC_${n}`]?.value ?? null)
-				const i = num(meter?.[`I_f_${n}`]?.value ?? null)
-				/*
-				 * Un FP en 0 con corriente circulando no es coseno cero, es el
-				 * equipo que no lo esta reportando (caso real: el NOJA de RE11
-				 * publica FP_f = 0 en las tres fases con 3 A y 56 kW de W_1).
-				 * Mejor sin dato que tres ceros que contradicen al equipo.
-				 */
-				const fp = num(meter?.[`FP_f_${n}`]?.value ?? null)
-				if ([v, i, fp].some((x) => x === null || isNaN(x)) || fp === 0) return null
-				return (sentido * Math.abs(v * i * fp)) / 1000
-			})
-		},
-		// La activa total del equipo, publicada y no derivada
-		powerTotal: (meter) => num(meter?.W_1?.value ?? null),
+		power: (meter) => ({
+			s: num(meter?.W_0?.value ?? null),
+			p: num(meter?.W_1?.value ?? null),
+			q: num(meter?.W_2?.value ?? null),
+		}),
 	},
 	// Medidor
 	2: {
 		kind: 'meter',
 		unit: 'V',
-		units: { v: 'V', i: 'A', p: 'W' },
+		units: { v: 'V', i: 'A', s: 'VA', p: 'W', q: 'VAr' },
 		range: '-30m',
 		fields: ['V_0', 'V_1', 'V_2', 'I_0', 'I_1', 'I_2'],
-		v: ['V_0', 'V_1', 'V_2'],
+		// El medidor mide fase en el secundario del VT (65 V de un VT de 110, que
+		// es 110/raiz(3)), asi que la compuesta se deriva
+		voltage: (meter) => [0, 1, 2].map((n) => derivada(primerCampo(meter, `V_${n}`))),
 		i: ['I_0', 'I_1', 'I_2'],
 		parts: (model, serial) => [model.name, model.brand, serial],
 		topics: (model, serial) => {
@@ -131,21 +182,15 @@ const FAMILIES = {
 			return {
 				state: [],
 				meter: [`${prefix}/SCADA`],
-				/*
-				 * status/VI trae tension, corriente y coseno juntos (la potencia se
-				 * calcula, ver abajo) y status/Fasorial la relacion de
-				 * transformacion. Los dos van en el mismo pedido: son topics
-				 * distintos del mismo equipo y se resuelven en una sola consulta.
-				 */
-				power: [`${prefix}/status/VI`, `${prefix}/status/Fasorial`],
+				// status/VI trae tension, corriente y coseno juntos, de una sola
+				// publicacion, que es con lo que se calculan las potencias
+				power: [`${prefix}/status/VI`],
+				// La relacion de transformacion, en su propio canal por la ventana
+				ratio: [`${prefix}/status/Fasorial`],
 			}
 		},
-		powerFields: [
-			'V_0', 'V_1', 'V_2',
-			'I_0', 'I_1', 'I_2',
-			'CFi_0', 'CFi_1', 'CFi_2',
-			'VT_0', 'VT_1', 'CT_0', 'CT_1',
-		],
+		powerFields: ['V_0', 'V_1', 'V_2', 'I_0', 'I_1', 'I_2', 'CFi_0', 'CFi_1', 'CFi_2'],
+		ratioFields: ['VT_0', 'VT_1', 'CT_0', 'CT_1'],
 		/*
 		 * Relacion de transformacion, la MISMA que aplica el tablero del medidor
 		 * (ver convertV/convertI en MeterContext): la tension se multiplica por
@@ -153,15 +198,17 @@ const FAMILIES = {
 		 * MeterTransformRatios ganandole a lo que reporta el equipo cuando esta
 		 * activo.
 		 *
-		 * Los VT/CT los publica status/Fasorial, no SCADA ni status/VI. Verificado
-		 * contra Influx en los 12 medidores: los de ET1 reportan VT 13200:110 y CT
-		 * 400:5, 800:5 o 2500:5, y los de baja tension reportan VT 1:1.
+		 * Los VT/CT los publica status/Fasorial, no SCADA ni status/VI, y cada 15
+		 * minutos, asi que ese topic va en su propio canal con ventana larga (ver
+		 * RATIO_RANGE). Verificado contra Influx en los 12 medidores: los de ET1
+		 * reportan VT 13200:110 y CT 400:5, 800:5 o 2500:5, y los de baja tension
+		 * reportan VT 1:1.
 		 *
 		 * Los que reportan 1:1 midiendo 65 V (el gran consumidor de SETA64) quedan
 		 * sin convertir, igual que en el tablero: para esos esta el override
 		 * manual, que se carga desde el tablero del medidor.
 		 */
-		factors: (extra, manual) => {
+		factors: (ratio, manual) => {
 			const razon = (primary, secondary) => {
 				const p = num(primary)
 				const s = num(secondary)
@@ -174,49 +221,67 @@ const FAMILIES = {
 					label: `VT ${manual.vt_primary}:${manual.vt_secondary} · CT ${manual.ct_primary}:${manual.ct_secondary} (manual)`,
 				}
 			}
-			const vt = razon(extra?.VT_0?.value, extra?.VT_1?.value)
-			const ct = razon(extra?.CT_0?.value, extra?.CT_1?.value)
+			const vt = razon(ratio?.VT_0?.value, ratio?.VT_1?.value)
+			const ct = razon(ratio?.CT_0?.value, ratio?.CT_1?.value)
 			if (vt === 1 && ct === 1) return { v: 1, i: 1, label: null }
 			return {
 				v: vt,
 				i: ct,
-				label: `VT ${extra?.VT_0?.value ?? 1}:${extra?.VT_1?.value ?? 1} · CT ${extra?.CT_0?.value ?? 1}:${extra?.CT_1?.value ?? 1}`,
+				label: `VT ${ratio?.VT_0?.value ?? 1}:${ratio?.VT_1?.value ?? 1} · CT ${ratio?.CT_0?.value ?? 1}:${ratio?.CT_1?.value ?? 1}`,
 			}
 		},
 		/*
-		 * La activa por fase se CALCULA como V * I * cos con la relacion de
-		 * transformacion aplicada, o sea del lado primario, igual que la tension y
-		 * la corriente de la fila.
+		 * Las tres potencias se CALCULAN por fase y se suman, con la relacion de
+		 * transformacion aplicada, o sea del lado primario igual que la tension y
+		 * la corriente de la fila:
+		 *   S = V * I,  P = V * I * cos,  Q = raiz(S^2 - P^2)
+		 * Los tres valores salen del MISMO topic (status/VI, que trae tension,
+		 * corriente y coseno juntos) para que la cuenta sea de una sola
+		 * publicacion, y se suman por fase igual que en el tablero del analizador.
 		 *
-		 * No se toma del registro IAcP_3 de status/P_imp que muestra el tablero
-		 * del medidor porque su escala no es la misma en todos los equipos:
-		 * verificado contra la medicion convertida de los 12 medidores, tres de
-		 * ellos publican kW (83786132: 9504 contra 9507.7 calculados, 83786119:
+		 * No se toman de los registros IAcP/IReP/IApP de status/P_imp que muestra
+		 * el tablero del medidor porque su escala no es la misma en todos los
+		 * equipos: verificado contra la medicion convertida de los 12 medidores,
+		 * tres publican kW (83786132: 9504 contra 9507.7 calculados, 83786119:
 		 * 2477 contra 2461.2, 83786124: 2415 contra 2379.0) y los otros nueve
 		 * publican una escala 10000 veces mas chica. La cuenta, en cambio, cierra
-		 * en los tres casos comprobables con menos del 2% de desvio, asi que se
-		 * usa para todos por igual.
+		 * en los tres casos comprobables con menos del 2% de desvio.
 		 *
-		 * Los tres valores salen del MISMO topic (status/VI) para que la cuenta
-		 * sea de una sola publicacion.
+		 * La reactiva viaja sin signo: sale de la raiz y el coseno que publica el
+		 * equipo no dice si es inductiva o capacitiva.
 		 */
-		power: (meter, vi, factors) =>
-			[0, 1, 2].map((n) => {
+		power: (meter, vi, factors) => {
+			const fases = [0, 1, 2].map((n) => {
 				const v = num(vi?.[`V_${n}`]?.value ?? null)
 				const i = num(vi?.[`I_${n}`]?.value ?? null)
 				const cos = num(vi?.[`CFi_${n}`]?.value ?? null)
 				if ([v, i, cos].some((x) => x === null || isNaN(x))) return null
-				return v * factors.v * i * factors.i * cos
-			}),
+				const aparente = v * factors.v * i * factors.i
+				const activa = aparente * cos
+				return { s: aparente, p: activa, q: Math.sqrt(Math.max(aparente ** 2 - activa ** 2, 0)) }
+			}).filter(Boolean)
+			if (!fases.length) return { s: null, p: null, q: null }
+			return {
+				s: fases.reduce((acc, f) => acc + f.s, 0),
+				p: fases.reduce((acc, f) => acc + f.p, 0),
+				q: fases.reduce((acc, f) => acc + f.q, 0),
+			}
+		},
 	},
 	// Analizador de red
 	3: {
 		kind: 'analyzer',
 		unit: 'V',
-		units: { v: 'V', i: 'A', p: 'W' },
+		units: { v: 'V', i: 'A', s: 'VA', p: 'W', q: 'VAr' },
 		range: '-30m',
-		fields: ['f_0_v', 'f_1_v', 'f_2_v', 'f_0_i', 'f_1_i', 'f_2_i', 'f_0_p', 'f_1_p', 'f_2_p'],
-		v: ['f_0_v', 'f_1_v', 'f_2_v'],
+		fields: [
+			'f_0_v', 'f_1_v', 'f_2_v',
+			'f_0_i', 'f_1_i', 'f_2_i',
+			'f_0_p', 'f_1_p', 'f_2_p',
+			'f_0_q', 'f_1_q', 'f_2_q',
+		],
+		// Baja tension de fase (~228 V de una red 380/220): la compuesta se deriva
+		voltage: (meter) => [0, 1, 2].map((n) => derivada(primerCampo(meter, `f_${n}_v`))),
 		i: ['f_0_i', 'f_1_i', 'f_2_i'],
 		/*
 		 * El analizador es el unico que publica marca y modelo en MINUSCULAS.
@@ -228,19 +293,54 @@ const FAMILIES = {
 		topics: (model, serial) => ({
 			state: [],
 			meter: [`coop/energia/Analizador/${model.name.toLowerCase()}/${model.brand.toLowerCase()}/${serial}/inst`],
-			// La potencia viene en el mismo topic 'inst'
+			// Las potencias vienen en el mismo topic 'inst'
 			power: [],
+			// Mide directo, sin transformadores de medicion
+			ratio: [],
 		}),
 		/*
-		 * f_n_p es la activa por fase en W, no en kW como dice el tablero del
-		 * analizador: verificado contra Influx, 228.4 V por 14.7 A dan 3357 W
-		 * contra f_0_p = 3316.
+		 * El analizador publica activa y reactiva por fase (f_n_p y f_n_q, en W y
+		 * VAr: verificado contra Influx, 228.4 V por 14.7 A dan 3357 W contra
+		 * f_0_p = 3316). Las tres potencias se arman con la misma cuenta que hace
+		 * getMetrology para su tablero: activa y reactiva son la suma de las
+		 * fases y la aparente es la suma de la raiz por fase.
 		 */
-		power: (meter) => ['f_0_p', 'f_1_p', 'f_2_p'].map((f) => num(meter?.[f]?.value ?? null)),
+		power: (meter) => {
+			const fases = [0, 1, 2].map((n) => {
+				const p = num(meter?.[`f_${n}_p`]?.value ?? null)
+				const q = num(meter?.[`f_${n}_q`]?.value ?? null)
+				if ([p, q].some((x) => x === null || isNaN(x))) return null
+				return { s: Math.sqrt(p ** 2 + q ** 2), p, q }
+			}).filter(Boolean)
+			if (!fases.length) return { s: null, p: null, q: null }
+			return {
+				s: fases.reduce((acc, f) => acc + f.s, 0),
+				p: fases.reduce((acc, f) => acc + f.p, 0),
+				q: fases.reduce((acc, f) => acc + f.q, 0),
+			}
+		},
 	},
 }
 
 const num = (v) => (v === null || v === undefined ? null : parseFloat(v))
+
+/**
+ * Tension de fase pasada a compuesta.
+ */
+const derivada = (fase) => (fase === null ? { value: null, derived: false } : { value: fase * RAIZ_3, derived: true })
+
+/**
+ * Primer campo con dato de la lista. Sirve para las magnitudes que cada marca
+ * publica en un campo distinto (ver la tension del reconectador). Un 0 cuenta
+ * como dato: es una medicion, no una ausencia.
+ */
+const primerCampo = (group, campos) => {
+	for (const campo of Array.isArray(campos) ? campos : [campos]) {
+		const valor = group?.[campo]?.value
+		if (valor !== undefined && valor !== null) return num(valor)
+	}
+	return null
+}
 
 /**
  * Una sola consulta con todos los topics y campos pedidos. Sin aggregateWindow:
@@ -296,10 +396,8 @@ const buildTopicIndex = (elements) => {
 			}
 
 			const ref = { id_element: element.id, id_equipment: equipment.id }
-			const { state, meter, power } = family.topics(model, serial)
-			agregar(`${model.type}:state`, state, ref)
-			agregar(`${model.type}:meter`, meter, ref)
-			agregar(`${model.type}:power`, power || [], ref)
+			const canales = family.topics(model, serial)
+			CHANNELS.forEach((canal) => agregar(`${model.type}:${canal}`, canales[canal] || [], ref))
 		})
 	})
 
@@ -343,8 +441,8 @@ const manualRatios = async (db) => {
  *
  * @param {Object} [db] Solo para los overrides manuales de CT/VT; sin `db` se
  * usa la relacion que reporta cada equipo.
- * @returns {Promise<Object>} `{ states, meters, powers, ratios, skipped }`, los
- * tres primeros y `ratios` indexados por id de equipo.
+ * @returns {Promise<Object>} `{ states, meters, powers, ratios, overrides,
+ * skipped }`, los cuatro primeros indexados por id de equipo.
  */
 const fetchByEquipment = async (elements, influxName, db = null) => {
 	const { byTopic, grupos, descartados } = buildTopicIndex(elements)
@@ -354,44 +452,50 @@ const fetchByEquipment = async (elements, influxName, db = null) => {
 	const pedidos = [...grupos.entries()].map(([clave, topics]) => {
 		const [type, canal] = clave.split(':')
 		const family = FAMILIES[type]
-		const fields = canal === 'state' ? FIELDS_STATE : canal === 'power' ? family.powerFields : family.fields
-		return { clave, canal, filas: lastByTopic(topics, fields, influxName, family.range) }
+		return {
+			clave,
+			canal,
+			filas: lastByTopic(topics, channelFields(family, canal), influxName, channelRange(family, canal)),
+		}
 	})
 
 	// Los overrides salen de MySQL y son independientes de Influx: van juntos
-	const [resultados, ratios] = await Promise.all([Promise.all(pedidos.map((p) => p.filas)), manualRatios(db)])
+	const [resultados, overrides] = await Promise.all([Promise.all(pedidos.map((p) => p.filas)), manualRatios(db)])
 
-	// Tres indices, porque el estado solo lo publica el reconectador y la
-	// potencia del medidor sale de un topic aparte.
-	const states = {}
-	const meters = {}
-	const powers = {}
-	pedidos.forEach((p, idx) => {
-		const destino = p.canal === 'state' ? states : p.canal === 'power' ? powers : meters
-		Object.assign(destino, groupByEquipment(resultados[idx], byTopic))
-	})
+	// Un indice por canal, porque no todas las familias publican todos
+	const indices = { state: {}, meter: {}, power: {}, ratio: {} }
+	pedidos.forEach((p, idx) => Object.assign(indices[p.canal], groupByEquipment(resultados[idx], byTopic)))
 
-	return { states, meters, powers, ratios, skipped: descartados }
+	return {
+		states: indices.state,
+		meters: indices.meter,
+		powers: indices.power,
+		ratios: indices.ratio,
+		// Overrides manuales de CT/VT, que le ganan a lo que reporta el equipo
+		overrides,
+		skipped: descartados,
+	}
 }
 
 /**
- * Suma de las fases con dato, o null si no llego ninguna.
+ * Los cuatro grupos de UN equipo, tal como los espera measuresOf.
  */
-const sumaFases = (fases) => {
-	const validos = (fases || []).filter((x) => x !== null && !isNaN(x))
-	if (!validos.length) return null
-	return validos.reduce((acc, x) => acc + x, 0)
-}
+const groupsOf = (fetched, idEquipment) => ({
+	meter: fetched.meters[idEquipment],
+	power: fetched.powers[idEquipment],
+	ratio: fetched.ratios[idEquipment],
+})
 
 /**
- * Potencia activa, tension y corriente de UN equipo POR FASE, con las unidades
- * en las que las publica. Las tres magnitudes viajan como array de tres para
- * que el front muestre R/S/T y no un promedio.
+ * Mediciones de UN equipo, en las unidades en las que las publica.
  *
- * `total` es la activa del equipo entero: la publicada cuando el equipo la
- * publica (el W_1 del reconectador) y la suma de las fases cuando no.
+ * La tension y la corriente van POR FASE, como array de tres, para que el front
+ * muestre L1/L2/L3 y no un promedio. La potencia va como las TRES POTENCIAS del
+ * equipo entero — aparente, activa y reactiva —, que son las que muestra su
+ * tablero: el reconectador no publica potencia por fase y las derivadas no eran
+ * confiables (ver FAMILIES).
  *
- * En el medidor los tres valores vienen CONVERTIDOS por la relacion de
+ * En el medidor los valores vienen CONVERTIDOS por la relacion de
  * transformacion, igual que en su tablero: `manual` es el override activo de
  * MeterTransformRatios y, sin override, la relacion sale de lo que reporta el
  * equipo en status/Fasorial.
@@ -399,19 +503,24 @@ const sumaFases = (fases) => {
  * `null` en un valor es "sin dato" y no cero: un 0 diria que el equipo no mide
  * nada, que es otra cosa.
  */
-const measuresOf = (type, meter, power, manual = null) => {
+const measuresOf = (type, groups, manual = null) => {
 	const family = FAMILIES[type]
 	if (!family) return null
+	const { meter, power, ratio } = groups ?? {}
 	// El reconectador y el analizador miden directo; solo el medidor va por
 	// transformadores de medicion y necesita conversion
-	const factors = family.factors ? family.factors(power, manual) : { v: 1, i: 1, label: null }
+	const factors = family.factors ? family.factors(ratio, manual) : { v: 1, i: 1, label: null }
 	const escalar = (value, factor) => (value === null || isNaN(value) ? null : value * factor)
-	const p = family.power(meter, power, factors)
+	const tension = family.voltage(meter)
 	return {
-		p,
-		total: family.powerTotal ? family.powerTotal(meter, power) : sumaFases(p),
-		v: family.v.map((f) => escalar(num(meter?.[f]?.value ?? null), factors.v)),
-		i: family.i.map((f) => escalar(num(meter?.[f]?.value ?? null), factors.i)),
+		// { s, p, q }: aparente, activa y reactiva del equipo
+		power: family.power(meter, power, factors),
+		// Tension COMPUESTA, publicada donde el equipo la publica y derivada de la
+		// fase donde no (ver RAIZ_3)
+		v: tension.map(({ value }) => escalar(value, factors.v)),
+		// Como se obtuvo, para que el front lo pueda aclarar
+		vDerived: tension.some(({ derived }) => derived),
+		i: family.i.map((campos) => escalar(primerCampo(meter, campos), factors.i)),
 		units: family.units,
 		// Relacion aplicada, para que el front la pueda aclarar; null si no se
 		// convirtio nada
@@ -421,6 +530,7 @@ const measuresOf = (type, meter, power, manual = null) => {
 
 module.exports = {
 	FAMILIES,
+	groupsOf,
 	FIELDS_STATE,
 	SAFE_TOPIC_PART,
 	num,
