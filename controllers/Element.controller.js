@@ -14,7 +14,7 @@ const {
 	saveImage,
 } = require('../services/ElementService')
 const { EventsCustom, getEventsInflux } = require('../services/EventService')
-const { fetchByEquipment, measuresOf } = require('../services/LiveMeasureService')
+const { fetchByEquipment, groupsOf, measuresOf } = require('../services/LiveMeasureService')
 const { getStatus } = require('../services/MeterService')
 const { dataRecloseInflux } = require('../services/RecloserServices')
 
@@ -39,7 +39,7 @@ const listElements = async (req, res) => {
 		 */
 		const mediciones = await fetchByEquipment(plainElements, influxName, req.db).catch((e) => {
 			console.error('listElements: mediciones no disponibles ->', e.message)
-			return { states: {}, meters: {}, powers: {}, ratios: new Map() }
+			return { states: {}, meters: {}, powers: {}, ratios: {}, overrides: new Map() }
 		})
 
 		const elementsWithInflux = await Promise.all(
@@ -96,16 +96,15 @@ const listElements = async (req, res) => {
 						}
 
 						/*
-						 * Tres columnas nuevas de la tabla general: potencia, tension y
-						 * corriente por fase. En el medidor van convertidas por la
-						 * relacion de transformacion, igual que en su tablero (ver
-						 * LiveMeasureService).
+						 * Tres columnas nuevas de la tabla general: las potencias del
+						 * equipo y la tension y la corriente por fase. En el medidor van
+						 * convertidas por la relacion de transformacion, igual que en su
+						 * tablero (ver LiveMeasureService).
 						 */
 						jsonEquipment.measures = measuresOf(
 							jsonEquipment.equipmentmodels.type,
-							mediciones.meters[jsonEquipment.id],
-							mediciones.powers[jsonEquipment.id],
-							mediciones.ratios.get(jsonEquipment.id)
+							groupsOf(mediciones, jsonEquipment.id),
+							mediciones.overrides.get(jsonEquipment.id)
 						)
 
 						return jsonEquipment

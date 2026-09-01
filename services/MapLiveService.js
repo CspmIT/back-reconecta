@@ -13,12 +13,12 @@
  * (`equipments`), para que la tabla del panel pueda desplegarlos: ET1 y CE01
  * tienen 7 medidores cada uno y antes de esto la tabla los mostraba vacios.
  * Los campos del elemento en si (st/v/i) siguen saliendo del reconectador
- * principal y NO cambiaron: son los que pintan el marcador del mapa.
+ * principal: son los que pintan el marcador del mapa.
  *
  * @author fgonzalez <fgonzalez@coopmorteros.coop>
  */
 const { getEventsInflux, EventsCustom } = require('./EventService')
-const { FAMILIES, num, fetchByEquipment, measuresOf } = require('./LiveMeasureService')
+const { FAMILIES, num, fetchByEquipment, groupsOf, measuresOf } = require('./LiveMeasureService')
 
 /**
  * Reconectadores del elemento (equipmentmodels.type === 1).
@@ -117,7 +117,8 @@ const getMapLive = async (db, influxName) => {
 		// Las alarmas no deben tumbar el mapa: si fallan, se degrada sin parpadeos.
 		.catch((e) => console.error('getMapLive: alarmas no disponibles ->', e.message))
 
-	const [{ states, meters, powers, ratios, skipped }] = await Promise.all([fetchByEquipment(plain, influxName, db), alarmas])
+	const [fetched] = await Promise.all([fetchByEquipment(plain, influxName, db), alarmas])
+	const { states, meters, powers, overrides, skipped } = fetched
 
 	const data = plain.map((element) => {
 		const reclosers = reclosersOf(element)
@@ -135,7 +136,7 @@ const getMapLive = async (db, influxName) => {
 				const state = states[eq.id]
 				const meter = meters[eq.id]
 				const power = powers[eq.id]
-				const medicion = measuresOf(eq.equipmentmodels.type, meter, power, ratios.get(eq.id))
+				const medicion = measuresOf(eq.equipmentmodels.type, groupsOf(fetched, eq.id), overrides.get(eq.id))
 				return {
 					id: eq.id,
 					serial: eq.serial,
@@ -156,10 +157,12 @@ const getMapLive = async (db, influxName) => {
 					units: medicion.units,
 					// Relacion de transformacion aplicada, null si no se convirtio
 					tx: medicion.tx,
-					// Por fase, igual que la tension y la corriente; `pTotal` es la
-					// activa del equipo entero
-					p: medicion.p,
-					pTotal: medicion.total,
+					// La tension es compuesta; esto dice si la publica el equipo o
+					// si se derivo de la de fase
+					vDerived: medicion.vDerived,
+					// Aparente, activa y reactiva del equipo; la tension y la
+					// corriente si van por fase
+					power: medicion.power,
 					v: medicion.v,
 					i: medicion.i,
 					updatedAt: ultimoTiempo(state, meter, power),
@@ -172,7 +175,9 @@ const getMapLive = async (db, influxName) => {
 		const state = principal ? states[principal.id] : null
 		const meter = principal ? meters[principal.id] : null
 		const power = principal ? powers[principal.id] : null
-		const medicion = measuresOf(1, meter, power, principal ? ratios.get(principal.id) : null)
+		const medicion = principal
+			? measuresOf(1, groupsOf(fetched, principal.id), overrides.get(principal.id))
+			: measuresOf(1, {})
 
 		return {
 			id: element.id,
@@ -187,9 +192,9 @@ const getMapLive = async (db, influxName) => {
 			// tiene un evento activo, el elemento esta en alarma.
 			alarm: reclosers.some((eq) => alarmsByEquipment.has(eq.id)),
 			// Unidades tal como las publica el equipo; el formateo va en el front
-			p: medicion.p,
-			pTotal: medicion.total,
+			power: medicion.power,
 			v: medicion.v,
+			vDerived: medicion.vDerived,
 			i: medicion.i,
 			updatedAt: ultimoTiempo(state, meter, power),
 			equipments,
