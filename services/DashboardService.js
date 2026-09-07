@@ -4,15 +4,24 @@
  * Antes el front pedia TRES endpoints cada 10 segundos —/getAllReclosers,
  * /recloserAlarm y /getAcReclosers— y los dos primeros consultaban Influx UNA
  * VEZ POR EQUIPO: con 14 reconectadores eran 29 consultas por ciclo, y las de
- * alarmas barren desde 2022-11-01. Aca todo sale de consultas multi-topic (el
+ * alarmas barren desde 2022-11-01. Los dos ultimos se borraron junto con este
+ * cambio porque no los usaba nadie mas; /getAllReclosers sigue en pie, lo usan
+ * el tablero del reconectador y la configuracion de notificaciones. Aca todo sale de consultas multi-topic (el
  * mismo motor que usan /map/live y /Elements, ver LiveMeasureService), asi que
  * el total NO depende de cuantos equipos haya: cuatro pedidos a Influx —uno por
  * familia mas el de alarmas— y tres a MySQL, siempre.
  *
  * Las tarjetas de "offline" y "total" cuentan TODOS los equipos y no solo los
  * reconectadores, que es lo que sus titulos dicen desde siempre; las de
- * abiertos, alarma y sin AC siguen siendo de reconectadores porque las otras
- * dos familias no tienen polos ni publican el estado de la alimentacion.
+ * abiertos, cerrados, sin tension, alarma y sin AC son de reconectadores porque
+ * las otras dos familias no tienen polos ni publican el estado de la
+ * alimentacion.
+ *
+ * Se devuelven TODOS los contadores siempre, esten o no en pantalla: cada
+ * usuario elige que tarjetas ve y en que orden (UserPref, modulo 'dashboard'),
+ * y ninguno cuesta una consulta aparte —salen del mismo recorrido de los mismos
+ * datos—, asi que filtrar por preferencia no ahorraria nada y obligaria a
+ * mandar la seleccion en cada pedido.
  *
  * @author fgonzalez <fgonzalez@coopmorteros.coop>
  */
@@ -22,6 +31,7 @@ const { FAMILIES, FIELDS_STATE, SAFE_TOPIC_PART, num, lastByTopic, buildTopicInd
 const { EventsCustom } = require('./EventService')
 
 const RECLOSER = 1
+const MEDIDOR = 2
 
 // Estados del reconectador, la misma tabla que devuelve getStatusRecloser
 const CERRADO = 0
@@ -104,11 +114,11 @@ const verificacionesPorEquipo = async (db) => {
 /**
  * Reconectadores con al menos una alarma de prioridad 1 activa.
  *
- * Es lo que contaba /recloserAlarm, que ademas armaba el detalle completo de
- * cada evento (nombre, descripcion, fecha, info adicional) para despues quedarse
- * con la cantidad de claves del objeto. Aca solo se necesita el "si o no" por
- * equipo, asi que la consulta pide un unico campo —`events_0`, el id del
- * evento— y la alarma se resuelve con el timestamp de la propia fila.
+ * Es lo que contaba el viejo /recloserAlarm, que ademas armaba el detalle
+ * completo de cada evento (nombre, descripcion, fecha, info adicional) para
+ * despues quedarse con la cantidad de claves del objeto. Aca solo se necesita el
+ * "si o no" por equipo, asi que la consulta pide un unico campo —`events_0`, el
+ * id del evento— y la alarma se resuelve con el timestamp de la propia fila.
  *
  * Un evento esta activo cuando llego DESPUES de la ultima verificacion; sin
  * verificacion, cualquier evento cuenta. Es el mismo criterio de
@@ -126,9 +136,9 @@ const conAlarmaActiva = async (db, influxName, reclosers) => {
 	/*
 	 * Los eventos activos, con el mismo alcance que getEventsActive: prioridad 1
 	 * y 2. La tarjeta cuenta solo los de prioridad 1, pero el descarte va DESPUES
-	 * de resolver el evento y no en el where, igual que /recloserAlarm: si dos
+	 * de resolver el evento y no en el where, para no cambiar el numero: si dos
 	 * eventos de la misma version comparten id_event_influx, el que gana es el
-	 * primero y no el de prioridad 1.
+	 * primero y no el de prioridad 1, que es lo que hacia el endpoint viejo.
 	 */
 	const eventos = await EventsCustom(db, { status: 1, priority: { [Op.lte]: 2 } })
 	if (!eventos.length) return new Set()
@@ -165,10 +175,14 @@ const conAlarmaActiva = async (db, influxName, reclosers) => {
 }
 
 /**
- * Los cinco numeros de las tarjetas del Home.
+ * Todos los contadores de las tarjetas del Home.
+ *
+ * Van siempre completos, sin mirar que tarjetas tiene elegidas el usuario: son
+ * el mismo recorrido sobre los mismos datos, asi que ninguno cuesta una consulta
+ * de mas y el front puede cambiar la seleccion sin volver a pedir.
  *
  * `alarm` vuelve en null si Influx no pudo responder las alarmas: son la parte
- * mas cara de la consulta y no vale tumbar las otras cuatro tarjetas por ellas,
+ * mas cara de la consulta y no vale tumbar el resto de las tarjetas por ellas,
  * igual que hace el mapa.
  */
 const getDashboard = async (db, influxName) => {
@@ -201,29 +215,41 @@ const getDashboard = async (db, influxName) => {
 
 	const contadores = plain.reduce(
 		(acc, equipment) => {
-			if (equipment.equipmentmodels.type === RECLOSER) {
-				const estado = estadoRecloser(datos[equipment.id])
+			const tipo = equipment.equipmentmodels.type
+			const dato = datos[equipment.id]
+
+			if (tipo === RECLOSER) {
+				const estado = estadoRecloser(dato)
 				if (estado === ABIERTO) acc.open++
-				if (estado === SIN_SENAL) acc.offline++
+				if (estado === CERRADO) acc.closed++
+				if (estado === SIN_TENSION) acc.noVoltage++
+				if (estado === SIN_SENAL) acc.offlineReclosers++
 				/*
 				 * Sin alimentacion AC es el equipo que REPORTA ac en cero, no el que
 				 * no reporta nada: ese ya se cuenta como offline. La consulta vieja
 				 * no los distinguia porque ante un balde vacio se iba a buscar hasta
 				 * un dia atras y daba por bueno un dato de horas antes.
 				 */
-				if (num(datos[equipment.id]?.ac?.value) === 0) acc.withoutAc++
+				if (num(dato?.ac?.value) === 0) acc.withoutAc++
 				return acc
 			}
+
 			// El medidor y el analizador no tienen estado: o llego una medicion en
 			// su ventana o estan sin comunicacion
-			if (!datos[equipment.id] || !Object.keys(datos[equipment.id]).length) acc.offline++
+			if (!dato || !Object.keys(dato).length) {
+				if (tipo === MEDIDOR) acc.offlineMeters++
+				else acc.offlineAnalyzers++
+			}
 			return acc
 		},
-		{ open: 0, offline: 0, withoutAc: 0 }
+		{ open: 0, closed: 0, noVoltage: 0, offlineReclosers: 0, offlineMeters: 0, offlineAnalyzers: 0, withoutAc: 0 }
 	)
 
 	return {
 		...contadores,
+		// El total de offline es la suma de los tres desgloses y no un contador
+		// aparte, para que nunca puedan contradecirse en pantalla
+		offline: contadores.offlineReclosers + contadores.offlineMeters + contadores.offlineAnalyzers,
 		alarm: enAlarma ? enAlarma.size : null,
 		total: plain.length,
 	}

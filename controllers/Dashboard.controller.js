@@ -3,8 +3,9 @@ const { getDashboard } = require('../services/DashboardService')
 /**
  * Contadores de las tarjetas del Home, ya calculados.
  *
- * Reemplaza a los tres pedidos que hacia el front (/getAllReclosers,
- * /recloserAlarm y /getAcReclosers) cada 10 segundos; ver DashboardService.
+ * Reemplaza a los tres pedidos que hacia el front cada 10 segundos:
+ * /getAllReclosers —que sigue vivo para el tablero del reconectador— y
+ * /recloserAlarm y /getAcReclosers, que se borraron. Ver DashboardService.
  */
 const dashboardCounters = async (req, res) => {
 	try {
