@@ -44,8 +44,12 @@ module.exports = {
 			"SELECT id FROM Menus WHERE link = 'config/audit' LIMIT 1"
 		)
 
-		// Solo el perfil administrador arranca con el acceso habilitado: el
-		// registro de acciones muestra la actividad de todos los usuarios.
+		// Perfiles que arrancan viendo el modulo: 1 (Moderador) audita su propia
+		// cooperativa y 4 (Super Admin) es ademas el unico que puede cambiar de
+		// cooperativa, control que aplica el backend en utils/auditTenants.js.
+		// El resto queda en 0 y se habilita desde Accesos si hace falta.
+		const PERFILES_HABILITADOS = [1, 4]
+
 		const profiles = await queryInterface.sequelize.query('SELECT id FROM Profiles', {
 			type: queryInterface.sequelize.QueryTypes.SELECT,
 		})
@@ -56,7 +60,7 @@ module.exports = {
 				id_menu: menu.id,
 				id_profile: profile.id,
 				id_user: null,
-				status: profile.id === 1 ? 1 : 0,
+				status: PERFILES_HABILITADOS.includes(profile.id) ? 1 : 0,
 				createdAt: date,
 				updatedAt: date,
 			}))

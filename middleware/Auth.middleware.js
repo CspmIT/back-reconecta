@@ -22,6 +22,10 @@ const verifyToken = async (req, res, next) => {
 			id: user.id,
 			influx_name: decoded.influx_name,
 			name_coop: decoded.nameApp,
+			// El perfil y el schema propio los usa la auditoria para decidir si
+			// el usuario puede mirar los datos de otras cooperativas.
+			profile: user.profile,
+			schema,
 		}
 
 		next()

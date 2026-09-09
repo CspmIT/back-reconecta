@@ -42,7 +42,13 @@ const getKpis = async (db, days) => {
 		db.ApiRequest.count({ where: { createdAt: { [Op.gte]: startOfDay } } }),
 		db.ApiRequest.count({ where: { createdAt: { [Op.gte]: startOfMonth } } }),
 		db.ApiRequest.findOne({
-			attributes: [[fn('AVG', col('ms')), 'avg']],
+			// Ademas del promedio se devuelven el total y la suma de ms: son los
+			// que permiten ponderar el promedio al juntar varias cooperativas.
+			attributes: [
+				[fn('AVG', col('ms')), 'avg'],
+				[fn('COUNT', col('id')), 'total'],
+				[fn('SUM', col('ms')), 'sum_ms'],
+			],
 			where: inRange(from, to),
 			raw: true,
 		}),
@@ -56,6 +62,8 @@ const getKpis = async (db, days) => {
 		requests_month: requestsMonth,
 		avg_ms: avg?.avg ? Math.round(Number(avg.avg)) : null,
 		errors,
+		period_requests: Number(avg?.total || 0),
+		period_ms: Number(avg?.sum_ms || 0),
 	}
 }
 
