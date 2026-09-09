@@ -308,38 +308,6 @@ const getMetrologiaIntantanea = async (data, influxName) => {
 }
 
 /**
- * Consulta los datos instantaneos de un reconectador si no encuentra busca hasta 1 dia hacia atras, en InfluxDB.
- *
- * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
- * @returns {Promise<Object|null>} Un objeto que representa los datos encontrados en InfluxDB, o `null` si no se encuentran datos. Lanza un error si ocurre un problema en la consulta.
- * @throws {Error} Lanza un error si no se encuentran datos o si ocurre algún problema durante la consulta.
- * @author  [Jose Romani]  <jose.romani@hotmail.com>
- *
- */
-
-const acReclosers = async (filter, influxName) => {
-	const query = `|> range(start: -1m, stop: now())
-		|> filter(fn: (r) => r["topic"] == ${filter})
-        |> filter(fn: (r) => r["_field"] == "ac" )
-        |> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
-		|> last()`
-
-	let dataInflux = await ConsultaInflux(query, influxName)
-
-	if (!dataInflux || !dataInflux.length) {
-		const fallbackQuery = `|> range(start: -1d, stop: now())
-			|> filter(fn: (r) => r["topic"] == ${filter})
-			|> filter(fn: (r) => r["_field"] == "ac" )
-			|> aggregateWindow(every: 10ms, fn: last, createEmpty: false)
-			|> last()`
-
-		dataInflux = await ConsultaInflux(fallbackQuery, influxName)
-	}
-	if (!dataInflux || !dataInflux.length) return null
-	return dataInflux
-}
-
-/**
  * Consulta los eventos desde el 01/11/2022 hasta la fecha, filtrando los ultimos 200 registros, de un reconectador en InfluxDB.
  *
  * @param {Object} data - Un objeto que contiene la información del reconectador, incluyendo su marca y número de serie.
@@ -793,7 +761,6 @@ module.exports = {
 	getEventCheckRecloserOld,
 	getStatusAlarm,
 	updateRecloser,
-	acReclosers,
 	getManauver,
 	getReclosersxVersion,
 }

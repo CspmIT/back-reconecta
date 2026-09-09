@@ -18,10 +18,8 @@ const {
 	getDataMap,
 	controlAction,
 	changeStatusAlarm,
-	recloserAlarm,
 	manauvers,
 	reclosersxVersion,
-	getAcReclosers,
 } = require('../controllers/Recloser.controller')
 const { sendMQTT, sendMqttMessagge } = require('../controllers/Mqtt.controller')
 
@@ -43,9 +41,6 @@ router.post('/deleteRecloser', verifyToken, deleteRecloser)
 router.post('/unlinkRelation', verifyToken, unlinkRelation)
 
 router.get('/getDataMap', verifyToken, getDataMap)
-
-router.get('/recloserAlarm', verifyToken, recloserAlarm)
-router.get('/getAcReclosers', verifyToken, getAcReclosers)
 
 router.get('/getRecloserxVersion', verifyToken, reclosersxVersion)
 // Section MQTT
