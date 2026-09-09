@@ -24,6 +24,7 @@ const graphicRoutes = require('./routes/Graphic.routes')
 const MapRoutes = require('./routes/Map.routes')
 const BinnacleRoutes = require('./routes/Binnacle.routes')
 const PersonalRoutes = require('./routes/Personal.routes')
+const DashboardRoutes = require('./routes/Dashboard.routes')
 
 
 // Configuracion para los cors
@@ -50,6 +51,7 @@ app.use('/api', graphicRoutes)
 app.use('/api', MapRoutes)
 app.use('/api', BinnacleRoutes)
 app.use('/api', PersonalRoutes)
+app.use('/api', DashboardRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
