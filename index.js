@@ -56,6 +56,8 @@ app.use('/api', graphicRoutes)
 app.use('/api', MapRoutes)
 app.use('/api', BinnacleRoutes)
 app.use('/api', PersonalRoutes)
+app.use('/api', DashboardRoutes)
+app.use('/api', AuditRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
