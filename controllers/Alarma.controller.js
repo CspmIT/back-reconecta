@@ -1,12 +1,22 @@
 const { default: axios } = require('axios')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
-const { saveAlarm, discordCredentials } = require('../services/AlarmService')
+const { saveAlarm, discordCredentials, notifyAlarm } = require('../services/AlarmService')
 const { listClients } = require('../utils/js/clients')
 const { getTenantDb } = require('../models')
 const https = require('https')
 
 let discordQueue = null
+
+// Vista de alarmas del front: es lo que abre la notificacion al tocarla.
+const APP_URL = (process.env.APP_URL || 'https://reconecta.cooptech.com.ar').replace(/\/$/, '')
+const ALARM_URL = `${APP_URL}/Alert`
+
+// El push se manda sin esperarlo: el fan-out a todos los dispositivos no tiene
+// que demorar la respuesta a Influx, y la alarma ya quedo guardada y en Discord.
+const dispatchPush = (db, alarm) => {
+	notifyAlarm(db, { ...alarm, url: ALARM_URL }).catch((e) => console.error('Push de alarma:', e.message))
+}
 
 const initDiscordQueue = async () => {
 	if (!discordQueue) {
@@ -56,6 +66,15 @@ const influxAlarm = async (req, res) => {
 
 		const title = `Alerta reconectador ${recloser[0].observation}`
 		const content = alarmDef.name
+
+		dispatchPush(dbTenant, {
+			...body,
+			title,
+			body: content,
+			priority: alarmDef.priority,
+			tag: `evento-${recloser[0].id}-${alarmDef.id}`,
+		})
+
 		await initDiscordQueue()
 		await discordQueue.add(() => discord(dbTenant, title, content, 1))
 
@@ -82,6 +101,13 @@ const influxAlarmDeadman = async (req, res) => {
 		}
 
 		await saveAlarm(dbTenant, body)
+
+		dispatchPush(dbTenant, {
+			...body,
+			title,
+			body: 'Alerta equipo sin conexión',
+			tag: `deadman-${recloser[0].id}`,
+		})
 		return res.json({ message: 'OK' })
 	} catch (e) {
 		return res.status(500).json({ message: e.message })
