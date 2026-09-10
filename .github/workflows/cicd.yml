@@ -75,5 +75,9 @@ jobs:
                      --build-arg INFLUX_BUCKET=${{ secrets.INFLUX_BUCKET }} \
                      --build-arg ALARM_TOKEN=${{ secrets.ALARM_TOKEN }} \
                      --build-arg SECRET=${{ secrets.SECRET }} \
+                     --build-arg VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }} \
+                     --build-arg VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }} \
+                     --build-arg VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }} \
+                     --build-arg APP_URL=${{ secrets.APP_URL }} \
                     -t ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }} .
                   docker push ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}
