@@ -1,9 +1,16 @@
 // Preferencias de notificacion por usuario: interruptor general, ventana de
-// silencio en la zona horaria del usuario y silenciado por tipo de alarma, tipo
-// de dispositivo, evento puntual, equipo puntual o prioridad minima.
+// silencio en la zona horaria del usuario, tipos de alarma y de equipo activos,
+// y silenciado de un evento puntual, un equipo puntual o una prioridad minima.
 // El filtro corre al momento de enviar, no al generar la alarma: la alarma
-// siempre se guarda en Logs_Alarm y se manda a Discord, lo que se silencia es el
+// siempre se guarda en Logs_Alarm y se manda a Discord, lo que se filtra es el
 // push de cada usuario.
+//
+// Dos criterios distintos a proposito:
+//   alarm_types / device_types son listas de lo ACTIVO (el usuario marca lo que
+//     quiere recibir; son enums cortos y cerrados, se ven enteros en pantalla).
+//   muted_devices / muted_events son listas de EXCEPCIONES (los equipos son
+//     muchos y nacen todos con la alarma activa; el usuario apaga los que no
+//     quiere con la campana de la tabla general).
 
 const ALARM_TYPES = ['Evento', 'Deadman']
 const DEVICE_TYPES = ['Reconectador', 'Medidor', 'Analizador']
@@ -11,7 +18,7 @@ const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/
 const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
 const DEFAULT_TZ = 'America/Argentina/Cordoba'
 
-// Sin fila en NotificationPrefs el usuario recibe todo: el modulo es opt-out.
+// Sin fila en NotificationPrefs el usuario recibe todo.
 const DEFAULTS = {
 	enabled: true,
 	timezone: DEFAULT_TZ,
@@ -20,8 +27,8 @@ const DEFAULTS = {
 	quiet_end: null,
 	quiet_days: null,
 	quiet_allow_critical: true,
-	muted_alarm_types: [],
-	muted_device_types: [],
+	alarm_types: [...ALARM_TYPES],
+	device_types: [...DEVICE_TYPES],
 	muted_events: [],
 	muted_devices: [],
 	min_priority: null,
@@ -31,6 +38,20 @@ const EDITABLE = Object.keys(DEFAULTS)
 
 // Acepta tanto una instancia de Sequelize como un objeto plano.
 const plain = (pref) => (pref && typeof pref.get === 'function' ? pref.get({ plain: true }) : pref || {})
+
+// Campos donde null guardado significa "nunca se configuro", no "ninguno": hay
+// que caer al default (todos activos) y no dejar al usuario sin notificaciones.
+const NULL_IS_DEFAULT = ['alarm_types', 'device_types']
+
+/** Fila del usuario (o null) completada con los valores por defecto. */
+const withDefaults = (pref) => {
+	const row = plain(pref)
+	const cfg = { ...DEFAULTS, ...row }
+	for (const field of NULL_IS_DEFAULT) {
+		if (cfg[field] == null) cfg[field] = DEFAULTS[field]
+	}
+	return cfg
+}
 
 const list = (value) => (Array.isArray(value) ? value : [])
 
@@ -54,6 +75,8 @@ const toDays = (value) => {
 	return [...new Set(days)].sort((a, b) => a - b)
 }
 
+// Ojo: aca la lista vacia es una eleccion valida (el usuario desmarco todo y no
+// quiere nada de ese tipo). null solo llega desde el default.
 const toEnumList = (value, allowed, field) => {
 	if (value === null) return []
 	if (!Array.isArray(value)) throw new Error(`${field} debe ser un arreglo`)
@@ -97,8 +120,8 @@ const SANITIZERS = {
 	quiet_end: (v) => toTime(v, 'quiet_end'),
 	quiet_days: toDays,
 	quiet_allow_critical: (v) => toBool(v, 'quiet_allow_critical'),
-	muted_alarm_types: (v) => toEnumList(v, ALARM_TYPES, 'muted_alarm_types'),
-	muted_device_types: (v) => toEnumList(v, DEVICE_TYPES, 'muted_device_types'),
+	alarm_types: (v) => toEnumList(v, ALARM_TYPES, 'alarm_types'),
+	device_types: (v) => toEnumList(v, DEVICE_TYPES, 'device_types'),
 	muted_events: (v) => toIdList(v, 'muted_events'),
 	muted_devices: (v) => toIdList(v, 'muted_devices'),
 	min_priority: toPriority,
@@ -162,6 +185,16 @@ const inQuietHours = (cfg, now = new Date()) => {
 	return start < end ? minutes >= start && minutes < end : minutes >= start || minutes < end
 }
 
+/*
+ * Un valor que no esta en el catalogo (un tipo de alarma nuevo que el usuario
+ * todavia no pudo elegir) pasa igual: la lista de activos solo filtra lo que la
+ * pantalla ofrece, asi nadie se pierde una alarma nueva por omision.
+ */
+const isActive = (selected, catalog, value) => {
+	if (value == null || !catalog.includes(value)) return true
+	return list(selected).includes(value)
+}
+
 /**
  * Decide si una alarma se le notifica a un usuario.
  *
@@ -170,12 +203,12 @@ const inQuietHours = (cfg, now = new Date()) => {
  * @returns {{ notify: boolean, reason: string|null }}
  */
 const shouldNotify = (pref, alarm, now = new Date()) => {
-	const cfg = { ...DEFAULTS, ...plain(pref) }
+	const cfg = withDefaults(pref)
 	const no = (reason) => ({ notify: false, reason })
 
 	if (!cfg.enabled) return no('notificaciones desactivadas')
-	if (list(cfg.muted_alarm_types).includes(alarm.type_alarm)) return no(`tipo de alarma ${alarm.type_alarm} silenciado`)
-	if (list(cfg.muted_device_types).includes(alarm.type)) return no(`tipo de equipo ${alarm.type} silenciado`)
+	if (!isActive(cfg.alarm_types, ALARM_TYPES, alarm.type_alarm)) return no(`tipo de alarma ${alarm.type_alarm} desactivado`)
+	if (!isActive(cfg.device_types, DEVICE_TYPES, alarm.type)) return no(`tipo de equipo ${alarm.type} desactivado`)
 	if (alarm.id_event && list(cfg.muted_events).includes(Number(alarm.id_event))) return no('evento silenciado')
 	if (alarm.id_device && list(cfg.muted_devices).includes(Number(alarm.id_device))) return no('equipo silenciado')
 
@@ -195,7 +228,7 @@ const shouldNotify = (pref, alarm, now = new Date()) => {
 
 const getPref = async (db, idUser) => {
 	const pref = await db.NotificationPref.findOne({ where: { id_user: idUser } })
-	return { ...DEFAULTS, ...plain(pref) }
+	return withDefaults(pref)
 }
 
 const savePref = async (db, idUser, body) => {
@@ -216,12 +249,30 @@ const savePref = async (db, idUser, body) => {
 	})
 	if (!created) await pref.update(data)
 
-	return { ...DEFAULTS, ...plain(pref) }
+	return withDefaults(pref)
+}
+
+/**
+ * Prende o apaga la campana de un equipo puntual (la de la tabla general).
+ * Todos los equipos nacen activos, asi que lo que se guarda es la excepcion.
+ *
+ * @param {number} idDevice - Id de Equipment.
+ * @param {boolean} active - true vuelve a notificar ese equipo.
+ */
+const setDeviceNotification = async (db, idUser, idDevice, active) => {
+	const id = Number(idDevice)
+	if (!Number.isInteger(id) || id <= 0) throw new Error('Id de equipo invalido')
+
+	const current = await getPref(db, idUser)
+	const muted = list(current.muted_devices).map(Number)
+	const next = toBool(active, 'active') ? muted.filter((item) => item !== id) : [...new Set([...muted, id])]
+
+	return savePref(db, idUser, { muted_devices: next })
 }
 
 /**
  * Suscripciones que deben recibir una alarma: todos los dispositivos de los
- * usuarios activos cuyas preferencias no la silencien.
+ * usuarios activos cuyas preferencias la dejen pasar.
  */
 const recipientsFor = async (db, alarm, now = new Date()) => {
 	const subscriptions = await db.PushSubscription.findAll({
@@ -245,6 +296,7 @@ module.exports = {
 	DEFAULTS,
 	getPref,
 	savePref,
+	setDeviceNotification,
 	shouldNotify,
 	inQuietHours,
 	recipientsFor,
