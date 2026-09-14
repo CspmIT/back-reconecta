@@ -18,8 +18,10 @@ module.exports = (sequelize, DataTypes) => {
 			quiet_end: DataTypes.TIME,
 			quiet_days: DataTypes.JSON,
 			quiet_allow_critical: DataTypes.BOOLEAN,
-			muted_alarm_types: DataTypes.JSON,
-			muted_device_types: DataTypes.JSON,
+			// Listas de lo que SI notifica. null = todavia sin configurar, o sea
+			// todos los tipos activos (ver NotificationPrefService).
+			alarm_types: DataTypes.JSON,
+			device_types: DataTypes.JSON,
 			muted_events: DataTypes.JSON,
 			muted_devices: DataTypes.JSON,
 			min_priority: DataTypes.TINYINT,

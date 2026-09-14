@@ -7,7 +7,14 @@ const {
 	subscriptionsOf,
 	sendToSubscriptions,
 } = require('../services/PushService')
-const { getPref, savePref, ALARM_TYPES, DEVICE_TYPES, DEFAULTS } = require('../services/NotificationPrefService')
+const {
+	getPref,
+	savePref,
+	setDeviceNotification,
+	ALARM_TYPES,
+	DEVICE_TYPES,
+	DEFAULTS,
+} = require('../services/NotificationPrefService')
 
 /**
  * Clave publica VAPID que el front necesita para suscribir al service worker.
@@ -94,6 +101,20 @@ const updatePreferences = async (req, res) => {
 }
 
 /**
+ * Campana de un equipo puntual, la que se toca desde la tabla general.
+ * Body: { active: boolean }. Devuelve las preferencias completas para que el
+ * front se quede con la lista al dia sin pedirla de nuevo.
+ */
+const updateDeviceNotification = async (req, res) => {
+	try {
+		const pref = await setDeviceNotification(req.db, req.user.id, req.params.id, req.body?.active)
+		return res.status(200).json(pref)
+	} catch (e) {
+		return res.status(400).json({ message: e.message })
+	}
+}
+
+/**
  * Valores validos para armar la pantalla de configuracion. Los eventos y equipos
  * concretos se listan con los endpoints que ya existen (/AllEvents, /eventsDevices).
  */
@@ -117,5 +138,6 @@ module.exports = {
 	sendTest,
 	getPreferences,
 	updatePreferences,
+	updateDeviceNotification,
 	preferenceOptions,
 }

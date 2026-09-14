@@ -8,6 +8,7 @@ const {
 	sendTest,
 	getPreferences,
 	updatePreferences,
+	updateDeviceNotification,
 	preferenceOptions,
 } = require('../controllers/Notification.controller')
 const router = express.Router()
@@ -19,9 +20,12 @@ router.post('/push/subscribe', verifyToken, subscribe)
 router.post('/push/unsubscribe', verifyToken, unsubscribe)
 router.post('/push/test', verifyToken, sendTest)
 
-// Preferencias de notificacion del usuario: horario de silencio y silenciados.
+// Preferencias de notificacion del usuario: horario de silencio, tipos activos
+// y campana por equipo.
 router.get('/notificationPref/options', verifyToken, preferenceOptions)
 router.get('/notificationPref', verifyToken, getPreferences)
 router.put('/notificationPref', verifyToken, updatePreferences)
+// La campana de la tabla general: un equipo por vez, sin mandar toda la lista.
+router.put('/notificationPref/devices/:id', verifyToken, updateDeviceNotification)
 
 module.exports = router
