@@ -27,6 +27,7 @@ const PersonalRoutes = require('./routes/Personal.routes')
 const DashboardRoutes = require('./routes/Dashboard.routes')
 const AuditRoutes = require('./routes/Audit.routes')
 const NotificationRoutes = require('./routes/Notification.routes')
+const AutonomiaRoutes = require('./routes/Autonomia.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -60,6 +61,7 @@ app.use('/api', PersonalRoutes)
 app.use('/api', DashboardRoutes)
 app.use('/api', AuditRoutes)
 app.use('/api', NotificationRoutes)
+app.use('/api', AutonomiaRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {
