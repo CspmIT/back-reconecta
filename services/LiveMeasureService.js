@@ -125,6 +125,14 @@ const FAMILIES = {
 				if (fase !== null) return { value: fase * RAIZ_3, derived: true }
 				return { value: null, derived: false }
 			}),
+		/*
+		 * La tension de FASE (A/B/C), que es la que muestra la tabla general.
+		 * El orden de preferencia sirve para las dos marcas: el NOJA publica la de
+		 * fase en su campo (V_f_ABC) y el COOPER la publica bajo el nombre del
+		 * campo de linea (V_L_ABC), que es justo lo que verifica `voltage`. En los
+		 * dos casos el valor se toma tal cual, sin cuentas de por medio.
+		 */
+		phaseVoltage: (meter) => [0, 1, 2].map((n) => primerCampo(meter, [`V_f_ABC_${n}`, `V_L_ABC_${n}`])),
 		i: ['I_f_0', 'I_f_1', 'I_f_2'],
 		// El topic del reconectador NO lleva el modelo: 'Form 5' tiene un espacio
 		// y exigirle el formato de un topic descartaba al COOPER de RE02.
@@ -175,6 +183,8 @@ const FAMILIES = {
 		// El medidor mide fase en el secundario del VT (65 V de un VT de 110, que
 		// es 110/raiz(3)), asi que la compuesta se deriva
 		voltage: (meter) => [0, 1, 2].map((n) => derivada(primerCampo(meter, `V_${n}`))),
+		// Lo que mide el equipo es la de fase: es la compuesta la que se deriva
+		phaseVoltage: (meter) => [0, 1, 2].map((n) => primerCampo(meter, `V_${n}`)),
 		i: ['I_0', 'I_1', 'I_2'],
 		parts: (model, serial) => [model.name, model.brand, serial],
 		topics: (model, serial) => {
@@ -282,6 +292,8 @@ const FAMILIES = {
 		],
 		// Baja tension de fase (~228 V de una red 380/220): la compuesta se deriva
 		voltage: (meter) => [0, 1, 2].map((n) => derivada(primerCampo(meter, `f_${n}_v`))),
+		// Lo que mide el equipo es la de fase: es la compuesta la que se deriva
+		phaseVoltage: (meter) => [0, 1, 2].map((n) => primerCampo(meter, `f_${n}_v`)),
 		i: ['f_0_i', 'f_1_i', 'f_2_i'],
 		/*
 		 * El analizador es el unico que publica marca y modelo en MINUSCULAS.
@@ -520,6 +532,12 @@ const measuresOf = (type, groups, manual = null) => {
 		v: tension.map(({ value }) => escalar(value, factors.v)),
 		// Como se obtuvo, para que el front lo pueda aclarar
 		vDerived: tension.some(({ derived }) => derived),
+		/*
+		 * Tension de FASE (A/B/C), tal como la publica el equipo y sin derivar:
+		 * es la que muestra la tabla general del Home. El mapa sigue con la
+		 * compuesta (`v`), que es como se habla de una red de media tension.
+		 */
+		vPhase: family.phaseVoltage(meter).map((value) => escalar(value, factors.v)),
 		i: family.i.map((campos) => escalar(primerCampo(meter, campos), factors.i)),
 		units: family.units,
 		// Relacion aplicada, para que el front la pueda aclarar; null si no se

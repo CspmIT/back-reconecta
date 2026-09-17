@@ -23,6 +23,9 @@ module.exports = (sequelize, DataTypes) => {
 			id_element: DataTypes.INTEGER,
 			id_equipment: DataTypes.INTEGER,
 			name_element: DataTypes.STRING,
+			// Texto libre y opcional: las bitacoras viejas no lo tienen (ver la
+			// migracion que agrego la columna)
+			client: DataTypes.STRING,
 			order: {
 				type: DataTypes.STRING,
 			},
