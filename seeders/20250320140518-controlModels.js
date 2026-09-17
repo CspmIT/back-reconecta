@@ -48,7 +48,16 @@ module.exports = {
 				updatedAt: date,
 			})
 		})
-		await queryInterface.bulkInsert('ControlsModels', dataInsert)
+		/*
+		 * El seeder se corrio mas de una vez sobre la misma base y duplico cada
+		 * control (un `bulkInsert` no chequea nada), lo que se veia como controles
+		 * repetidos en el tablero. Se insertan solo los pares que faltan.
+		 */
+		const [existentes] = await queryInterface.sequelize.query('SELECT id_model, id_control FROM ControlsModels')
+		const yaCargados = new Set(existentes.map((item) => `${item.id_model}-${item.id_control}`))
+		const faltantes = dataInsert.filter((item) => !yaCargados.has(`${item.id_model}-${item.id_control}`))
+		if (!faltantes.length) return
+		await queryInterface.bulkInsert('ControlsModels', faltantes)
 	},
 
 	async down(queryInterface) {
