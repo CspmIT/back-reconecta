@@ -79,5 +79,8 @@ jobs:
                      --build-arg VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }} \
                      --build-arg VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }} \
                      --build-arg APP_URL=${{ secrets.APP_URL }} \
+                     --build-arg MINIO_ACCESS=${{ secrets.MINIO_ACCESS }} \
+                     --build-arg MINIO_SECRET=${{ secrets.MINIO_SECRET }} \
+                     --build-arg AUTONOMIA_CATALOG_TOKEN=${{ secrets.AUTONOMIA_CATALOG_TOKEN }} \
                     -t ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }} .
                   docker push ${{ secrets.DOCKER_USER_NAME }}/${REPO_NAME}:${{ needs.bump.outputs.new_tag }}
