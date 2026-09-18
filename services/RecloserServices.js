@@ -544,6 +544,9 @@ const getInfoMap = async (db) => {
  * Si no encuentra datos recientes, lanza un error.
  *
  * @param {Object} data - Información del reconectador, que incluye marca y número de serie.
+ *  Opcionalmente acepta `dateStart` / `dateEnd` (ISO) para acotar el rango consultado y `limit`
+ *  para el tope de paquetes devueltos. Sin esos campos mantiene el comportamiento histórico
+ *  (desde 2022-11-01, los 200 paquetes más recientes).
  * @param {string} influxName - Nombre de la base de datos en InfluxDB donde se realiza la consulta.
  * @returns {Promise<Object>} Un objeto con el estado de eventos organizados por tiempos y eventos, donde cada clave de tiempo contiene un array de objetos con:
  *  - field: nombre del campo del evento,
@@ -554,10 +557,15 @@ const getInfoMap = async (db) => {
  * @author  [Jose Romani]  <jose.romani@hotmail.com>
  */
 const consultEventRecloserInfluxOld = async (data, influxName) => {
-	const query = ` |> range(start: 2022-11-01)
+	// El rango se aplica sobre el _time de escritura en Influx, que para estos equipos corre
+	// junto al horario que se muestra en pantalla, así que un rango tomado del calendario sirve tal cual.
+	const start = data.dateStart ? new Date(data.dateStart).toISOString() : '2022-11-01T00:00:00Z'
+	const stop = data.dateEnd ? `, stop: ${new Date(data.dateEnd).toISOString()}` : ''
+	const limit = Number.isInteger(data.limit) && data.limit > 0 ? data.limit : 200
+	const query = ` |> range(start: ${start}${stop})
 		 	|> filter(fn: (r) => r["topic"] == "coop/energia/Reconectadores/${data.brand}/${data.serial}/status/channel_events")
 		 	|> sort(columns: ["_time"], desc: true)
-		 	|> limit (n: 200)`
+		 	|> limit (n: ${limit})`
 
 	let dataInflux = await ConsultaInflux(query, influxName)
 	if (!dataInflux || dataInflux.length === 0) return []
