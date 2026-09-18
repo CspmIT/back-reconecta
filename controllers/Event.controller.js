@@ -106,10 +106,28 @@ const AllEvents = async (req, res) => {
 }
 const eventsDevices = async (req, res) => {
 	try {
-		const { id, type } = req.query
+		const { id, type, dateStart, dateEnd, limit } = req.query
 		if (!id || !type) {
 			return res.status(400).json({ message: 'Debe enviar todo los parametros necesarios tanto id como type' })
 		}
+		// Rango opcional. Sin el, se mantiene el comportamiento historico: los 200 paquetes mas recientes.
+		for (const [nombre, valor] of [
+			['dateStart', dateStart],
+			['dateEnd', dateEnd],
+		]) {
+			if (valor && isNaN(new Date(valor).getTime())) {
+				return res.status(400).json({ message: `El parametro ${nombre} no es una fecha valida` })
+			}
+		}
+		if (dateStart && dateEnd && new Date(dateStart) > new Date(dateEnd)) {
+			return res.status(400).json({ message: 'dateStart no puede ser posterior a dateEnd' })
+		}
+		const limitParsed = limit !== undefined ? Number(limit) : NaN
+		if (limit !== undefined && (!Number.isInteger(limitParsed) || limitParsed <= 0 || limitParsed > 20000)) {
+			return res.status(400).json({ message: 'El parametro limit debe ser un entero entre 1 y 20000' })
+		}
+		// Con un rango explicito el tope de 200 dejaria de lado registros del periodo pedido.
+		const limitFinal = Number.isInteger(limitParsed) ? limitParsed : dateStart || dateEnd ? 20000 : 200
 		//const recloser = await getRecloserId(id)
 		const recloser = await getEquipment(req.db, { id })
 		const Events = await getEventsDevice(req.db, recloser[0].equipmentmodels.id, 'Reconectador')
@@ -129,6 +147,9 @@ const eventsDevices = async (req, res) => {
 				serial: recloser[0].serial,
 				brand: recloser[0].equipmentmodels.name,
 				event: eventActiveReco,
+				dateStart,
+				dateEnd,
+				limit: limitFinal,
 			},
 			req.user.influx_name
 		)
