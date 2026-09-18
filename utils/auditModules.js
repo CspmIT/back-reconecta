@@ -8,6 +8,8 @@
  */
 const MODULE_RULES = [
 	[/^\/audit/i, 'Auditoría'],
+	// Va antes que la regla de eventos: /autonomia/eventos matchea /event/.
+	[/^\/autonomia/i, 'AutonomIA'],
 	[/binnacle|bitacora/i, 'Bitácora'],
 	[/analyzer|sunburst/i, 'Analizadores'],
 	[/substation/i, 'Subestaciones'],
@@ -35,12 +37,17 @@ const MODULE_RULES = [
  */
 const normalizePath = (url) => {
 	const path = (url || '').split('?')[0].replace(/\/+$/, '') || '/'
-	return path
-		.replace(/^\/api/, '')
-		.split('/')
-		.map((seg) => (/^\d+$/.test(seg) ? ':id' : seg))
-		.join('/')
-		.slice(0, 255)
+	return (
+		path
+			.replace(/^\/api/, '')
+			.split('/')
+			.map((seg) => (/^\d+$/.test(seg) ? ':id' : seg))
+			.join('/')
+			// La key del binario de AutonomIA es un nombre de objeto (uuid): sin
+			// esto cada firmware seria un endpoint distinto en los rankings.
+			.replace(/^\/autonomia\/bin\/.+$/i, '/autonomia/bin/:key')
+			.slice(0, 255)
+	)
 }
 
 /**
