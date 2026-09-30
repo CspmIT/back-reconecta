@@ -2,6 +2,7 @@ const express = require('express')
 const { verifyToken } = require('../middleware/Auth.middleware')
 const {
 	getMapConfig,
+	addMapConfig,
 	editMapConfig,
 	listLines,
 	addLine,
@@ -15,6 +16,7 @@ const router = express.Router()
 
 // Vista por defecto (un solo mapa)
 router.get('/map', verifyToken, getMapConfig)
+router.post('/map', verifyToken, addMapConfig)
 router.patch('/map', verifyToken, editMapConfig)
 
 // Datos en vivo agregados de todos los elementos
