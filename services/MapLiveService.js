@@ -206,4 +206,7 @@ const getMapLive = async (db, influxName) => {
 
 module.exports = {
 	getMapLive,
+	// La API externa informa el estado con la misma semantica que el mapa
+	resolveState,
+	resolvePresence,
 }

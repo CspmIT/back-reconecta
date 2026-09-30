@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
 	ActionLog.init(
 		{
 			id_user: DataTypes.INTEGER,
-			action: DataTypes.ENUM('LOGIN', 'MQTT_SEND'),
+			action: DataTypes.ENUM('LOGIN', 'MQTT_SEND', 'API_TOKEN_CREATE', 'API_TOKEN_REVOKE'),
 			details: DataTypes.JSON,
 		},
 		{

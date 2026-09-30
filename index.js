@@ -28,6 +28,8 @@ const DashboardRoutes = require('./routes/Dashboard.routes')
 const AuditRoutes = require('./routes/Audit.routes')
 const NotificationRoutes = require('./routes/Notification.routes')
 const AutonomiaRoutes = require('./routes/Autonomia.routes')
+const ApiTokenRoutes = require('./routes/ApiToken.routes')
+const ExternalRoutes = require('./routes/External.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -60,8 +62,11 @@ app.use('/api', BinnacleRoutes)
 app.use('/api', PersonalRoutes)
 app.use('/api', DashboardRoutes)
 app.use('/api', AuditRoutes)
+app.use('/api', ApiTokenRoutes)
 app.use('/api', NotificationRoutes)
 app.use('/api', AutonomiaRoutes)
+// API externa para integraciones de terceros, con token de API propio
+app.use('/api/v1/external', ExternalRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

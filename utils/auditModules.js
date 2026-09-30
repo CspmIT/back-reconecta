@@ -7,6 +7,8 @@
  * primera regla que matchea.
  */
 const MODULE_RULES = [
+	// Va primero: /v1/external/equipments matchea las reglas de equipos.
+	[/^\/v1\/external|^\/apitokens/i, 'API externa'],
 	[/^\/audit/i, 'Auditoría'],
 	// Va antes que la regla de eventos: /autonomia/eventos matchea /event/.
 	[/^\/autonomia/i, 'AutonomIA'],
@@ -46,6 +48,9 @@ const normalizePath = (url) => {
 			// La key del binario de AutonomIA es un nombre de objeto (uuid): sin
 			// esto cada firmware seria un endpoint distinto en los rankings.
 			.replace(/^\/autonomia\/bin\/.+$/i, '/autonomia/bin/:key')
+			// La API externa identifica al equipo por serial, que no siempre es
+			// numerico (1VYV91254078): sin esto cada equipo seria un endpoint.
+			.replace(/^(\/v1\/external\/equipments\/)[^/]+/i, '$1:serial')
 			.slice(0, 255)
 	)
 }
