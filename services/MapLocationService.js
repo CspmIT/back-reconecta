@@ -1,14 +1,14 @@
 /**
- * Obtiene el último registro de verificación de alarma para un dispositivo específico y tipo.
+ * Lista los mapas activos (status = 1), para el selector de mapa del alta de
+ * elementos. Los dados de baja no se ofrecen: vincular un elemento nuevo a uno
+ * de ellos lo dejaria fuera del mapa operativo, que solo lee la vista activa.
  *
- * @param {number} id - El ID del dispositivo.
- * @param {string} typeDevice - El tipo de dispositivo.
- * @returns {Promise<Object|null>} El registro más reciente de verificación de alarma o `null` si no se encuentra.
- * @throws {Error} Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+ * @param {Object} db - Conexion del tenant.
+ * @returns {Promise<Array>} Los mapas activos, por id.
  * @author Jose Romani <jose.romani@hotmail.com>
  */
 const getListMaps = async (db) => {
-	const dataResult = await db.MapLocation.findAll()
+	const dataResult = await db.MapLocation.findAll({ where: { status: 1 }, order: [['id', 'ASC']] })
 	return dataResult
 }
 
