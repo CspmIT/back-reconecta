@@ -3,6 +3,7 @@ const { getTenantDb } = require('../models')
 const { getUser } = require('../services/AuthService')
 const secret = process.env.SECRET
 const TOKEN_ALARMA = process.env.ALARM_TOKEN
+const TOKEN_PROVISION = process.env.PROVISION_TOKEN
 
 const verifyToken = async (req, res, next) => {
 	try {
@@ -59,4 +60,22 @@ const alarmToken = async (req, res, next) => {
 	}
 }
 
-module.exports = { verifyToken, alarmToken }
+/**
+ * Token de servicio para el software administrativo que da de alta clientes.
+ * Si PROVISION_TOKEN no esta definido, el endpoint queda deshabilitado.
+ */
+const provisionToken = (req, res, next) => {
+	if (!TOKEN_PROVISION) {
+		return res.status(503).json({ error: 'Alta de clientes deshabilitada (falta PROVISION_TOKEN)' })
+	}
+	const [type, token] = (req.headers['authorization'] || '').split(' ')
+	if (type !== 'Bearer' || !token) {
+		return res.status(401).json({ error: 'Falta el header Authorization: Bearer <token>' })
+	}
+	if (token !== TOKEN_PROVISION) {
+		return res.status(403).json({ error: 'Token inválido' })
+	}
+	next()
+}
+
+module.exports = { verifyToken, alarmToken, provisionToken }
