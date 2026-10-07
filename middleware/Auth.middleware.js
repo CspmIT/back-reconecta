@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken')
 const { getTenantDb } = require('../models')
 const { getUser } = require('../services/AuthService')
+const { getInfluxConfig } = require('../services/InfluxConfigService')
 const secret = process.env.SECRET
 const TOKEN_ALARMA = process.env.ALARM_TOKEN
 const TOKEN_PROVISION = process.env.PROVISION_TOKEN
@@ -21,7 +22,8 @@ const verifyToken = async (req, res, next) => {
 
 		req.user = {
 			id: user.id,
-			influx_name: decoded.influx_name,
+			// Config de Influx del schema (token propio si ya se cargo en client_products).
+			influx: await getInfluxConfig(schema, decoded.influx_name),
 			name_coop: decoded.nameApp,
 			// El perfil y el schema propio los usa la auditoria para decidir si
 			// el usuario puede mirar los datos de otras cooperativas.

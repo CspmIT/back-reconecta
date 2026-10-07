@@ -3,12 +3,15 @@ const crypto = require('crypto')
 require('dotenv').config()
 const axios = require('axios')
 const config_influx = require(__dirname + '/../config/config_influx.js')
+const { fromStaticConfig } = require('./InfluxConfigService')
 
-const ConsultaInflux = async (query, influxName) => {
-	const url = config_influx[influxName].INFLUX_URL
-	const token = config_influx[influxName].INFLUXDB_TOKEN
-	const org = config_influx[influxName].INFLUX_ORG
-	const bucket = config_influx[influxName].INFLUX_BUCKET
+/**
+ * @param {string} query - Flux a continuacion del from(bucket).
+ * @param {object|string} influx - Config resuelta por schema (req.user.influx) o,
+ *   por compatibilidad, el nombre de una entrada de config_influx.
+ */
+const ConsultaInflux = async (query, influx) => {
+	const { url, token, org, bucket } = typeof influx === 'string' ? fromStaticConfig(influx) : influx
 
 	// Crea una instancia del cliente
 	const influxDB = new InfluxDB({ url, token })

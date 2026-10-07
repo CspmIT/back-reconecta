@@ -63,7 +63,7 @@ const listMeter = async (req, res) => {
 						version: meter.version.name,
 						serial: meter.serial,
 					},
-					req.user.influx_name
+					req.user.influx
 				)
 				const finalStatusMeter = statusMeter !== null && statusMeter !== undefined ? statusMeter : 2
 				return {
@@ -153,7 +153,7 @@ const dataMetrologyVI = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dataInflux = await getVIinflux({ serial: serial, brand: brand, version: version }, influxName)
 		res.status(200).json(dataInflux)
 	} catch (error) {
@@ -171,7 +171,7 @@ const dataMetrologyEnergy = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dataInflux = await getMetrologyEnergy({ serial: serial, brand: brand, version: version }, influxName)
 		res.status(200).json(dataInflux)
 	} catch (error) {
@@ -189,7 +189,7 @@ const dataMetrologyPower = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dataInflux = await getMetrologyPower({ serial: serial, brand: brand, version: version }, influxName)
 		res.status(200).json(dataInflux)
 	} catch (error) {
@@ -207,7 +207,7 @@ const dataMetrologyBasic = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dataInflux = await getMetrologyBasic({ serial: serial, brand: brand, version: version }, influxName)
 		res.status(200).json(dataInflux)
 	} catch (error) {
@@ -239,7 +239,7 @@ const dataMeter = async (req, res) => {
 			id_version: meter.equipmentmodels.id,
 			brand: meter.equipmentmodels.name,
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dataInflux = await getVIinflux(
 			{ serial: dataMeter.number, brand: dataMeter.brand, version: dataMeter.version },
 			influxName
@@ -296,7 +296,7 @@ const dataCurva = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		// Los valores se devuelven tal cual publica el medidor (topic /status/curva).
@@ -322,7 +322,7 @@ const dataSurge = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoSurge(
@@ -345,7 +345,7 @@ const dataSurgeSummary = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoSurgeSummary(
@@ -369,7 +369,7 @@ const dataUnderVoltage = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoUnderVoltage(
@@ -393,7 +393,7 @@ const dataUnderVoltageSummary = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoUnderVoltageSummary(
@@ -417,7 +417,7 @@ const dataCourt = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoCourt(
@@ -441,7 +441,7 @@ const dataCourtSummary = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoCourtSummary(
@@ -465,7 +465,7 @@ const dataInterruption = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoInterruption(
@@ -489,7 +489,7 @@ const dataInterruptionSummary = async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await getInfoInterruptionSummary(
@@ -514,7 +514,7 @@ const makeEobController = (serviceFn) => async (req, res) => {
 		if ((!version, !brand, !serial)) {
 			return res.status(400).json({ message: 'Faltan parametros...' })
 		}
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 		const dateStart = req.body.dateStart ?? null
 		const dateFinished = req.body.dateFinished ?? null
 		const dataInflux = await serviceFn(

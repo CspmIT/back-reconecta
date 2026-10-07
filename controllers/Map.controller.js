@@ -179,7 +179,7 @@ const listElementUsage = async (req, res) => {
 
 const liveData = async (req, res) => {
 	try {
-		const { data, skipped } = await getMapLive(req.db, req.user.influx_name)
+		const { data, skipped } = await getMapLive(req.db, req.user.influx)
 		if (skipped.length) {
 			console.warn('GET /map/live: equipos con marca/serial invalido omitidos ->', JSON.stringify(skipped))
 		}

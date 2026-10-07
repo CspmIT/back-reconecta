@@ -3,8 +3,8 @@ const { convertIsoToDate } = require('../utils/js/dateConvert')
 
 const getMetrology = async (req, res) => {
 	try {
-		const { influx_name } = req.user
-		const analyzer = await getDataAnalyzer(req.body, influx_name)
+		const { influx } = req.user
+		const analyzer = await getDataAnalyzer(req.body, influx)
 		const dataAnalyzer = {}
 		let pot_activa = 0
 		let pot_reactiva = 0
@@ -65,8 +65,8 @@ const getMetrology = async (req, res) => {
 
 const getHistory = async (req, res) => {
 	try {
-		const { influx_name } = req.user
-		const analyzer = await getHistoryAnalyzer(req.body, influx_name)
+		const { influx } = req.user
+		const analyzer = await getHistoryAnalyzer(req.body, influx)
 		const dataAnalyzer = []
 		const fieldsMap = {
 			f_0_v: 'tr',
@@ -137,8 +137,8 @@ const getHistory = async (req, res) => {
 
 const getGraphics = async (req, res) => {
 	try {
-		const { influx_name } = req.user
-		const analyzer = await getHistoryAnalyzer(req.body, influx_name)
+		const { influx } = req.user
+		const analyzer = await getHistoryAnalyzer(req.body, influx)
 		const tension = await formatData(analyzer, 'v')
 		const corriente = await formatData(analyzer, 'i')
 		const activa = await formatData(analyzer, 'p')
@@ -184,8 +184,8 @@ const formatData = async (data, field) => {
 
 const getMonthData = async (req, res) => {
 	try {
-		const { influx_name } = req.user
-		const data = await getYearAnalyzer(req.body, influx_name)
+		const { influx } = req.user
+		const data = await getYearAnalyzer(req.body, influx)
 		const months = [
 			'Enero',
 			'Febrero',

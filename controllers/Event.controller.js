@@ -79,7 +79,7 @@ const sendConfigMQTT = async (req, res) => {
 const AllEvents = async (req, res) => {
 	try {
 		const Events = await getEventsActive(req.db)
-		const eventsInflux = await getEventsInflux(req.db, req.user.influx_name, Events)
+		const eventsInflux = await getEventsInflux(req.db, req.user.influx, Events)
 		const deadmanLogs = await getEventsDeadman(req.db)
 		const combined = [...eventsInflux, deadmanLogs]
 		const returnData = combined
@@ -151,7 +151,7 @@ const eventsDevices = async (req, res) => {
 				dateEnd,
 				limit: limitFinal,
 			},
-			req.user.influx_name
+			req.user.influx
 		)
 		const returnData = eventsInflux.sort((a, b) => new Date(b.dateAlert) - new Date(a.dateAlert))
 

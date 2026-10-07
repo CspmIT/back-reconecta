@@ -9,7 +9,7 @@ const { getDashboard } = require('../services/DashboardService')
  */
 const dashboardCounters = async (req, res) => {
 	try {
-		const data = await getDashboard(req.db, req.user.influx_name)
+		const data = await getDashboard(req.db, req.user.influx)
 		return res.status(200).json(data)
 	} catch (e) {
 		return res.status(500).json({ message: e.message })

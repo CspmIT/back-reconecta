@@ -23,7 +23,7 @@ const listElements = async (req, res) => {
 		const filters = req.params
 		const elements = await getElements(req.db, filters)
 		const activeEvents = await EventsCustom(req.db, { flash_screen: 1 })
-		const influxName = req.user.influx_name
+		const influxName = req.user.influx
 
 		const plainElements = elements.map((element) => (element.toJSON ? element.toJSON() : element))
 
