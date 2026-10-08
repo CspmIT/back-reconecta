@@ -43,6 +43,10 @@ const plain = (pref) => (pref && typeof pref.get === 'function' ? pref.get({ pla
 // que caer al default (todos activos) y no dejar al usuario sin notificaciones.
 const NULL_IS_DEFAULT = ['alarm_types', 'device_types']
 
+// El codigo de vinculacion de WhatsApp vive en la misma fila pero no se expone:
+// quien lo vea puede vincular su telefono a la cuenta del usuario.
+const HIDDEN = ['whatsapp_code', 'whatsapp_code_expires_at']
+
 /** Fila del usuario (o null) completada con los valores por defecto. */
 const withDefaults = (pref) => {
 	const row = plain(pref)
@@ -50,6 +54,7 @@ const withDefaults = (pref) => {
 	for (const field of NULL_IS_DEFAULT) {
 		if (cfg[field] == null) cfg[field] = DEFAULTS[field]
 	}
+	for (const field of HIDDEN) delete cfg[field]
 	return cfg
 }
 
@@ -290,6 +295,20 @@ const recipientsFor = async (db, alarm, now = new Date()) => {
 	return subscriptions.filter((sub) => shouldNotify(sub.user?.notificationPref, alarm, now).notify)
 }
 
+/**
+ * Telefonos que deben recibir una alarma por WhatsApp: usuarios activos con el
+ * numero vinculado y el opt-in vigente, filtrados con las mismas preferencias
+ * que el push (tipos activos, silencios, horario).
+ */
+const whatsappRecipientsFor = async (db, alarm, now = new Date()) => {
+	const prefs = await db.NotificationPref.findAll({
+		where: { whatsapp_enabled: true },
+		include: [{ association: 'user', required: true, attributes: ['id', 'status'], where: { status: 1 } }],
+	})
+
+	return prefs.filter((pref) => pref.whatsapp_phone && shouldNotify(pref, alarm, now).notify).map((pref) => pref.whatsapp_phone)
+}
+
 module.exports = {
 	ALARM_TYPES,
 	DEVICE_TYPES,
@@ -300,4 +319,5 @@ module.exports = {
 	shouldNotify,
 	inQuietHours,
 	recipientsFor,
+	whatsappRecipientsFor,
 }

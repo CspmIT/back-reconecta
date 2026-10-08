@@ -1,5 +1,6 @@
 const { isConfigured, sendToSubscriptions } = require('./PushService')
-const { recipientsFor } = require('./NotificationPrefService')
+const { recipientsFor, whatsappRecipientsFor } = require('./NotificationPrefService')
+const WhatsApp = require('./WhatsAppService')
 
 const saveAlarm = async (db, data) => {
 	await db.Logs_Alarm.create(data)
@@ -32,8 +33,33 @@ const notifyAlarm = async (db, alarm) => {
 	return { ...result, recipients: subscriptions.length }
 }
 
+/**
+ * Manda la alarma por WhatsApp (plantilla aprobada) a los usuarios con el numero
+ * vinculado y el opt-in vigente, con los mismos filtros de preferencias que el push.
+ *
+ * @param {Object} db - Instancia del tenant.
+ * @param {Object} alarm - { title, body, type_alarm, type, id_device, id_event, priority }.
+ * @returns {Promise<{sent:number, failed:number, recipients:number}>}
+ */
+const notifyAlarmWhatsApp = async (db, alarm) => {
+	const empty = { sent: 0, failed: 0, recipients: 0 }
+
+	// Sin credenciales de Meta el canal queda inactivo y el resto sigue igual.
+	if (!WhatsApp.isConfigured()) return empty
+
+	const phones = await whatsappRecipientsFor(db, alarm)
+	if (!phones.length) return empty
+
+	const result = await WhatsApp.sendAlarm(phones, alarm)
+	for (const r of result.results) {
+		if (r.error) console.error(`WhatsApp a ${r.to}:`, r.error)
+	}
+	return { sent: result.sent, failed: result.failed, recipients: phones.length }
+}
+
 module.exports = {
 	saveAlarm,
 	discordCredentials,
 	notifyAlarm,
+	notifyAlarmWhatsApp,
 }

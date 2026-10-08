@@ -29,6 +29,7 @@ const AuditRoutes = require('./routes/Audit.routes')
 const NotificationRoutes = require('./routes/Notification.routes')
 const AutonomiaRoutes = require('./routes/Autonomia.routes')
 const ProvisionRoutes = require('./routes/Provision.routes')
+const WhatsAppRoutes = require('./routes/WhatsApp.routes')
 
 // Configuracion para los cors
 const corsConfig = require('./config/app.conf')
@@ -37,7 +38,15 @@ app.use(corsConfig)
 app.use(cookieParser())
 
 // Configuracion para el body parser
-app.use(express.json())
+// El webhook de WhatsApp firma el body crudo (X-Hub-Signature-256): se guarda
+// aparte porque el JSON ya parseado no sirve para recalcular el HMAC.
+app.use(
+	express.json({
+		verify: (req, res, buf) => {
+			if (req.originalUrl.startsWith('/api/whatsapp/webhook')) req.rawBody = buf
+		},
+	})
+)
 app.use(express.urlencoded({ extended: true }))
 
 // Registro de trafico para el modulo de auditoria. Va antes de las rutas, pero
@@ -64,6 +73,7 @@ app.use('/api', AuditRoutes)
 app.use('/api', NotificationRoutes)
 app.use('/api', AutonomiaRoutes)
 app.use('/api', ProvisionRoutes)
+app.use('/api', WhatsAppRoutes)
 
 const server = http.createServer(app)
 app.use('/api', async (req, res, next) => {

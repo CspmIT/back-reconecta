@@ -1,7 +1,7 @@
 const { default: axios } = require('axios')
 const { getEquipment } = require('../services/ElementService')
 const { checkIsAlarm } = require('../services/EventService')
-const { saveAlarm, discordCredentials, notifyAlarm } = require('../services/AlarmService')
+const { saveAlarm, discordCredentials, notifyAlarm, notifyAlarmWhatsApp } = require('../services/AlarmService')
 const { listClients } = require('../utils/js/clients')
 const { getTenantDb } = require('../models')
 const https = require('https')
@@ -16,6 +16,8 @@ const ALARM_URL = `${APP_URL}/Alert`
 // que demorar la respuesta a Influx, y la alarma ya quedo guardada y en Discord.
 const dispatchPush = (db, alarm) => {
 	notifyAlarm(db, { ...alarm, url: ALARM_URL }).catch((e) => console.error('Push de alarma:', e.message))
+	// WhatsApp va por el mismo camino: mismas preferencias, sin demorar la respuesta.
+	notifyAlarmWhatsApp(db, alarm).catch((e) => console.error('WhatsApp de alarma:', e.message))
 }
 
 const initDiscordQueue = async () => {

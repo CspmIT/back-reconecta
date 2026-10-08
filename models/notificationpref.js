@@ -25,6 +25,13 @@ module.exports = (sequelize, DataTypes) => {
 			muted_events: DataTypes.JSON,
 			muted_devices: DataTypes.JSON,
 			min_priority: DataTypes.TINYINT,
+			// Canal WhatsApp (ver WhatsAppLinkService). No son editables por el
+			// PUT de preferencias: se vinculan con el codigo que manda el usuario.
+			whatsapp_phone: DataTypes.STRING,
+			whatsapp_enabled: DataTypes.BOOLEAN,
+			whatsapp_opt_in_at: DataTypes.DATE,
+			whatsapp_code: DataTypes.STRING,
+			whatsapp_code_expires_at: DataTypes.DATE,
 		},
 		{
 			sequelize,
